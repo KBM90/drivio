@@ -1,4 +1,4 @@
-import 'package:drivio_app/driver/screens/modals/side_menu.dart';
+import 'package:drivio_app/driver/ui/modals/side_menu.dart';
 import 'package:flutter/material.dart';
 
 class MenuButton extends StatelessWidget {

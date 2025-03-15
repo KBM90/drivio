@@ -1,3 +1,5 @@
+import 'package:drivio_app/common/helpers/osrm_services.dart';
+import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
 import 'package:flutter/material.dart';
@@ -5,11 +7,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:drivio_app/common/constants/map_constants.dart';
-import 'package:drivio_app/driver/screens/widgets/go_offline_widget.dart';
-import 'package:drivio_app/driver/screens/widgets/go_online_widget.dart';
+import 'package:drivio_app/driver/ui/widgets/go_offline_widget.dart';
+import 'package:drivio_app/driver/ui/widgets/go_online_widget.dart';
 
 class MapView extends StatefulWidget {
-  const MapView({super.key});
+  final Driver? driver;
+
+  const MapView({super.key, this.driver});
 
   @override
   _MapViewState createState() => _MapViewState();
@@ -17,30 +21,68 @@ class MapView extends StatefulWidget {
 
 class _MapViewState extends State<MapView> {
   final MapController _mapController = MapController();
+  LatLng? _destination;
+  List<LatLng> _polylinePoints = [];
+  final OSRMService _osrmService = OSRMService();
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _initializeMap();
+  }
 
-    // Fetch initial location when the map loads
-    Future.delayed(Duration.zero, () async {
+  Future<void> _initializeMap() async {
+    try {
       final locationProvider = Provider.of<DriverLocationProvider>(
         context,
         listen: false,
       );
+
       await locationProvider.updateLocation();
 
-      // ✅ Move the map to the new location
+      if (widget.driver?.dropoffLocation != null) {
+        await _getDestinationCoordinates(widget.driver!.dropoffLocation!);
+      }
+
+      if (locationProvider.currentLocation != null && _destination != null) {
+        _polylinePoints = await _osrmService.getRouteBetweenCoordinates(
+          locationProvider.currentLocation!,
+          _destination!,
+        );
+      }
+
       if (locationProvider.currentLocation != null) {
         _mapController.move(locationProvider.currentLocation!, 15.0);
       }
-    });
+    } catch (e) {
+      print('Error initializing map: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _getDestinationCoordinates(Location dropoffLocation) async {
+    try {
+      setState(() {
+        _destination = LatLng(
+          dropoffLocation.latitude,
+          dropoffLocation.longitude,
+        );
+      });
+    } catch (e) {
+      print('Error setting destination coordinates: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final driverStatusProvider = Provider.of<DriverStatusProvider>(context);
     final locationProvider = Provider.of<DriverLocationProvider>(context);
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Stack(
       children: [
@@ -49,20 +91,50 @@ class _MapViewState extends State<MapView> {
           options: MapOptions(
             interactionOptions: InteractionOptions(flags: InteractiveFlag.all),
             initialCenter:
-                locationProvider.currentLocation ??
-                LatLng(37.7749, -122.4194), // Default: San Francisco
+                locationProvider.currentLocation ?? LatLng(37.7749, -122.4194),
             initialZoom: 13,
           ),
           children: [
             TileLayer(urlTemplate: MapConstants.tileLayerUrl),
+
+            // Current Location Marker
             if (locationProvider.currentLocation != null)
               MarkerLayer(
                 markers: [
                   Marker(
                     point: locationProvider.currentLocation!,
-                    width: 40,
-                    height: 40,
-                    child: Icon(Icons.car_crash, color: Colors.red, size: 40),
+                    child: const Icon(
+                      Icons.navigation,
+                      size: 40,
+                      color: Color.fromARGB(255, 8, 8, 8),
+                    ),
+                  ),
+                ],
+              ),
+
+            // Destination Marker
+            if (_destination != null)
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _destination!,
+                    child: const Icon(
+                      Icons.location_pin,
+                      size: 40,
+                      color: Color.fromARGB(255, 11, 3, 247),
+                    ),
+                  ),
+                ],
+              ),
+
+            // Route Polyline
+            if (_polylinePoints.isNotEmpty)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: _polylinePoints,
+                    color: const Color.fromARGB(255, 9, 9, 9),
+                    strokeWidth: 4,
                   ),
                 ],
               ),
@@ -75,10 +147,25 @@ class _MapViewState extends State<MapView> {
           right: 2,
           child: FloatingActionButton(
             onPressed: () async {
-              await locationProvider.updateLocation(); // 🔄 Update location
-              // ✅ Move the map to the new location
-              if (locationProvider.currentLocation != null) {
-                _mapController.move(locationProvider.currentLocation!, 15.0);
+              try {
+                await locationProvider.updateLocation();
+                if (locationProvider.currentLocation != null) {
+                  _mapController.move(locationProvider.currentLocation!, 15.0);
+                  final newPolylinePoints = await _osrmService
+                      .getRouteBetweenCoordinates(
+                        locationProvider.currentLocation!,
+                        _destination!,
+                      );
+                  // Recalculate polyline if destination exists
+                  if (_destination != null) {
+                    setState(() {
+                      _polylinePoints = newPolylinePoints;
+                    });
+                  }
+                }
+              } catch (e) {
+                print('Error updating location: $e');
+                // Optionally, show a snackbar or dialog to inform the user
               }
             },
             backgroundColor: Colors.white,

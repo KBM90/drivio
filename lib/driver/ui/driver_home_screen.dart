@@ -1,8 +1,7 @@
-import 'package:drivio_app/driver/screens/widgets/preferences_button.dart';
-import 'package:drivio_app/driver/screens/widgets/recommanded_for_you_button.dart';
 import 'package:drivio_app/common/widgets/safty_floating_button.dart';
+import 'package:drivio_app/driver/models/driver.dart';
+import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../common/widgets/map_view.dart';
 import 'widgets/earnings_widget.dart';
 import 'widgets/menu_button.dart';
@@ -17,12 +16,27 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
+  Driver? _currentDriver;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final driver = await DriverService.getDriver();
+    setState(() {
+      _currentDriver = driver;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          MapView(), // Displays the map
+          MapView(driver: _currentDriver), // Displays the map
           // Earnings Widget (Centered at the Top)
           Positioned(
             top: 40,

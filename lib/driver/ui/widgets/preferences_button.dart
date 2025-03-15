@@ -1,4 +1,5 @@
-import 'package:drivio_app/driver/screens/modals/preferences_modal_screen.dart';
+import 'package:drivio_app/driver/ui/modals/preferences_modal_screen.dart';
+import 'package:drivio_app/driver/ui/screens/preferences_page.dart';
 import 'package:flutter/material.dart';
 
 class PreferencesButton extends StatelessWidget {
@@ -13,7 +14,10 @@ class PreferencesButton extends StatelessWidget {
         color: Colors.black,
       ), // Preferences Icon
       onPressed: () {
-        _showPreferencesModal(context);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PreferencesScreen()),
+        );
       },
     );
   }

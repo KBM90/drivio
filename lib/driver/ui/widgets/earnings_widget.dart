@@ -63,12 +63,12 @@ class _EarningsWidgetState extends State<EarningsWidget> {
                 _buildEarningsPage(
                   title: "Last Trip",
                   route: "\$5.99",
-                  trips: "UberX",
+                  trips: "DrivioX",
                   points: "1 point",
                 ),
                 // "Go Premium" View
                 _buildEarningsPage(
-                  title: "Uber Pro",
+                  title: "Drivio Pro",
                   points: "128 points",
                   trips: "Earn 172 more points to achieve Gold",
                   route: "See Progress",

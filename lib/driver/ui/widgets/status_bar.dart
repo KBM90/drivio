@@ -1,6 +1,6 @@
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
-import 'package:drivio_app/driver/screens/widgets/preferences_button.dart';
-import 'package:drivio_app/driver/screens/widgets/recommanded_for_you_button.dart';
+import 'package:drivio_app/driver/ui/widgets/preferences_button.dart';
+import 'package:drivio_app/driver/ui/widgets/recommanded_for_you_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -75,7 +75,7 @@ class StatusBar extends StatelessWidget {
                     ),
                     ListTile(
                       leading: Icon(Icons.local_offer, color: Colors.green),
-                      title: Text("Enjoy more benefits with Uber Pro"),
+                      title: Text("Enjoy more benefits with Drivio Pro"),
                       subtitle: Text("Exclusive savings and discounts"),
                       trailing: Icon(Icons.arrow_forward_ios, size: 16),
                     ),

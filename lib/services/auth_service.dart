@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:drivio_app/common/constants/api.dart';
+import 'package:drivio_app/common/models/user.dart';
+import 'package:drivio_app/common/services/user_services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,26 +36,35 @@ class AuthService {
     }
   }
 
-  Future<String?> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('${Api.baseUrl}/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+  Future<User?> login(String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${Api.baseUrl}/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('auth_token', data['token']);
-      await prefs.setString('role', data['role']); // Store role
-      await prefs.setInt(
-        'current_user_id',
-        data['user_id'],
-      ); // Store current user id
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-      return data['token'];
-    } else {
-      return null;
+        // Parse the user model
+        final user = User.fromJson(data['user']);
+
+        // Store authentication token
+        await prefs.setString('auth_token', data['token']);
+        // Store user role
+        await prefs.setString('role', data['role']);
+        // Store complete user model as JSON
+        await prefs.setString('current_user', jsonEncode(user.toJson()));
+
+        return user;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Login failed');
+      }
+    } catch (e) {
+      throw Exception('Login error: $e');
     }
   }
 
@@ -70,8 +81,7 @@ class AuthService {
         },
       );
 
-      await prefs.remove('auth_token');
-      await prefs.remove('role');
+      await UserService.clearUser();
     }
   }
 

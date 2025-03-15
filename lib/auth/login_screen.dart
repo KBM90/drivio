@@ -1,6 +1,7 @@
 import 'package:drivio_app/common/constants/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:drivio_app/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,10 +17,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService authService = AuthService();
 
   void login() async {
-    String? token = await authService.login(
-      emailController.text,
-      passwordController.text,
-    );
+    await authService.login(emailController.text, passwordController.text);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('auth_token');
+
     if (!mounted) return; // Ensure the widget is still active
     if (token != null) {
       Navigator.pushReplacementNamed(
@@ -86,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      hintText: "ferdinand@gmail.com",
+                      hintText: "Yahya.Sinwar@gmail.com",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),

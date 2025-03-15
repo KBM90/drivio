@@ -64,7 +64,7 @@ class MenuModal extends StatelessWidget {
             _buildMenuItem("Refer Friends", Icons.group),
             _buildMenuItem("Opportunities", Icons.work, badgeCount: 8),
             _buildMenuItem("Earnings", Icons.attach_money),
-            _buildMenuItem("Uber Pro", Icons.star),
+            _buildMenuItem("Drivio Pro", Icons.star),
             _buildMenuItem("Wallet", Icons.account_balance_wallet),
             _buildMenuItem("Account", Icons.person),
 
