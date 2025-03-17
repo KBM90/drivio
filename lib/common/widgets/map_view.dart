@@ -1,5 +1,6 @@
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/driver/models/driver.dart';
+import 'package:drivio_app/driver/providers/driver_dropoff_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,8 @@ class _MapViewState extends State<MapView> {
   List<LatLng> _polylinePoints = [];
   final OSRMService _osrmService = OSRMService();
   bool _isLoading = true;
+  late DriverLocationProvider locationProvider; // Define as a field
+  late DriverDropOffLocationProvider driverDropOffLocationProvider;
 
   @override
   void initState() {
@@ -38,6 +41,8 @@ class _MapViewState extends State<MapView> {
         context,
         listen: false,
       );
+      driverDropOffLocationProvider =
+          Provider.of<DriverDropOffLocationProvider>(context, listen: false);
 
       await locationProvider.updateLocation();
 
@@ -55,10 +60,31 @@ class _MapViewState extends State<MapView> {
       if (locationProvider.currentLocation != null) {
         _mapController.move(locationProvider.currentLocation!, 15.0);
       }
+
+      driverDropOffLocationProvider.addListener(() {
+        if (mounted && driverDropOffLocationProvider.dropoffLocation != null) {
+          setState(() {
+            _destination =
+                driverDropOffLocationProvider.dropoffLocation ?? null;
+          });
+
+          _updateRoute();
+        }
+      });
     } catch (e) {
       print('Error initializing map: $e');
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  void _updateRoute() async {
+    if (locationProvider.currentLocation != null && _destination != null) {
+      _polylinePoints = await _osrmService.getRouteBetweenCoordinates(
+        locationProvider.currentLocation!,
+        _destination!,
+      );
+      setState(() {});
     }
   }
 

@@ -18,9 +18,6 @@ class DriverService {
         },
       );
 
-      print('Response status: ${response.statusCode}'); // Debugging
-      print('Response body: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 

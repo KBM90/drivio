@@ -1,7 +1,10 @@
+import 'package:drivio_app/driver/models/wallet.dart';
 import 'package:flutter/material.dart';
 
 class EarningsWidget extends StatefulWidget {
-  const EarningsWidget({super.key});
+  final Wallet? wallet;
+
+  EarningsWidget({super.key, this.wallet});
 
   @override
   _EarningsWidgetState createState() => _EarningsWidgetState();
@@ -31,7 +34,7 @@ class _EarningsWidgetState extends State<EarningsWidget> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              "\$0.00",
+              widget.wallet!.balance.toString(),
               style: TextStyle(color: Colors.white, fontSize: 18),
             ),
           ),

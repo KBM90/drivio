@@ -1,6 +1,9 @@
 import 'package:drivio_app/common/widgets/safty_floating_button.dart';
 import 'package:drivio_app/driver/models/driver.dart';
+import 'package:drivio_app/driver/models/wallet.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
+import 'package:drivio_app/driver/services/wallet_service.dart';
+import 'package:drivio_app/driver/ui/screens/wallet_page.dart';
 import 'package:flutter/material.dart';
 import '../../common/widgets/map_view.dart';
 import 'widgets/earnings_widget.dart';
@@ -17,6 +20,7 @@ class DriverHomeScreen extends StatefulWidget {
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Driver? _currentDriver;
+  Wallet? _currentWallet;
 
   @override
   void initState() {
@@ -31,6 +35,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     });
   }
 
+  Future<void> _loadWallet() async {
+    final wallet = await WalletService().getWallet();
+    setState(() {
+      _currentWallet = wallet;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,7 +53,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             top: 40,
             left: MediaQuery.of(context).size.width / 2 - 300,
             right: MediaQuery.of(context).size.width / 2 - 300, // Centered
-            child: EarningsWidget(),
+            child: EarningsWidget(wallet: _currentWallet),
           ),
 
           // Menu Button (Left Side)

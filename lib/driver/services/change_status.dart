@@ -16,7 +16,7 @@ class ChangeStatus {
     }
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('auth_token');
-    int? driverId = prefs.getInt('current_user_id');
+
     final response = await http.patch(
       Uri.parse('${Api.baseUrl}/goOnline'),
       headers: {
@@ -26,7 +26,6 @@ class ChangeStatus {
             'Bearer $token', // Add this if using Sanctum token-based auth
       },
       body: jsonEncode({
-        'driverId': driverId,
         'location': {
           'latitude': currentLocation.latitude,
           'longitude': currentLocation.longitude,
