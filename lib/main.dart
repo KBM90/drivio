@@ -1,9 +1,8 @@
 import 'package:drivio_app/common/constants/routes.dart';
-import 'package:drivio_app/driver/models/driver.dart';
-import 'package:drivio_app/driver/providers/driver_dropoff_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
-import 'package:drivio_app/driver/services/driver_services.dart';
+import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
+import 'package:drivio_app/driver/providers/wallet_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -14,16 +13,15 @@ void main() async {
 
   String? token = prefs.getString('auth_token');
   String? role = prefs.getString('role');
-  Driver? driver = await DriverService.getDriver();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => DriverStatusProvider()),
         ChangeNotifierProvider(create: (_) => DriverLocationProvider()),
+        ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
         ChangeNotifierProvider(
-          create:
-              (context) => DriverDropOffLocationProvider(driverId: driver.id),
+          create: (context) => WalletProvider()..fetchWallet(),
         ),
       ],
       child: MyApp(isLoggedIn: token != null, role: role),

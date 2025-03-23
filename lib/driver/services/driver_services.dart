@@ -36,4 +36,64 @@ class DriverService {
       throw Exception('Error fetching driver: $e');
     }
   }
+
+  static Future<bool> updateDriverLocation(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      final response = await http.patch(
+        Uri.parse('${Api.baseUrl}/updateLocation'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+          errorData['message'] ?? 'Server error: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error updating driver location: $e');
+    }
+  }
+
+  static Future<bool> updateDriverDropOffLocation(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      final response = await http.patch(
+        Uri.parse('${Api.baseUrl}/updateDropOffLocation'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(
+          errorData['message'] ?? 'Server error: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error updating driver location: $e');
+    }
+  }
 }

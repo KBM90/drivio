@@ -1,10 +1,10 @@
 import 'package:drivio_app/common/widgets/safty_floating_button.dart';
 import 'package:drivio_app/driver/models/driver.dart';
-import 'package:drivio_app/driver/models/wallet.dart';
+import 'package:drivio_app/driver/providers/wallet_provider.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
-import 'package:drivio_app/driver/services/wallet_service.dart';
-import 'package:drivio_app/driver/ui/screens/wallet_page.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../common/widgets/map_view.dart';
 import 'widgets/earnings_widget.dart';
 import 'widgets/menu_button.dart';
@@ -20,26 +20,24 @@ class DriverHomeScreen extends StatefulWidget {
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Driver? _currentDriver;
-  Wallet? _currentWallet;
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentUser();
+    _loadCurrentDriver();
+    _loadWallet();
   }
 
-  Future<void> _loadCurrentUser() async {
+  Future<void> _loadCurrentDriver() async {
     final driver = await DriverService.getDriver();
+
     setState(() {
       _currentDriver = driver;
     });
   }
 
   Future<void> _loadWallet() async {
-    final wallet = await WalletService().getWallet();
-    setState(() {
-      _currentWallet = wallet;
-    });
+    await Provider.of<WalletProvider>(context, listen: false).fetchWallet();
   }
 
   @override
@@ -47,13 +45,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          MapView(driver: _currentDriver), // Displays the map
+          _currentDriver == null
+              ? const Center(
+                child: CircularProgressIndicator(),
+              ) // Show a loader
+              : MapView(driver: _currentDriver), // Displays the map
           // Earnings Widget (Centered at the Top)
           Positioned(
             top: 40,
             left: MediaQuery.of(context).size.width / 2 - 300,
             right: MediaQuery.of(context).size.width / 2 - 300, // Centered
-            child: EarningsWidget(wallet: _currentWallet),
+            child: EarningsWidget(),
           ),
 
           // Menu Button (Left Side)

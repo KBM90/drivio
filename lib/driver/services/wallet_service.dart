@@ -24,6 +24,7 @@ class WalletService {
 
     if (response.statusCode == 200) {
       // If the API returns a 200 status code, parse the wallet data
+      await prefs.setString('wallet', response.body);
       return Wallet.fromJson(jsonDecode(response.body));
     } else {
       // If the wallet is not found or an error occurs

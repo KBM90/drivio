@@ -29,7 +29,7 @@ class MenuButton extends StatelessWidget {
           child: SizedBox(
             width:
                 MediaQuery.of(context).size.width * 0.75, // 75% of screen width
-            child: const SideMenu(),
+            child: SideMenu(),
           ),
         );
       },

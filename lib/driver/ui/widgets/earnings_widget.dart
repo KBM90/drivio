@@ -1,10 +1,10 @@
 import 'package:drivio_app/driver/models/wallet.dart';
+import 'package:drivio_app/driver/providers/wallet_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class EarningsWidget extends StatefulWidget {
-  final Wallet? wallet;
-
-  EarningsWidget({super.key, this.wallet});
+  EarningsWidget({super.key});
 
   @override
   _EarningsWidgetState createState() => _EarningsWidgetState();
@@ -12,12 +12,13 @@ class EarningsWidget extends StatefulWidget {
 
 class _EarningsWidgetState extends State<EarningsWidget> {
   bool _isPageViewVisible = false; // To track the visibility of PageView
-
   // PageController to manage the page view
   final PageController _pageController = PageController();
 
   @override
   Widget build(BuildContext context) {
+    final walletProvider = Provider.of<WalletProvider>(context);
+    final Wallet? wallet = walletProvider.wallet; // Get wallet data
     return Column(
       children: [
         GestureDetector(
@@ -34,7 +35,9 @@ class _EarningsWidgetState extends State<EarningsWidget> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              widget.wallet!.balance.toString(),
+              wallet != null
+                  ? wallet.balance.toString()
+                  : "Loading...", // Listen to balance changes
               style: TextStyle(color: Colors.white, fontSize: 18),
             ),
           ),

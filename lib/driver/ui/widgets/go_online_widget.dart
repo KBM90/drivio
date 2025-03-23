@@ -28,7 +28,7 @@ class GoOnlineButton extends StatelessWidget {
             try {
               final message = await ChangeStatus().goOnline();
               // ✅ Update location
-              await locationProvider.updateLocation();
+              locationProvider.currentLocation;
               if (!context.mounted) return;
 
               // ✅ Update status after a successful request

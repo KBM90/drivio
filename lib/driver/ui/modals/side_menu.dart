@@ -237,7 +237,7 @@ class _SideMenuState extends State<SideMenu> {
         if (title == "Wallet") {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const WalletScreen()),
+            MaterialPageRoute(builder: (context) => WalletScreen()),
           );
         }
         if (title == "Account") {

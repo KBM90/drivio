@@ -1,46 +1,74 @@
-import 'package:drivio_app/common/constants/api.dart';
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:drivio_app/driver/services/driver_services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:drivio_app/common/helpers/geolocator_helper.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
-class DriverLocationProvider with ChangeNotifier {
+class DriverLocationProvider extends ChangeNotifier {
   LatLng? _currentLocation;
+  StreamSubscription<Position>? _positionStream;
 
   LatLng? get currentLocation => _currentLocation;
 
-  /// Fetch user location and update state
+  DriverLocationProvider() {
+    _startListening();
+  }
 
-  Future<void> updateLocation() async {
-    LatLng? location = await GeolocatorHelper.getCurrentLocation();
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+  void _startListening() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print("Location services are disabled.");
+      return;
+    }
 
-    if (location != null) {
-      _currentLocation = location;
-      notifyListeners(); // 🔔 Notify UI about changes
-
-      // Send location to Laravel backend
-      final response = await http.post(
-        Uri.parse('${Api.baseUrl}/updateLocation'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token', // Add if using authentication
-        },
-        body: jsonEncode(<String, dynamic>{
-          'latitude': location.latitude,
-          'longitude': location.longitude,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        print('Location updated successfully');
-      } else {
-        print('Failed to update location: ${response.body}');
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permission denied.");
+        return;
       }
     }
+
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5, // Update location every 5 meters
+      ),
+    ).listen((Position position) async {
+      try {
+        // Avoid unnecessary API calls for minor position changes
+        if (_currentLocation != null) {
+          double distanceMoved = Geolocator.distanceBetween(
+            _currentLocation!.latitude,
+            _currentLocation!.longitude,
+            position.latitude,
+            position.longitude,
+          );
+
+          if (distanceMoved < 5) {
+            return; // Skip API update if movement is less than 5 meters
+          }
+        }
+
+        _currentLocation = LatLng(position.latitude, position.longitude);
+
+        // 🔹 Ensure the API call doesn't block UI updates
+        await DriverService.updateDriverLocation(
+          position.latitude,
+          position.longitude,
+        );
+
+        notifyListeners();
+      } catch (e) {
+        print("Error updating location: $e");
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _positionStream?.cancel();
+    super.dispose();
   }
 }

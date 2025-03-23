@@ -31,13 +31,3 @@ Map<String, dynamic> _$DriverToJson(Driver instance) => <String, dynamic>{
   'driving_distance': instance.drivingDistance,
   'status': instance.status,
 };
-
-Location _$LocationFromJson(Map<String, dynamic> json) => Location(
-  latitude: (json['latitude'] as num).toDouble(),
-  longitude: (json['longitude'] as num).toDouble(),
-);
-
-Map<String, dynamic> _$LocationToJson(Location instance) => <String, dynamic>{
-  'latitude': instance.latitude,
-  'longitude': instance.longitude,
-};

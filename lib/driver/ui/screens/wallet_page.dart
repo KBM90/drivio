@@ -1,10 +1,20 @@
+import 'package:drivio_app/driver/models/wallet.dart';
+import 'package:drivio_app/driver/providers/wallet_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class WalletScreen extends StatelessWidget {
+class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
 
   @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen> {
+  @override
   Widget build(BuildContext context) {
+    final walletProvider = Provider.of<WalletProvider>(context);
+    final Wallet? wallet = walletProvider.wallet; // Get wallet data
     return Scaffold(
       appBar: AppBar(title: Text('Wallet')),
       body: Padding(
@@ -19,7 +29,7 @@ class WalletScreen extends StatelessWidget {
               ),
               SizedBox(height: 8),
               Text(
-                '\$205.74',
+                wallet != null ? wallet.balance.toString() : "Loading...",
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
