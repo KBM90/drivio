@@ -5,7 +5,7 @@ import 'package:drivio_app/driver/services/driver_services.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../common/models/ride_request.dart';
+import '../models/ride_request.dart';
 
 class RideRequestService {
   /// Fetch ride requests within 10km from driver's location & matching preferences

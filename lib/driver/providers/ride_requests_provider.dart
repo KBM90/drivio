@@ -1,4 +1,4 @@
-import 'package:drivio_app/common/models/ride_request.dart';
+import 'package:drivio_app/driver/models/ride_request.dart';
 import 'package:drivio_app/driver/services/ride_request_services.dart';
 import 'package:flutter/material.dart';
 

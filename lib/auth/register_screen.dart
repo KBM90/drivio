@@ -20,7 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isPasswordVisible = false;
   bool isConfirmPasswordVisible = false;
   bool isLoading = false;
-  String selectedRole = 'Driver'; // Default role
+  String selectedRole = 'driver'; // Default role
 
   final AuthService authService = AuthService(); // Instance of AuthService
 
@@ -105,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 DropdownButtonFormField<String>(
                   value: selectedRole,
                   items:
-                      ["Driver", "Passenger"]
+                      ["driver", "passenger"]
                           .map(
                             (role) => DropdownMenuItem(
                               value: role,

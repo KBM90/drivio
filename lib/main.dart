@@ -11,7 +11,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure async storage is ready
   SharedPreferences prefs = await SharedPreferences.getInstance();
 
-  String? token = prefs.getString('auth_token');
   String? role = prefs.getString('role');
 
   runApp(
@@ -20,11 +19,9 @@ void main() async {
         ChangeNotifierProvider(create: (context) => DriverStatusProvider()),
         ChangeNotifierProvider(create: (_) => DriverLocationProvider()),
         ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
-        ChangeNotifierProvider(
-          create: (context) => WalletProvider()..fetchWallet(),
-        ),
+        ChangeNotifierProvider(create: (context) => WalletProvider()),
       ],
-      child: MyApp(isLoggedIn: token != null, role: role),
+      child: MyApp(isLoggedIn: role != null, role: role),
     ),
   );
 }

@@ -10,15 +10,14 @@ class ChangeStatus {
   Future<String?> goOnline() async {
     // Fetch the current location
     final LatLng? currentLocation = await GeolocatorHelper.getCurrentLocation();
-
-    if (currentLocation == null) {
-      throw Exception('Unable to fetch current location');
-    }
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('auth_token');
+    if (currentLocation == null) {
+      return 'Unable to fetch current location';
+    }
 
     final response = await http.patch(
-      Uri.parse('${Api.baseUrl}/goOnline'),
+      Uri.parse('${Api.baseUrl}/toggleStatus'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -26,83 +25,104 @@ class ChangeStatus {
             'Bearer $token', // Add this if using Sanctum token-based auth
       },
       body: jsonEncode({
-        'location': {
+        'location': <String, double>{
           'latitude': currentLocation.latitude,
           'longitude': currentLocation.longitude,
         },
+        'status': 'active',
       }),
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      await prefs.setBool('status', data['status']);
+      await prefs.setString('status', data['status']);
 
       return data['message']; // Return the success message
     } else if (response.statusCode == 403) {
       // Handle unauthorized access
       final data = jsonDecode(response.body);
-      throw Exception(
-        data['message'],
-      ); // Throw an exception for unauthorized access
+      print('Response Status: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      throw Exception(data['message']);
     } else if (response.statusCode == 404) {
       // Handle driver not found
       final data = jsonDecode(response.body);
-      throw Exception(
-        data['message'],
-      ); // Throw an exception for driver not found
+      throw Exception(data['message']);
     } else {
       // Handle other errors
+
       final data = jsonDecode(response.body);
       throw Exception(data['message']);
     }
   }
 
   Future<String?> goOffline() async {
-    // Fetch the current location
-    final LatLng? currentLocation = await GeolocatorHelper.getCurrentLocation();
-
-    if (currentLocation == null) {
-      throw Exception('Unable to fetch current location');
-    }
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('auth_token');
-    int? driverId = prefs.getInt('current_user_id');
+
     final response = await http.patch(
-      Uri.parse('${Api.baseUrl}/goOffline'),
+      Uri.parse('${Api.baseUrl}/toggleStatus'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization':
             'Bearer $token', // Add this if using Sanctum token-based auth
       },
-      body: jsonEncode({
-        'driverId': driverId,
-        'location': {
-          'latitude': currentLocation.latitude,
-          'longitude': currentLocation.longitude,
-        },
-      }),
+      body: jsonEncode({'status': 'inactive'}),
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      await prefs.setBool('status', data['status']);
+      await prefs.setString('status', data['status']);
 
       return data['message']; // Return the success message
     } else if (response.statusCode == 403) {
       // Handle unauthorized access
       final data = jsonDecode(response.body);
-      throw Exception(
-        data['message'],
-      ); // Throw an exception for unauthorized access
+      throw Exception(data['message']);
     } else if (response.statusCode == 404) {
       // Handle driver not found
       final data = jsonDecode(response.body);
-      throw Exception(
-        data['message'],
-      ); // Throw an exception for driver not found
+      throw Exception(data['message']);
     } else {
       // Handle other errors
+
+      final data = jsonDecode(response.body);
+      throw Exception(data['message']);
+    }
+  }
+
+  Future<String?> onTrip() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('auth_token');
+
+    final response = await http.patch(
+      Uri.parse('${Api.baseUrl}/toggleStatus'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization':
+            'Bearer $token', // Add this if using Sanctum token-based auth
+      },
+      body: jsonEncode({'status': 'on_trip'}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      await prefs.setString('status', data['status']);
+
+      return data['message']; // Return the success message
+    } else if (response.statusCode == 403) {
+      // Handle unauthorized access
+      final data = jsonDecode(response.body);
+      throw Exception(data['message']);
+    } else if (response.statusCode == 404) {
+      // Handle driver not found
+      final data = jsonDecode(response.body);
+      throw Exception(data['message']);
+    } else {
+      // Handle other errors
+
       final data = jsonDecode(response.body);
       throw Exception(data['message']);
     }

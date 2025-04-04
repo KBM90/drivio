@@ -49,7 +49,7 @@ class StatusBar extends StatelessWidget {
                             children: [
                               PreferencesButton(),
                               Text(
-                                provider.driverStatus
+                                provider.driverStatus == 'active'
                                     ? "You're online"
                                     : "You're offline",
                                 style: const TextStyle(

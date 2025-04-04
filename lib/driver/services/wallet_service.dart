@@ -7,28 +7,38 @@ import 'package:shared_preferences/shared_preferences.dart'; // For storing toke
 class WalletService {
   // Fetch the wallet of the authenticated user
   Future<Wallet> getWallet() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token'); // For storing auth token
-    // Get the auth token from secure storage
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
 
-    if (token == null) {
-      throw Exception('Authentication token not found');
-    }
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
 
-    final response = await http.get(
-      Uri.parse('${Api.baseUrl}/getWallet'),
-      headers: {
-        'Authorization': 'Bearer $token', // Pass the token in the header
-      },
-    );
+      final response = await http.get(
+        Uri.parse('${Api.baseUrl}/getWallet'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json', // Explicitly request JSON
+        },
+      );
 
-    if (response.statusCode == 200) {
-      // If the API returns a 200 status code, parse the wallet data
-      await prefs.setString('wallet', response.body);
-      return Wallet.fromJson(jsonDecode(response.body));
-    } else {
-      // If the wallet is not found or an error occurs
-      throw Exception('Failed to load wallet');
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return Wallet.fromJson(responseData);
+      } else {
+        // Try to parse error message from response
+        final errorResponse = jsonDecode(response.body);
+
+        throw Exception(
+          errorResponse['message'] ??
+              'Failed to load wallet. Status: ${response.statusCode}',
+        );
+      }
+    } on FormatException catch (e) {
+      throw Exception('Invalid server response format: $e');
+    } catch (e) {
+      throw Exception('Error fetching wallet: $e');
     }
   }
 }

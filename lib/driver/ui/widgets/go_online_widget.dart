@@ -13,6 +13,8 @@ class GoOnlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusProvider = Provider.of<DriverStatusProvider>(context);
+
     return Positioned(
       bottom: 80,
       left: 0,
@@ -26,26 +28,17 @@ class GoOnlineButton extends StatelessWidget {
               listen: false,
             );
             try {
-              final message = await ChangeStatus().goOnline();
-              // ✅ Update location
-              locationProvider.currentLocation;
-              if (!context.mounted) return;
-
               // ✅ Update status after a successful request
-              Provider.of<DriverStatusProvider>(
-                context,
-                listen: false,
-              ).toggleStatus(true);
-
+              await statusProvider.toggleStatus('active');
+              if (!context.mounted) return;
               // ✅ Move map to new location
               if (locationProvider.currentLocation != null) {
-                print(locationProvider.currentLocation);
                 mapController.move(locationProvider.currentLocation!, 15.0);
               }
 
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(message!),
+                  content: Text(statusProvider.statusMessage!),
                   backgroundColor: Colors.green,
                 ),
               );

@@ -19,7 +19,7 @@ Driver _$DriverFromJson(Map<String, dynamic> json) => Driver(
           : Location.fromJson(json['dropoff_location'] as Map<String, dynamic>),
   preferences: json['preferences'] as Map<String, dynamic>?,
   drivingDistance: (json['driving_distance'] as num?)?.toDouble(),
-  status: json['status'] as bool,
+  status: $enumDecode(_$DriverStatusEnumMap, json['status']),
 );
 
 Map<String, dynamic> _$DriverToJson(Driver instance) => <String, dynamic>{
@@ -29,5 +29,11 @@ Map<String, dynamic> _$DriverToJson(Driver instance) => <String, dynamic>{
   'dropoff_location': instance.dropoffLocation,
   'preferences': instance.preferences,
   'driving_distance': instance.drivingDistance,
-  'status': instance.status,
+  'status': _$DriverStatusEnumMap[instance.status]!,
+};
+
+const _$DriverStatusEnumMap = {
+  DriverStatus.active: 'active',
+  DriverStatus.inactive: 'inactive',
+  DriverStatus.onTrip: 'on_trip',
 };

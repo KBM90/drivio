@@ -1,11 +1,12 @@
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/models/location.dart';
-import 'package:drivio_app/common/models/ride_request.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
-import 'package:drivio_app/driver/services/ride_request_services.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
+import 'package:drivio_app/driver/services/driver_services.dart';
+import 'package:drivio_app/driver/ui/modals/ride_request_modal.dart';
+import 'package:drivio_app/driver/ui/widgets/cancel_trip_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -25,12 +26,13 @@ class MapView extends StatefulWidget {
 
 class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   final MapController _mapController = MapController();
-  LatLng? _destination;
-  List<LatLng> _polylinePoints = [];
+  List<LatLng> _routePolyline = [];
   final OSRMService _osrmService = OSRMService();
   bool _isLoading = true;
   bool _isMapReady = false; // 🔹 Track if the map is ready
   late DriverLocationProvider locationProvider;
+  LatLng? _destination;
+  LatLng? _pickup;
 
   @override
   void initState() {
@@ -42,20 +44,21 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       listen: false,
     );
 
-    if (widget.driver?.dropoffLocation != null) {
-      _destination = LatLng(
-        widget.driver!.dropoffLocation!.latitude,
-        widget.driver!.dropoffLocation!.longitude,
-      );
-    }
-
     _initializeMap();
 
     // 🔹 Listen for location updates to recalculate the route
-    locationProvider.addListener(() {
+    locationProvider.addListener(() async {
       if (mounted && locationProvider.currentLocation != null && _isMapReady) {
-        _updateRoute();
         _mapController.move(locationProvider.currentLocation!, 15.0);
+
+        // 🚀 Recalculate the route if there's an active destination
+        if (_destination != null) {
+          await _fetchRoute(
+            locationProvider.currentLocation!,
+            _pickup!,
+            _destination!, // 🚀 Keep updating the route dynamically
+          );
+        }
       }
     });
   }
@@ -88,14 +91,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
   Future<void> _initializeMap() async {
     try {
-      if (widget.driver?.dropoffLocation != null) {
-        await _getDestinationCoordinates(widget.driver!.dropoffLocation!);
-      }
-
-      if (locationProvider.currentLocation != null && _destination != null) {
-        await _updateRoute(); // Ensures the initial route is set
-      }
-
       if (locationProvider.currentLocation != null && _isMapReady) {
         _mapController.move(locationProvider.currentLocation!, 15.0);
       }
@@ -106,23 +101,42 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _updateRoute() async {
-    if (locationProvider.currentLocation != null && _destination != null) {
-      _polylinePoints = await _osrmService.getRouteBetweenCoordinates(
+  Future<void> _getDestinationCoordinates(
+    Location pickupLocation,
+    Location dropoffLocation,
+  ) async {
+    if (locationProvider.currentLocation != null) {
+      await _fetchRoute(
         locationProvider.currentLocation!,
-        _destination!,
+        LatLng(pickupLocation.latitude, pickupLocation.longitude),
+        LatLng(dropoffLocation.latitude, dropoffLocation.longitude),
       );
-      setState(() {}); // 🔹 Triggers UI update
+      setState(() {
+        _pickup = LatLng(pickupLocation.latitude, pickupLocation.longitude);
+        _destination = LatLng(
+          dropoffLocation.latitude,
+          dropoffLocation.longitude,
+        );
+      });
+    } else {
+      print("Driver location not available yet.");
     }
   }
 
-  Future<void> _getDestinationCoordinates(Location dropoffLocation) async {
-    setState(() {
-      _destination = LatLng(
-        dropoffLocation.latitude,
-        dropoffLocation.longitude,
-      );
-    });
+  Future<void> _fetchRoute(LatLng driver, LatLng pickup, LatLng dropoff) async {
+    List<LatLng> newPolyline = await _osrmService.getRouteBetweenCoordinates(
+      driver,
+      pickup,
+      dropoff,
+    );
+
+    if (newPolyline.isNotEmpty) {
+      setState(() {
+        _routePolyline = newPolyline;
+      });
+    } else {
+      print("Failed to fetch route from OSRMService.");
+    }
   }
 
   @override
@@ -170,25 +184,62 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                       color: Color.fromARGB(255, 8, 8, 8),
                     ),
                   ),
-
-                // Ride Requests Pickup Markers
-                ...rideRequestsProvider.rideRequests.map((rideRequest) {
-                  return Marker(
-                    point: LatLng(
-                      rideRequest.pickupLocation.latitude,
-                      rideRequest.pickupLocation.longitude,
-                    ),
-                    child: const Icon(
-                      Icons.person_pin_circle,
-                      size: 40,
-                      color: Color.fromARGB(255, 93, 2, 2),
-                    ),
-                  );
-                }),
               ],
             ),
 
-            // Destination Marker
+            if (driverStatusProvider.driverStatus == 'active')
+              MarkerLayer(
+                markers:
+                    rideRequestsProvider.rideRequests.map((rideRequest) {
+                      return Marker(
+                        point: LatLng(
+                          rideRequest.pickupLocation.latitude,
+                          rideRequest.pickupLocation.longitude,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            // Get the tapped ride request
+                            _getDestinationCoordinates(
+                              rideRequest.pickupLocation, // ✅ Pickup location
+                              rideRequest
+                                  .destinationLocation, // ✅ Dropoff location (was wrong before)
+                            );
+                            _mapController.move(
+                              locationProvider.currentLocation!,
+                              15.0 + (rideRequest.distanceKm! / 2),
+                            );
+                            showRideRequestModal(context, rideRequest).then((
+                              accepted,
+                            ) async {
+                              if (accepted != true) {
+                                setState(() {
+                                  _routePolyline = [];
+                                  _destination = null;
+                                });
+                              }
+                            });
+                          },
+                          child: const Icon(
+                            Icons.person_pin_circle,
+                            size: 40,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+              ),
+
+            // Route Polyline
+            if (_routePolyline.isNotEmpty)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: _routePolyline,
+                    color: const Color.fromARGB(255, 9, 9, 9),
+                    strokeWidth: 4,
+                  ),
+                ],
+              ),
             if (_destination != null)
               MarkerLayer(
                 markers: [
@@ -200,17 +251,13 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                       color: Color.fromARGB(255, 11, 3, 247),
                     ),
                   ),
-                ],
-              ),
-
-            // Route Polyline
-            if (_polylinePoints.isNotEmpty)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: _polylinePoints,
-                    color: const Color.fromARGB(255, 9, 9, 9),
-                    strokeWidth: 4,
+                  Marker(
+                    point: _pickup!,
+                    child: const Icon(
+                      Icons.person_pin_circle,
+                      size: 40,
+                      color: Color.fromARGB(255, 11, 3, 247),
+                    ),
                   ),
                 ],
               ),
@@ -227,17 +274,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                 locationProvider.currentLocation;
                 if (locationProvider.currentLocation != null && _isMapReady) {
                   _mapController.move(locationProvider.currentLocation!, 15.0);
-                  final newPolylinePoints = await _osrmService
-                      .getRouteBetweenCoordinates(
-                        locationProvider.currentLocation!,
-                        _destination!,
-                      );
-                  // Recalculate polyline if destination exists
-                  if (_destination != null) {
-                    setState(() {
-                      _polylinePoints = newPolylinePoints;
-                    });
-                  }
                 }
               } catch (e) {
                 print('Error updating location: $e');
@@ -253,9 +289,10 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
         ),
 
         /// Listen to driverStatus changes
-        driverStatusProvider.driverStatus
-            ? GoOfflineButton()
-            : GoOnlineButton(mapController: _mapController),
+        if (driverStatusProvider.driverStatus == 'active') GoOfflineButton(),
+        if (driverStatusProvider.driverStatus == 'inactive')
+          GoOnlineButton(mapController: _mapController),
+        if (driverStatusProvider.driverStatus == 'on_trip') CancelTripWidget(),
       ],
     );
   }

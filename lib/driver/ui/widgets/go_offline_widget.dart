@@ -30,7 +30,7 @@ class _GoOfflineButtonState extends State<GoOfflineButton> {
               Provider.of<DriverStatusProvider>(
                 context,
                 listen: false,
-              ).toggleStatus(false);
+              ).toggleStatus('inactive');
 
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

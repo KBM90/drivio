@@ -28,7 +28,7 @@ class AuthService {
       }),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       final data = jsonDecode(response.body);
       return data['token'];
     } else {
@@ -52,7 +52,7 @@ class AuthService {
         final user = User.fromJson(data['user']);
 
         // Store authentication token
-        await prefs.setString('auth_token', data['token']);
+        await prefs.setString('auth_token', data['auth_token']);
         // Store user role
         await prefs.setString('role', data['role']);
         // Store complete user model as JSON
@@ -90,8 +90,10 @@ class AuthService {
     return prefs.getString('auth_token') != null;
   }
 
-  Future<String?> getUserRole() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('role'); // Returns 'driver', 'passenger', or null
+  Future<void> getUser(String token) async {
+    var response = await http.get(
+      Uri.parse('${Api.baseUrl}/user'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
   }
 }

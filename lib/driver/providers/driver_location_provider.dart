@@ -7,8 +7,10 @@ import 'package:latlong2/latlong.dart';
 class DriverLocationProvider extends ChangeNotifier {
   LatLng? _currentLocation;
   StreamSubscription<Position>? _positionStream;
+  LatLng? _destination;
 
   LatLng? get currentLocation => _currentLocation;
+  LatLng? get destination => _destination;
 
   DriverLocationProvider() {
     _startListening();
@@ -64,6 +66,15 @@ class DriverLocationProvider extends ChangeNotifier {
         print("Error updating location: $e");
       }
     });
+  }
+
+  Future<void> getDestination(LatLng passengerDestination) async {
+    await DriverService.updateDriverDropOffLocation(
+      passengerDestination.latitude,
+      passengerDestination.longitude,
+    );
+    _destination = passengerDestination;
+    notifyListeners();
   }
 
   @override

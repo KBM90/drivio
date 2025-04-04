@@ -1,10 +1,13 @@
+import 'package:drivio_app/driver/services/change_status.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DriverStatusProvider extends ChangeNotifier {
-  bool _driverStatus = false;
+  String _driverStatus = 'inactive';
+  String? _statusMessage = "";
 
-  bool get driverStatus => _driverStatus;
+  String get driverStatus => _driverStatus;
+  String? get statusMessage => _statusMessage;
 
   DriverStatusProvider() {
     _loadStatus();
@@ -12,14 +15,21 @@ class DriverStatusProvider extends ChangeNotifier {
 
   Future<void> _loadStatus() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    _driverStatus = prefs.getBool("status") ?? false;
+    _driverStatus = prefs.getString("status") ?? 'inactive';
+
     notifyListeners();
   }
 
-  Future<void> toggleStatus(bool status) async {
+  Future<void> toggleStatus(String status) async {
+    if (status == 'active') {
+      _statusMessage = await ChangeStatus().goOnline();
+    } else if (status == 'on_trip') {
+      _statusMessage = await ChangeStatus().onTrip();
+    } else {
+      _statusMessage = await ChangeStatus().goOffline();
+    }
+
     _driverStatus = status;
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool("status", status);
     notifyListeners();
   }
 }

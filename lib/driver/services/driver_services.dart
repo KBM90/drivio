@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:drivio_app/common/constants/api.dart';
 import 'package:drivio_app/driver/models/driver.dart';
+import 'package:drivio_app/driver/providers/driver_status_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,30 +11,37 @@ class DriverService {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
 
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
       final response = await http.get(
         Uri.parse('${Api.baseUrl}/driver'),
         headers: {
-          'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        if (data['driver'] == null) {
-          throw Exception('Driver data not found in response');
-        }
-
         return Driver.fromJson(data['driver']);
       } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(
-          errorData['message'] ?? 'Server error: ${response.statusCode}',
-        );
+        // Try to parse error message
+        try {
+          final errorData = jsonDecode(response.body);
+          print(errorData);
+          throw Exception(
+            errorData['message'] ?? 'Error ${response.statusCode}',
+          );
+        } catch (_) {
+          throw Exception('Server responded with: ${response.body}');
+        }
       }
+    } on FormatException catch (e) {
+      throw Exception('Invalid server response format: ${e.message}');
     } catch (e) {
-      throw Exception('Error fetching driver: $e');
+      throw Exception('Failed to fetch driver: $e');
     }
   }
 
@@ -91,6 +99,49 @@ class DriverService {
         throw Exception(
           errorData['message'] ?? 'Server error: ${response.statusCode}',
         );
+      }
+    } catch (e) {
+      throw Exception('Error updating driver location: $e');
+    }
+  }
+
+  static Future<String?> accesptRideRequest(
+    int rideId,
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      final response = await http.patch(
+        Uri.parse('${Api.baseUrl}/acceptRide'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'rideId': rideId,
+          'latitude': latitude,
+          'longitude': longitude,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['message'];
+      } else if (response.statusCode == 403) {
+        // Handle unauthorized access
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else if (response.statusCode == 404) {
+        // Handle driver not found
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else {
+        // Handle other errors
+
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
       }
     } catch (e) {
       throw Exception('Error updating driver location: $e');

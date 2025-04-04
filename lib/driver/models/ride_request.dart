@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'location.dart'; // ✅ Import Location
+import '../../common/models/location.dart'; // ✅ Import Location
 
 part 'ride_request.g.dart';
 
