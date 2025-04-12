@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:drivio_app/common/constants/api.dart';
 import 'package:drivio_app/driver/models/driver.dart';
-import 'package:drivio_app/driver/providers/driver_status_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -105,7 +104,7 @@ class DriverService {
     }
   }
 
-  static Future<String?> accesptRideRequest(
+  static Future<String?> acceptRideRequest(
     int rideId,
     double latitude,
     double longitude,
@@ -135,6 +134,46 @@ class DriverService {
         throw Exception(data['message']);
       } else if (response.statusCode == 404) {
         // Handle driver not found
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else {
+        // Handle other errors
+
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      }
+    } catch (e) {
+      throw Exception('Error updating driver location: $e');
+    }
+  }
+
+  static Future<String?> cancelTrip(String reason) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final int? rideId = prefs.getInt('rideId');
+
+      final response = await http.patch(
+        Uri.parse('${Api.baseUrl}/cancelTrip'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'reason': reason, 'ride_request_id': rideId}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['message'];
+      } else if (response.statusCode == 403) {
+        // Handle unauthorized access
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else if (response.statusCode == 404) {
+        // Handle Ride not found or driver not found
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else if (response.statusCode == 422) {
+        // Handle insertion validation error
         final data = jsonDecode(response.body);
         throw Exception(data['message']);
       } else {

@@ -52,10 +52,10 @@ class ReferFriendsScreen extends StatelessWidget {
                 onPressed: () {
                   // Handle invite button press
                 },
-                child: Text('Invite'),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 ),
+                child: Text('Invite'),
               ),
             ),
           ],

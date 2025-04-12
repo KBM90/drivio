@@ -27,7 +27,7 @@ class _SideMenuState extends State<SideMenu> {
   }
 
   Future<void> _loadCurrentUser() async {
-    final user = await UserService.getCurrentUser();
+    final user = await UserService.getPersistanceCurrentUser();
     setState(() {
       _currentUser = user;
     });

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class EarningsWidget extends StatefulWidget {
-  EarningsWidget({super.key});
+  const EarningsWidget({super.key});
 
   @override
   _EarningsWidgetState createState() => _EarningsWidgetState();

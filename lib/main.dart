@@ -1,8 +1,10 @@
+import 'package:device_preview/device_preview.dart';
 import 'package:drivio_app/common/constants/routes.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/providers/wallet_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -21,7 +23,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
         ChangeNotifierProvider(create: (context) => WalletProvider()),
       ],
-      child: MyApp(isLoggedIn: role != null, role: role),
+      child: MyApp(isLoggedIn: true, role: role),
     ),
   );
 }

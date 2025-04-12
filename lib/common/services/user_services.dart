@@ -3,7 +3,7 @@ import 'package:drivio_app/common/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserService {
-  static Future<User?> getCurrentUser() async {
+  static Future<User?> getPersistanceCurrentUser() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       final String? userJson = prefs.getString('current_user');

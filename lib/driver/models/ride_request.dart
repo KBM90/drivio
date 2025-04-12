@@ -1,3 +1,5 @@
+import 'package:drivio_app/common/models/transporttype.dart';
+import 'package:drivio_app/passenger/models/passenger.dart';
 import 'package:json_annotation/json_annotation.dart';
 import '../../common/models/location.dart'; // ✅ Import Location
 
@@ -6,12 +8,14 @@ part 'ride_request.g.dart';
 @JsonSerializable()
 class RideRequest {
   final int id;
-  @JsonKey(name: 'passenger_id')
-  final int passengerId;
+  @JsonKey(name: 'passenger')
+  final Passenger passenger; // Change from passengerId to full Passenger object
   @JsonKey(name: 'driver_id')
   final int? driverId;
   @JsonKey(name: 'transport_type_id')
   final int? transportTypeId;
+  @JsonKey(name: 'transport_type')
+  final TransportType? transportType; // Add this field
   final String? status;
   final double? price;
   @JsonKey(name: 'pickup_location')
@@ -36,9 +40,10 @@ class RideRequest {
 
   RideRequest({
     required this.id,
-    required this.passengerId,
+    required this.passenger, // Update constructor
     this.driverId,
     required this.transportTypeId,
+    this.transportType, // Add to constructor
     required this.status,
     this.price,
     required this.pickupLocation,
@@ -56,18 +61,22 @@ class RideRequest {
   factory RideRequest.fromJson(Map<String, dynamic> json) {
     return RideRequest(
       id: json['id'] ?? 0,
-      passengerId: json['passenger_id'] ?? 0,
+      passenger: Passenger.fromJson(json['passenger'] ?? {}),
       driverId: json['driver_id'],
       transportTypeId: json['transport_type_id'],
+      transportType:
+          json['transport_type'] != null
+              ? TransportType.fromJson(json['transport_type'])
+              : null,
       status: json['status'] ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      price: (json['price'] as num?)?.toDouble(),
       preferences:
           json['preferences'] is Map<String, dynamic>
               ? json['preferences']
               : {},
-      distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0.0,
-      estimatedTimeMin: (json['estimated_time_min'] as num?)?.toInt() ?? 0,
-      estimatedFare: (json['estimated_fare'] as num?)?.toDouble() ?? 0.0,
+      distanceKm: (json['distance_km'] as num?)?.toDouble(),
+      estimatedTimeMin: (json['estimated_time_min'] as num?)?.toInt(),
+      estimatedFare: (json['estimated_fare'] as num?)?.toDouble(),
       requestedAt:
           json['requested_at'] != null
               ? DateTime.parse(json['requested_at'])
@@ -76,10 +85,14 @@ class RideRequest {
           json['accepted_at'] != null
               ? DateTime.parse(json['accepted_at'])
               : null,
-      pickupLocation: Location.fromJson(json['pickup_location'] ?? {}),
-      destinationLocation: Location.fromJson(
-        json['destination_location'] ?? {},
-      ),
+      pickupLocation:
+          json['pickup_location'] != null
+              ? Location.fromJson(json['pickup_location'])
+              : Location(latitude: null, longitude: null), // Handle null case
+      destinationLocation:
+          json['destination_location'] != null
+              ? Location.fromJson(json['destination_location'])
+              : Location(latitude: null, longitude: null),
     );
   }
 

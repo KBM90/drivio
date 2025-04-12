@@ -8,9 +8,15 @@ part of 'ride_request.dart';
 
 RideRequest _$RideRequestFromJson(Map<String, dynamic> json) => RideRequest(
   id: (json['id'] as num).toInt(),
-  passengerId: (json['passenger_id'] as num).toInt(),
+  passenger: Passenger.fromJson(json['passenger'] as Map<String, dynamic>),
   driverId: (json['driver_id'] as num?)?.toInt(),
   transportTypeId: (json['transport_type_id'] as num?)?.toInt(),
+  transportType:
+      json['transport_type'] == null
+          ? null
+          : TransportType.fromJson(
+            json['transport_type'] as Map<String, dynamic>,
+          ),
   status: json['status'] as String?,
   price: (json['price'] as num?)?.toDouble(),
   pickupLocation: Location.fromJson(
@@ -44,9 +50,10 @@ RideRequest _$RideRequestFromJson(Map<String, dynamic> json) => RideRequest(
 Map<String, dynamic> _$RideRequestToJson(RideRequest instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'passenger_id': instance.passengerId,
+      'passenger': instance.passenger,
       'driver_id': instance.driverId,
       'transport_type_id': instance.transportTypeId,
+      'transport_type': instance.transportType,
       'status': instance.status,
       'price': instance.price,
       'pickup_location': instance.pickupLocation,

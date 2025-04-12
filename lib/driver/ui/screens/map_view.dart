@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/models/location.dart';
+import 'package:drivio_app/common/widgets/marker.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
-import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:drivio_app/driver/ui/modals/ride_request_modal.dart';
 import 'package:drivio_app/driver/ui/widgets/cancel_trip_widget.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +33,10 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   bool _isLoading = true;
   bool _isMapReady = false; // 🔹 Track if the map is ready
   late DriverLocationProvider locationProvider;
+  late RideRequestsProvider rideRequestsProvider;
+  late DriverStatusProvider driverStatusProvider;
+  Timer? _debounce;
+
   LatLng? _destination;
   LatLng? _pickup;
 
@@ -39,32 +45,65 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this); // 🔹 Add observer
 
-    locationProvider = Provider.of<DriverLocationProvider>(
+    locationProvider = context.read<DriverLocationProvider>();
+    rideRequestsProvider = Provider.of<RideRequestsProvider>(
+      context,
+      listen: false,
+    );
+    driverStatusProvider = Provider.of<DriverStatusProvider>(
       context,
       listen: false,
     );
 
-    _initializeMap();
+    // Delay the initialization until after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeMap();
+      _setupLocationListener();
+    });
+  }
 
-    // 🔹 Listen for location updates to recalculate the route
-    locationProvider.addListener(() async {
-      if (mounted && locationProvider.currentLocation != null && _isMapReady) {
-        _mapController.move(locationProvider.currentLocation!, 15.0);
-
-        // 🚀 Recalculate the route if there's an active destination
-        if (_destination != null) {
-          await _fetchRoute(
-            locationProvider.currentLocation!,
-            _pickup!,
-            _destination!, // 🚀 Keep updating the route dynamically
-          );
+  void _setupLocationListener() {
+    locationProvider.addListener(() {
+      _debounce?.cancel(); // Cancel previous timer
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce = Timer(const Duration(seconds: 5), () async {
+        if (mounted &&
+            locationProvider.currentLocation != null &&
+            _isMapReady) {
+          if (rideRequestsProvider.currentRideRequest != null) {
+            await _fetchRoute(
+              locationProvider.currentLocation!,
+              LatLng(
+                rideRequestsProvider
+                    .currentRideRequest!
+                    .pickupLocation
+                    .latitude!,
+                rideRequestsProvider
+                    .currentRideRequest!
+                    .pickupLocation
+                    .longitude!,
+              ),
+              LatLng(
+                rideRequestsProvider
+                    .currentRideRequest!
+                    .destinationLocation
+                    .latitude!,
+                rideRequestsProvider
+                    .currentRideRequest!
+                    .destinationLocation
+                    .longitude!,
+              ),
+            );
+          }
         }
-      }
+      });
     });
   }
 
   @override
   void dispose() {
+    _mapController.dispose();
+    _debounce?.cancel();
     WidgetsBinding.instance.removeObserver(this); // 🔹 Remove observer
     super.dispose();
   }
@@ -91,8 +130,45 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
   Future<void> _initializeMap() async {
     try {
-      if (locationProvider.currentLocation != null && _isMapReady) {
-        _mapController.move(locationProvider.currentLocation!, 15.0);
+      if (driverStatusProvider.driverStatus == "on_trip" &&
+          rideRequestsProvider.currentRideRequest == null) {
+        await rideRequestsProvider.fetchPersistanceRideRequest();
+      }
+
+      if (rideRequestsProvider.currentRideRequest != null &&
+          locationProvider.currentLocation != null) {
+        _pickup = LatLng(
+          rideRequestsProvider.currentRideRequest!.pickupLocation.latitude!,
+          rideRequestsProvider.currentRideRequest!.pickupLocation.longitude!,
+        );
+        _destination = LatLng(
+          rideRequestsProvider
+              .currentRideRequest!
+              .destinationLocation
+              .latitude!,
+          rideRequestsProvider
+              .currentRideRequest!
+              .destinationLocation
+              .longitude!,
+        );
+
+        await _fetchRoute(
+          locationProvider.currentLocation!,
+          LatLng(
+            rideRequestsProvider.currentRideRequest!.pickupLocation.latitude!,
+            rideRequestsProvider.currentRideRequest!.pickupLocation.longitude!,
+          ),
+          LatLng(
+            rideRequestsProvider
+                .currentRideRequest!
+                .destinationLocation
+                .latitude!,
+            rideRequestsProvider
+                .currentRideRequest!
+                .destinationLocation
+                .longitude!,
+          ),
+        );
       }
     } catch (e) {
       print('Error initializing map: $e');
@@ -105,17 +181,18 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     Location pickupLocation,
     Location dropoffLocation,
   ) async {
+    print("_getDestinationCoordinates()");
     if (locationProvider.currentLocation != null) {
       await _fetchRoute(
         locationProvider.currentLocation!,
-        LatLng(pickupLocation.latitude, pickupLocation.longitude),
-        LatLng(dropoffLocation.latitude, dropoffLocation.longitude),
+        LatLng(pickupLocation.latitude!, pickupLocation.longitude!),
+        LatLng(dropoffLocation.latitude!, dropoffLocation.longitude!),
       );
       setState(() {
-        _pickup = LatLng(pickupLocation.latitude, pickupLocation.longitude);
+        _pickup = LatLng(pickupLocation.latitude!, pickupLocation.longitude!);
         _destination = LatLng(
-          dropoffLocation.latitude,
-          dropoffLocation.longitude,
+          dropoffLocation.latitude!,
+          dropoffLocation.longitude!,
         );
       });
     } else {
@@ -124,29 +201,46 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   }
 
   Future<void> _fetchRoute(LatLng driver, LatLng pickup, LatLng dropoff) async {
-    List<LatLng> newPolyline = await _osrmService.getRouteBetweenCoordinates(
-      driver,
-      pickup,
-      dropoff,
-    );
+    print("_fetchRoute()");
+    // 🔹 Validate coordinates (0.0, 0.0 is invalid)
+    if (pickup.latitude == 0.0 ||
+        pickup.longitude == 0.0 ||
+        dropoff.latitude == 0.0 ||
+        dropoff.longitude == 0.0) {
+      print("Invalid pickup/dropoff coordinates.");
+      return;
+    }
 
-    if (newPolyline.isNotEmpty) {
-      setState(() {
-        _routePolyline = newPolyline;
-      });
-    } else {
-      print("Failed to fetch route from OSRMService.");
+    try {
+      List<LatLng> newPolyline = await _osrmService.getRouteBetweenCoordinates(
+        driver,
+        pickup,
+        dropoff,
+      );
+
+      if (newPolyline.isNotEmpty) {
+        setState(() => _routePolyline = newPolyline);
+      } else {
+        print("OSRM returned an empty route.");
+      }
+    } catch (e) {
+      print("Failed to fetch route: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final driverStatusProvider = Provider.of<DriverStatusProvider>(context);
-    final locationProvider = Provider.of<DriverLocationProvider>(context);
     final rideRequestsProvider = Provider.of<RideRequestsProvider>(context);
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
+    }
+    if (driverStatusProvider.driverStatus == 'inactive' && !_isLoading) {
+      setState(() {
+        _routePolyline = [];
+        _destination = null;
+      });
     }
 
     return Stack(
@@ -166,6 +260,10 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
               // 🔹 Initialize map after it's ready
               await _initializeMap();
+              if (locationProvider.currentLocation != null) {
+                _mapController.move(locationProvider.currentLocation!, 15.0);
+              }
+
               // Listen to ride requests updates
             },
           ),
@@ -187,27 +285,30 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
               ],
             ),
 
-            if (driverStatusProvider.driverStatus == 'active')
+            if (driverStatusProvider.driverStatus == 'active' &&
+                rideRequestsProvider.rideRequests.isNotEmpty)
+              // ✅ Ride Request Markers
               MarkerLayer(
                 markers:
                     rideRequestsProvider.rideRequests.map((rideRequest) {
                       return Marker(
                         point: LatLng(
-                          rideRequest.pickupLocation.latitude,
-                          rideRequest.pickupLocation.longitude,
+                          rideRequest.pickupLocation.latitude!,
+                          rideRequest.pickupLocation.longitude!,
                         ),
                         child: GestureDetector(
-                          onTap: () {
+                          onTap: () async {
                             // Get the tapped ride request
-                            _getDestinationCoordinates(
+                            await _getDestinationCoordinates(
                               rideRequest.pickupLocation, // ✅ Pickup location
                               rideRequest
                                   .destinationLocation, // ✅ Dropoff location (was wrong before)
                             );
                             _mapController.move(
                               locationProvider.currentLocation!,
-                              15.0 + (rideRequest.distanceKm! / 2),
+                              15.0 - (rideRequest.distanceKm! / 10),
                             );
+                            if (!context.mounted) return;
                             showRideRequestModal(context, rideRequest).then((
                               accepted,
                             ) async {
@@ -289,6 +390,17 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
         ),
 
         /// Listen to driverStatus changes
+        /*  Consumer<DriverStatusProvider>(
+          builder: (context, driverStatusProvider, _) {
+            if (driverStatusProvider.driverStatus == 'active') {
+              return GoOfflineButton();
+            } else if (driverStatusProvider.driverStatus == 'inactive') {
+              return GoOnlineButton(mapController: _mapController);
+            }
+
+            return CancelTripWidget();
+          }
+        ),*/
         if (driverStatusProvider.driverStatus == 'active') GoOfflineButton(),
         if (driverStatusProvider.driverStatus == 'inactive')
           GoOnlineButton(mapController: _mapController),

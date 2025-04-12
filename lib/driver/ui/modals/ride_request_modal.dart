@@ -1,6 +1,8 @@
 import 'package:drivio_app/common/helpers/osrm_services.dart';
+import 'package:drivio_app/common/services/rating_services.dart';
 import 'package:drivio_app/driver/models/ride_request.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
+import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -27,8 +29,8 @@ Future<bool?> showRideRequestModal(
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "UberX Exclusive",
+                    Text(
+                      rideRequest.transportType!.name,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -47,12 +49,37 @@ Future<bool?> showRideRequestModal(
                   children: [
                     const Icon(Icons.star, size: 16, color: Colors.amber),
                     const SizedBox(width: 3),
-                    Text(
-                      "4.85",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    FutureBuilder<Map<String, dynamic>?>(
+                      future: RatingService.getRating(rideRequest.passenger.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Text(
+                            "Loading...",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ); // Show loading text while fetching
+                        } else if (snapshot.hasError) {
+                          return const Text(
+                            "Error fetching rating",
+                            style: TextStyle(fontSize: 14, color: Colors.red),
+                          ); // Show error message if something goes wrong
+                        } else {
+                          if (snapshot.data == null) {
+                            return Text(
+                              "NaN",
+                              style: const TextStyle(fontSize: 12),
+                            );
+                          } else {
+                            return Text(
+                              "${snapshot.data!['averageRating']}",
+                              style: const TextStyle(fontSize: 12),
+                            );
+                          } // Show the fetched place name
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -66,8 +93,8 @@ Future<bool?> showRideRequestModal(
                 Expanded(
                   child: FutureBuilder<String>(
                     future: OSRMService().getPlaceName(
-                      rideRequest.pickupLocation.latitude,
-                      rideRequest.pickupLocation.longitude,
+                      rideRequest.pickupLocation.latitude!,
+                      rideRequest.pickupLocation.longitude!,
                     ),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -106,8 +133,8 @@ Future<bool?> showRideRequestModal(
                 Expanded(
                   child: FutureBuilder<String>(
                     future: OSRMService().getPlaceName(
-                      rideRequest.destinationLocation.latitude,
-                      rideRequest.destinationLocation.longitude,
+                      rideRequest.destinationLocation.latitude!,
+                      rideRequest.destinationLocation.longitude!,
                     ),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -145,17 +172,23 @@ Future<bool?> showRideRequestModal(
                 minimumSize: const Size(double.infinity, 40),
               ),
               onPressed: () async {
-                await DriverService.accesptRideRequest(
+                await DriverService.acceptRideRequest(
                   rideRequest.id,
-                  rideRequest.destinationLocation.latitude,
-                  rideRequest.destinationLocation.longitude,
+                  rideRequest.destinationLocation.latitude!,
+                  rideRequest.destinationLocation.longitude!,
                 );
+
                 if (!context.mounted) return;
                 Provider.of<DriverStatusProvider>(
                   context,
                   listen: false,
                 ).toggleStatus('on_trip');
+                Provider.of<RideRequestsProvider>(
+                  context,
+                  listen: false,
+                ).fetchRideRequest(rideRequest.id);
 
+                if (!context.mounted) return;
                 Navigator.pop(
                   context,
                   true,

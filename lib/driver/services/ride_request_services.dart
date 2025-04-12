@@ -43,11 +43,54 @@ class RideRequestService {
         dynamic data = jsonDecode(response.body);
         // ✅ Extract ride_requests list
         final List<dynamic> rideRequestsList = data['ride_requests'] ?? [];
-
         // ✅ Convert list items to RideRequest objects
         return rideRequestsList
             .map((json) => RideRequest.fromJson(json as Map<String, dynamic>))
             .toList();
+      }
+      if (response.statusCode == 500) {
+        //handling no ride request found
+        // ✅ Convert list items to RideRequest objects
+        return [];
+      } else {
+        throw Exception(
+          "Failed to fetch ride requests: ${response.statusCode} - ${response.body}",
+        );
+      }
+    } catch (e) {
+      throw Exception("Error fetching ride requests: $e");
+    }
+  }
+
+  ///Fetch the choosen ride request
+  static Future<RideRequest> getRideRequest(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        throw Exception("Authentication token is missing.");
+      }
+
+      // ✅ Construct the URL with query parameters
+      final Uri url = Uri.parse(
+        '${Api.baseUrl}/getRideRequestById',
+      ).replace(queryParameters: {'id': id.toString()});
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (response.statusCode == 200) {
+        dynamic data = jsonDecode(response.body);
+        // ✅ Extract ride_requests list
+        RideRequest rideRequest = RideRequest.fromJson(
+          data as Map<String, dynamic>,
+        );
+        return rideRequest;
       } else {
         throw Exception(
           "Failed to fetch ride requests: ${response.statusCode} - ${response.body}",

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OSRMService {
   static const String osrmBaseUrl = MapConstants.osrmBaseUrl;
@@ -53,7 +54,7 @@ class OSRMService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      print(data);
+
       return getValidPlaceName(data);
     } else {
       return "Error fetching location";
@@ -74,6 +75,34 @@ class OSRMService {
       return data['address']?['town'];
     } else {
       return "Unknown location"; // ✅ Now properly placed in return statement
+    }
+  }
+
+  // In your osrm_services.dart file
+  Future<Map<String, dynamic>> getTimeAndDistanceToPickup(
+    LatLng driverLocation,
+    LatLng destinationLocation,
+  ) async {
+    final url =
+        '$osrmBaseUrl/${driverLocation.longitude},${driverLocation.latitude};'
+        '${destinationLocation.longitude},${destinationLocation.latitude}' // Note: longitude first in OSRM
+        '?overview=false&annotations=duration,distance';
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        final duration = (data['routes'][0]['duration']) / 196024; // in minutes
+        final distance = data['routes'][0]['distance'] / 1000; // in km
+
+        return {'duration': duration, 'distance': distance};
+      } else {
+        throw Exception('Failed to load route data');
+      }
+    } catch (e) {
+      print('Error getting time/distance to pickup: $e');
+      return {'duration': 0, 'distance': 0};
     }
   }
 }

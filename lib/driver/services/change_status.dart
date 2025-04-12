@@ -41,8 +41,7 @@ class ChangeStatus {
     } else if (response.statusCode == 403) {
       // Handle unauthorized access
       final data = jsonDecode(response.body);
-      print('Response Status: ${response.statusCode}');
-      print('Response Body: ${response.body}');
+
       throw Exception(data['message']);
     } else if (response.statusCode == 404) {
       // Handle driver not found

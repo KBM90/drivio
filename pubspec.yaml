@@ -46,6 +46,8 @@ dependencies:
   flutter_polyline_points: ^2.1.0
   geocoding: ^3.0.0
   pusher_channels_flutter: ^2.5.0
+#need to be deleted in production
+  device_preview: ^1.2.0
 
  
 

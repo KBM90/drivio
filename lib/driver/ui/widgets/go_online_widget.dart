@@ -1,10 +1,10 @@
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart'
     show DriverStatusProvider;
+import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
-import 'package:drivio_app/driver/services/change_status.dart';
 
 class GoOnlineButton extends StatelessWidget {
   final MapController mapController;
@@ -14,6 +14,7 @@ class GoOnlineButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusProvider = Provider.of<DriverStatusProvider>(context);
+    final rideRequestsProvider = Provider.of<RideRequestsProvider>(context);
 
     return Positioned(
       bottom: 80,
@@ -27,21 +28,36 @@ class GoOnlineButton extends StatelessWidget {
               context,
               listen: false,
             );
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
             try {
-              // ✅ Update status after a successful request
+              // 1. First check if we still have a valid context
+              if (!context.mounted) return;
+
+              // 2. Update status
               await statusProvider.toggleStatus('active');
+
+              // 3. Fetch ride requests
+              await rideRequestsProvider.fetchRideRequests();
               if (!context.mounted) return;
               // ✅ Move map to new location
               if (locationProvider.currentLocation != null) {
                 mapController.move(locationProvider.currentLocation!, 15.0);
               }
 
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text(statusProvider.statusMessage!),
                   backgroundColor: Colors.green,
                 ),
               );
+              if (rideRequestsProvider.rideRequests.isEmpty) {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text("No ride requests found"),
+                    backgroundColor: const Color.fromARGB(255, 244, 125, 6),
+                  ),
+                );
+              }
             } catch (e) {
               // ❌ If an error occurs, don't update driverStatus
               ScaffoldMessenger.of(context).showSnackBar(

@@ -1,5 +1,5 @@
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
-import 'package:drivio_app/driver/services/change_status.dart';
+import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,8 +11,25 @@ class CancelTripWidget extends StatefulWidget {
 }
 
 class _CancelTripWidgetState extends State<CancelTripWidget> {
+  String? _selectedReason;
+  final List<String> _cancellationReasons = [
+    'Passenger requested cancellation',
+    'Passenger not responding',
+    'Passenger location incorrect',
+    'Vehicle issues',
+    'Personal emergency',
+    'Traffic conditions too severe',
+    'Safety concerns',
+    'Payment method issues',
+    'Passenger behavior concerns',
+    'Other (please specify)',
+  ];
   @override
   Widget build(BuildContext context) {
+    final driverStatusProvider = Provider.of<DriverStatusProvider>(
+      context,
+      listen: false,
+    );
     return Positioned(
       bottom: 80,
       left: 0,
@@ -24,44 +41,89 @@ class _CancelTripWidgetState extends State<CancelTripWidget> {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (context) {
-                return AlertDialog(
-                  title: const Text("Confirm Cancel Trip"),
-                  content: const Text(
-                    "Are you sure you want to cancel the trip?",
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false), // Cancel
-                      child: const Text("No"),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true), // Confirm
-                      child: const Text("Yes"),
-                    ),
-                  ],
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    return AlertDialog(
+                      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+                      title: const Text("Cancel Trip"),
+                      content: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              "Please select the reason for cancellation:",
+                              style: TextStyle(fontSize: 15),
+                            ),
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<String>(
+                              value: _selectedReason,
+                              hint: const Text('Select reason'),
+                              items:
+                                  _cancellationReasons.map((String reason) {
+                                    return DropdownMenuItem<String>(
+                                      value: reason,
+                                      child: Text(reason),
+                                    );
+                                  }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedReason = value;
+                                });
+                              },
+                              validator:
+                                  (value) =>
+                                      value == null
+                                          ? 'Please select a reason'
+                                          : null,
+                            ),
+                            if (_selectedReason == 'Other (please specify)')
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: TextFormField(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Please specify',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onChanged: (value) {
+                                    _selectedReason = value;
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed:
+                              () => Navigator.pop(context, false), // Cancel
+                          child: const Text("No"),
+                        ),
+                        TextButton(
+                          onPressed:
+                              () => Navigator.pop(context, true), // Confirm
+                          child: const Text("Yes"),
+                        ),
+                      ],
+                    );
+                  },
                 );
               },
             );
-
             if (confirmed != true) return; // User cancelled the dialog
 
             try {
-              final message = await ChangeStatus().goOffline();
-
+              await DriverService.cancelTrip(_selectedReason!);
+              await driverStatusProvider.toggleStatus('inactive');
               if (!context.mounted) return;
-
-              Provider.of<DriverStatusProvider>(
-                context,
-                listen: false,
-              ).toggleStatus('inactive');
-
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(message!),
+                  content: Text(driverStatusProvider.statusMessage!),
                   backgroundColor: const Color.fromARGB(255, 5, 105, 171),
                 ),
               );
             } catch (e) {
+              if (!context.mounted) return;
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(e.toString()),
