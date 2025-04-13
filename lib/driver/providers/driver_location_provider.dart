@@ -1,19 +1,32 @@
 import 'dart:async';
+import 'package:drivio_app/common/helpers/geolocator_helper.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 class DriverLocationProvider extends ChangeNotifier {
-  LatLng? _currentLocation;
+  Position? _currentPosition; // Change to Position? instead of LatLng?
   StreamSubscription<Position>? _positionStream;
   LatLng? _destination;
 
-  LatLng? get currentLocation => _currentLocation;
+  LatLng? get currentLocation =>
+      _currentPosition != null
+          ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+          : null;
+  Position? get currentPosition => _currentPosition; // Add getter for Position
   LatLng? get destination => _destination;
 
   DriverLocationProvider() {
+    getCurrentLocation();
     _startListening();
+  }
+  Future<void> getCurrentLocation() async {
+    LatLng? location = await GeolocatorHelper.getCurrentLocation();
+
+    _currentPosition = GeolocatorHelper.latLngToPosition(location!);
+
+    notifyListeners();
   }
 
   void _startListening() async {
@@ -40,10 +53,10 @@ class DriverLocationProvider extends ChangeNotifier {
     ).listen((Position position) async {
       try {
         // Avoid unnecessary API calls for minor position changes
-        if (_currentLocation != null) {
+        if (_currentPosition != null) {
           double distanceMoved = Geolocator.distanceBetween(
-            _currentLocation!.latitude,
-            _currentLocation!.longitude,
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
             position.latitude,
             position.longitude,
           );
@@ -53,7 +66,7 @@ class DriverLocationProvider extends ChangeNotifier {
           }
         }
 
-        _currentLocation = LatLng(position.latitude, position.longitude);
+        _currentPosition = position; // Store the full Position object
 
         // 🔹 Ensure the API call doesn't block UI updates
         await DriverService.updateDriverLocation(

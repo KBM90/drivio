@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/models/location.dart';
@@ -47,7 +48,10 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this); // 🔹 Add observer
 
-    locationProvider = context.read<DriverLocationProvider>();
+    locationProvider = Provider.of<DriverLocationProvider>(
+      context,
+      listen: false,
+    );
     rideRequestsProvider = Provider.of<RideRequestsProvider>(
       context,
       listen: false,
@@ -263,9 +267,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
               // 🔹 Initialize map after it's ready
               await _initializeMap();
-              if (locationProvider.currentLocation != null) {
-                _mapController.move(locationProvider.currentLocation!, 15.0);
-              }
+              _mapController.move(locationProvider.currentLocation!, 15.0);
 
               // Listen to ride requests updates
             },
@@ -273,19 +275,32 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
           children: [
             TileLayer(urlTemplate: MapConstants.tileLayerUrl),
 
-            MarkerLayer(
-              markers: [
-                // Driver's Current Location Marker
-                if (locationProvider.currentLocation != null)
-                  Marker(
-                    point: locationProvider.currentLocation!,
-                    child: const Icon(
-                      Icons.navigation,
-                      size: 40,
-                      color: Color.fromARGB(255, 8, 8, 8),
-                    ),
-                  ),
-              ],
+            Consumer<DriverLocationProvider>(
+              builder: (context, locationProvider, child) {
+                return MarkerLayer(
+                  markers: [
+                    // Driver's Current Location Marker with Rotation
+                    if (locationProvider.currentPosition != null)
+                      Marker(
+                        point: LatLng(
+                          locationProvider.currentPosition!.latitude,
+                          locationProvider.currentPosition!.longitude,
+                        ),
+                        child: Transform.rotate(
+                          angle:
+                              (locationProvider.currentPosition!.heading *
+                                  math.pi /
+                                  180), // Convert degrees to radians
+                          child: const Icon(
+                            Icons.navigation,
+                            size: 30,
+                            color: Color.fromARGB(255, 8, 8, 8),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
 
             if (driverStatusProvider.driverStatus == 'active' &&
@@ -392,18 +407,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
           ),
         ),
 
-        /// Listen to driverStatus changes
-        /*  Consumer<DriverStatusProvider>(
-          builder: (context, driverStatusProvider, _) {
-            if (driverStatusProvider.driverStatus == 'active') {
-              return GoOfflineButton();
-            } else if (driverStatusProvider.driverStatus == 'inactive') {
-              return GoOnlineButton(mapController: _mapController);
-            }
-
-            return CancelTripWidget();
-          }
-        ),*/
         if (driverStatusProvider.driverStatus == 'active') GoOfflineButton(),
         if (driverStatusProvider.driverStatus == 'inactive')
           GoOnlineButton(mapController: _mapController),

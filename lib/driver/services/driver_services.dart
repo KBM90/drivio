@@ -151,7 +151,7 @@ class DriverService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
-      final int? rideId = prefs.getInt('rideId');
+      final int? rideId = prefs.getInt('currentRideId');
 
       final response = await http.patch(
         Uri.parse('${Api.baseUrl}/cancelTrip'),

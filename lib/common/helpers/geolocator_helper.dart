@@ -30,7 +30,7 @@ class GeolocatorHelper {
     return LatLng(position.latitude, position.longitude);
   }
 
-  Position latLngToPosition(LatLng latLng) {
+  static Position latLngToPosition(LatLng latLng) {
     return Position(
       latitude: latLng.latitude,
       longitude: latLng.longitude,
@@ -45,5 +45,9 @@ class GeolocatorHelper {
       headingAccuracy:
           0.0, // Default heading accuracy (required in newer versions)
     );
+  }
+
+  static LatLng positionToLatLng(Position position) {
+    return LatLng(position.latitude, position.longitude);
   }
 }
