@@ -16,4 +16,6 @@ class Location {
       longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
+
+  Map<String, dynamic> toJson() => _$LocationToJson(this);
 }

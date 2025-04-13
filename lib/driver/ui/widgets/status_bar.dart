@@ -1,5 +1,8 @@
 import 'package:drivio_app/common/helpers/osrm_services.dart';
+import 'package:drivio_app/common/screens/chat_screen.dart';
+import 'package:drivio_app/common/widgets/distance_progress_widget.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
+import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/ui/modals/trip_guide_modal.dart';
@@ -22,6 +25,7 @@ class _StatusBarState extends State<StatusBar> {
     final driverStatusProvider = Provider.of<DriverStatusProvider>(context);
     final locationProvider = Provider.of<DriverLocationProvider>(context);
     final rideRequestProvider = Provider.of<RideRequestsProvider>(context);
+    final driverProvider = Provider.of<DriverProvider>(context);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.1, // Start small
@@ -162,15 +166,13 @@ class _StatusBarState extends State<StatusBar> {
                                                       ),
                                                     ),
                                                     onPressed: () {
-                                                      showModalBottomSheet(
-                                                        context: context,
-                                                        isScrollControlled:
-                                                            true,
-                                                        backgroundColor:
-                                                            Colors.transparent,
-                                                        builder:
-                                                            (context) =>
-                                                                const TripGuideModal(),
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder:
+                                                              (context) =>
+                                                                  const TripGuideModal(),
+                                                        ),
                                                       );
                                                     },
                                                   ),
@@ -186,27 +188,19 @@ class _StatusBarState extends State<StatusBar> {
                                               ),
                                               const SizedBox(height: 8),
                                               // Progress bar
-                                              SizedBox(
-                                                width:
-                                                    double
-                                                        .infinity, // Takes full available width
-                                                child: LinearProgressIndicator(
-                                                  value: 0.3,
-                                                  backgroundColor:
-                                                      Colors.grey[200],
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                        Color
-                                                      >(Colors.blue),
-                                                ),
+                                              DistanceProgressWidget(
+                                                driverLocation:
+                                                    locationProvider
+                                                        .currentLocation!,
+                                                pickupLocation:
+                                                    rideRequestProvider
+                                                        .currentRideRequest!
+                                                        .pickupLocation,
                                               ),
 
                                               // Pickup info - minimal version like your screenshot
                                               Text(
-                                                rideRequestProvider
-                                                    .currentRideRequest!
-                                                    .passenger
-                                                    .name,
+                                                "Pickup ${rideRequestProvider.currentRideRequest!.passenger.name}",
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.bold,
@@ -259,11 +253,38 @@ class _StatusBarState extends State<StatusBar> {
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                       ),
                     if (driverStatusProvider.driverStatus == 'on_trip')
-                      ListTile(
-                        leading: Icon(Icons.car_repair, color: Colors.blue),
-                        title: Text("Get 10-40% off car services"),
-                        subtitle: Text("Save on maintenance & repair"),
-                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.phone),
+                            onPressed: () {
+                              // Navigate to the ChatScreen when the phone icon is clicked
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => ChatScreen(
+                                        passengerId:
+                                            rideRequestProvider
+                                                .currentRideRequest!
+                                                .passenger
+                                                .userId,
+                                        driverId:
+                                            driverProvider
+                                                .currentDriver!
+                                                .userId,
+                                      ),
+                                ),
+                              );
+                            },
+                          ),
+                          const Text('Melody', style: TextStyle(fontSize: 20)),
+                          IconButton(
+                            icon: const Icon(Icons.person),
+                            onPressed: () {},
+                          ),
+                        ],
                       ),
                   ],
                 ),

@@ -29,4 +29,21 @@ class GeolocatorHelper {
 
     return LatLng(position.latitude, position.longitude);
   }
+
+  Position latLngToPosition(LatLng latLng) {
+    return Position(
+      latitude: latLng.latitude,
+      longitude: latLng.longitude,
+      timestamp: DateTime.now(), // Current timestamp
+      accuracy: 0.0, // Default accuracy (unknown)
+      altitude: 0.0, // Default altitude
+      heading: 0.0, // Default heading
+      speed: 0.0, // Default speed
+      speedAccuracy: 0.0, // Default speed accuracy
+      altitudeAccuracy:
+          0.0, // Default altitude accuracy (required in newer versions)
+      headingAccuracy:
+          0.0, // Default heading accuracy (required in newer versions)
+    );
+  }
 }

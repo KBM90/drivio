@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/models/location.dart';
 import 'package:drivio_app/common/widgets/marker.dart';
+import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
@@ -35,6 +36,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   late DriverLocationProvider locationProvider;
   late RideRequestsProvider rideRequestsProvider;
   late DriverStatusProvider driverStatusProvider;
+  late DriverProvider driverProvider;
   Timer? _debounce;
 
   LatLng? _destination;
@@ -54,6 +56,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       context,
       listen: false,
     );
+    driverProvider = Provider.of<DriverProvider>(context, listen: false);
 
     // Delay the initialization until after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {

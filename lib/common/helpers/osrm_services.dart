@@ -1,9 +1,9 @@
 import 'package:drivio_app/common/constants/map_constants.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'package:latlong2/latlong.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class OSRMService {
   static const String osrmBaseUrl = MapConstants.osrmBaseUrl;
@@ -101,7 +101,7 @@ class OSRMService {
         throw Exception('Failed to load route data');
       }
     } catch (e) {
-      print('Error getting time/distance to pickup: $e');
+      debugPrint('Error getting time/distance to pickup: $e');
       return {'duration': 0, 'distance': 0};
     }
   }

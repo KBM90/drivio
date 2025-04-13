@@ -1,3 +1,4 @@
+// lib/widgets/trip_guide_modal.dart
 import 'package:flutter/material.dart';
 
 class TripGuideModal extends StatelessWidget {
@@ -5,64 +6,182 @@ class TripGuideModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      heightFactor: 0.4, // Smaller height for this compact guide
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with close button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Trip Guide",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Trip Steps
-            _buildTripStep("1. Pickup · UberX", "Melody"),
-            const SizedBox(height: 16),
-            _buildTripStep("2. Dropoff · UberX", "Melody"),
-
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-
-            // Footer
-            const Center(
-              child: Text(
-                "Watch!",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.8, // Prevent overflow
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with back button and menu
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Text(
+                    "Trip Guide",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () {
+                      // Handle menu action
+                    },
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
+
+              const SizedBox(height: 24),
+
+              // Trip Steps
+              _buildTripStep(
+                title: "Pickup · UberX",
+                subtitle: "Melody",
+                isPickup: true,
+              ),
+              const SizedBox(height: 16),
+              _buildTripStep(
+                title: "Dropoff · UberX",
+                subtitle: "Melody",
+                isPickup: false,
+              ),
+
+              // Dynamic spacer that ensures footer stays at bottom
+              Expanded(
+                child: SizedBox(
+                  height: constraints.maxHeight / 3, // Responsive spacing
+                ),
+              ),
+              // Waybill button
+              TextButton(
+                onPressed: () {
+                  // Handle waybill action
+                },
+                child: Center(
+                  child: const Text(
+                    "WAYBILL",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              ),
+              const Divider(thickness: 1),
+              const SizedBox(height: 16),
+
+              // Footer with buttons
+              _buildFooter(),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTripStep(String title, String subtitle) {
-    return Column(
+  Widget _buildFooter() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Circular Hand Button
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withOpacity(0.3),
+                  spreadRadius: 2,
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.pan_tool, color: Colors.white, size: 30),
+              onPressed: () {
+                // Handle stop ride requests action
+              },
+            ),
+          ),
+
+          // Stop New Requests button
+          TextButton(
+            onPressed: () {
+              // Handle stop new requests action
+            },
+            child: const Text(
+              "STOP NEW REQUESTS",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTripStep({
+    required String title,
+    required String subtitle,
+    required bool isPickup,
+  }) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        Container(
+          margin: const EdgeInsets.only(right: 12),
+          child: CircleAvatar(
+            backgroundColor: isPickup ? Colors.green : Colors.grey[200],
+            child: Icon(
+              Icons.person,
+              color: isPickup ? Colors.white : Colors.black,
+            ),
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.more_vert),
+          onPressed: () {
+            // Handle more options action
+          },
         ),
       ],
     );
