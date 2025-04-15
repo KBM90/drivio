@@ -1,3 +1,4 @@
+import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
 import 'package:drivio_app/driver/services/change_status.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,8 @@ class GoOfflineButton extends StatefulWidget {
 class _GoOfflineButtonState extends State<GoOfflineButton> {
   @override
   Widget build(BuildContext context) {
+    final driverProvider = Provider.of<DriverProvider>(context);
+
     return Positioned(
       bottom: 80,
       left: 0,
@@ -27,10 +30,7 @@ class _GoOfflineButtonState extends State<GoOfflineButton> {
               if (!context.mounted) return;
 
               // ✅ Only update status if no exception was thrown
-              Provider.of<DriverStatusProvider>(
-                context,
-                listen: false,
-              ).toggleStatus('inactive');
+              driverProvider.toggleStatus('inactive');
 
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

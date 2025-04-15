@@ -1,6 +1,7 @@
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/screens/chat_screen.dart';
 import 'package:drivio_app/common/widgets/distance_progress_widget.dart';
+import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/driver_status_provider.dart';
@@ -22,7 +23,6 @@ class StatusBar extends StatefulWidget {
 class _StatusBarState extends State<StatusBar> {
   @override
   Widget build(BuildContext context) {
-    final driverStatusProvider = Provider.of<DriverStatusProvider>(context);
     final locationProvider = Provider.of<DriverLocationProvider>(context);
     final rideRequestProvider = Provider.of<RideRequestsProvider>(context);
     final driverProvider = Provider.of<DriverProvider>(context);
@@ -60,13 +60,14 @@ class _StatusBarState extends State<StatusBar> {
                         vertical: 0,
                       ),
                       color: const Color.fromARGB(255, 244, 241, 241),
-                      child: Consumer<DriverStatusProvider>(
-                        builder: (context, provider, child) {
+                      child: Consumer<DriverProvider>(
+                        builder: (context, driverProvider, child) {
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               PreferencesButton(),
-                              if (provider.driverStatus == 'inactive')
+                              if (driverProvider.currentDriver?.status ==
+                                  DriverStatus.inactive)
                                 Text(
                                   "You're offline",
                                   style: const TextStyle(
@@ -74,7 +75,8 @@ class _StatusBarState extends State<StatusBar> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              if (provider.driverStatus == 'active')
+                              if (driverProvider.currentDriver?.status ==
+                                  DriverStatus.active)
                                 Text(
                                   "You're online",
                                   style: const TextStyle(
@@ -82,7 +84,8 @@ class _StatusBarState extends State<StatusBar> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              if (provider.driverStatus == 'on_trip' &&
+                              if (driverProvider.currentDriver?.status ==
+                                      DriverStatus.onTrip &&
                                   locationProvider.currentLocation != null &&
                                   rideRequestProvider.currentRideRequest !=
                                       null &&
@@ -224,35 +227,40 @@ class _StatusBarState extends State<StatusBar> {
                         },
                       ),
                     ),
-                    if (driverStatusProvider.driverStatus == 'active')
+                    if (driverProvider.currentDriver?.status ==
+                        DriverStatus.active)
                       ListTile(
                         leading: Icon(Icons.car_repair, color: Colors.blue),
                         title: Text("Get 10-40% off car services"),
                         subtitle: Text("Save on maintenance & repair"),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                       ),
-                    if (driverStatusProvider.driverStatus == 'active')
+                    if (driverProvider.currentDriver?.status ==
+                        DriverStatus.active)
                       ListTile(
                         leading: Icon(Icons.local_offer, color: Colors.green),
                         title: Text("Enjoy more benefits with Drivio Pro"),
                         subtitle: Text("Exclusive savings and discounts"),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                       ),
-                    if (driverStatusProvider.driverStatus == 'inactive')
+                    if (driverProvider.currentDriver?.status ==
+                        DriverStatus.inactive)
                       ListTile(
                         leading: Icon(Icons.car_repair, color: Colors.blue),
                         title: Text("Get 10-40% off car services"),
                         subtitle: Text("Save on maintenance & repair"),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                       ),
-                    if (driverStatusProvider.driverStatus == 'inactive')
+                    if (driverProvider.currentDriver?.status ==
+                        DriverStatus.inactive)
                       ListTile(
                         leading: Icon(Icons.local_offer, color: Colors.green),
                         title: Text("Enjoy more benefits with Drivio Pro"),
                         subtitle: Text("Exclusive savings and discounts"),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                       ),
-                    if (driverStatusProvider.driverStatus == 'on_trip')
+                    if (driverProvider.currentDriver?.status ==
+                        DriverStatus.onTrip)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [

@@ -1,6 +1,6 @@
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
-import 'package:drivio_app/driver/providers/driver_status_provider.dart'
-    show DriverStatusProvider;
+import 'package:drivio_app/driver/providers/driver_provider.dart';
+
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -13,7 +13,7 @@ class GoOnlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusProvider = Provider.of<DriverStatusProvider>(context);
+    final driverProvider = Provider.of<DriverProvider>(context);
     final rideRequestsProvider = Provider.of<RideRequestsProvider>(context);
 
     return Positioned(
@@ -34,7 +34,7 @@ class GoOnlineButton extends StatelessWidget {
               if (!context.mounted) return;
 
               // 2. Update status
-              await statusProvider.toggleStatus('active');
+              await driverProvider.toggleStatus('active');
 
               // 3. Fetch ride requests
               await rideRequestsProvider.fetchRideRequests();
@@ -46,7 +46,7 @@ class GoOnlineButton extends StatelessWidget {
 
               scaffoldMessenger.showSnackBar(
                 SnackBar(
-                  content: Text(statusProvider.statusMessage!),
+                  content: Text(driverProvider.statusMessage!),
                   backgroundColor: Colors.green,
                 ),
               );

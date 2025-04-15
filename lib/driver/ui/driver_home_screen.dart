@@ -1,7 +1,6 @@
 import 'package:drivio_app/common/widgets/safty_floating_button.dart';
-import 'package:drivio_app/driver/models/driver.dart';
+import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/wallet_provider.dart';
-import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/map_view.dart';
@@ -18,21 +17,10 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
-  Driver? _currentDriver;
-
   @override
   void initState() {
     super.initState();
-    _loadCurrentDriver();
     _loadWallet();
-  }
-
-  Future<void> _loadCurrentDriver() async {
-    final driver = await DriverService.getDriver();
-
-    setState(() {
-      _currentDriver = driver;
-    });
   }
 
   Future<void> _loadWallet() async {
@@ -44,11 +32,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          _currentDriver == null
-              ? const Center(
-                child: CircularProgressIndicator(),
-              ) // Show a loader
-              : MapView(driver: _currentDriver), // Displays the map
+          // Show a loader
+          MapView(), // Displays the map
           // Earnings Widget (Centered at the Top)
           Positioned(
             top: 40,

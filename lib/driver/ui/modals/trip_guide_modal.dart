@@ -1,11 +1,20 @@
 // lib/widgets/trip_guide_modal.dart
+import 'package:drivio_app/driver/providers/driver_provider.dart';
+import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class TripGuideModal extends StatelessWidget {
   const TripGuideModal({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    final rideRequestProvider = Provider.of<RideRequestsProvider>(
+      context,
+      listen: false,
+    );
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.8, // Prevent overflow
@@ -46,14 +55,18 @@ class TripGuideModal extends StatelessWidget {
 
               // Trip Steps
               _buildTripStep(
-                title: "Pickup · UberX",
-                subtitle: "Melody",
+                title:
+                    "Pickup · ${rideRequestProvider.currentRideRequest!.transportType!.name}",
+                subtitle:
+                    "Passenger : ${rideRequestProvider.currentRideRequest!.passenger.name}",
                 isPickup: true,
               ),
               const SizedBox(height: 16),
               _buildTripStep(
-                title: "Dropoff · UberX",
-                subtitle: "Melody",
+                title:
+                    "Dropoff ·${rideRequestProvider.currentRideRequest!.transportType!.name}",
+                subtitle:
+                    "Passenger : ${rideRequestProvider.currentRideRequest!.passenger.name}",
                 isPickup: false,
               ),
 
@@ -83,7 +96,10 @@ class TripGuideModal extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Footer with buttons
-              _buildFooter(),
+              if (driverProvider.currentDriver?.acceptNewRequest == 1)
+                _buildFooter(Colors.red, "Stop New Requests", context),
+              if (driverProvider.currentDriver?.acceptNewRequest == 0)
+                _buildFooter(Colors.green, "Accept New Requests", context),
             ],
           );
         },
@@ -91,7 +107,7 @@ class TripGuideModal extends StatelessWidget {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(Color color, String text, BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -101,11 +117,11 @@ class TripGuideModal extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: Colors.green,
+              color: color,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.withOpacity(0.3),
+                  color: color,
                   spreadRadius: 2,
                   blurRadius: 8,
                   offset: const Offset(0, 4),
@@ -114,24 +130,34 @@ class TripGuideModal extends StatelessWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.pan_tool, color: Colors.white, size: 30),
-              onPressed: () {
+              onPressed: () async {
                 // Handle stop ride requests action
+                if (Provider.of<DriverProvider>(
+                      context,
+                      listen: false,
+                    ).currentDriver?.acceptNewRequest ==
+                    1) {
+                  await Provider.of<DriverProvider>(
+                    context,
+                    listen: false,
+                  ).stopNewRequsts();
+                } else {
+                  await Provider.of<DriverProvider>(
+                    context,
+                    listen: false,
+                  ).acceptNewRequests();
+                }
               },
             ),
           ),
-
+          SizedBox(height: 10),
           // Stop New Requests button
-          TextButton(
-            onPressed: () {
-              // Handle stop new requests action
-            },
-            child: const Text(
-              "STOP NEW REQUESTS",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
-              ),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],

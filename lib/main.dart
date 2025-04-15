@@ -18,7 +18,6 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => DriverStatusProvider()),
         ChangeNotifierProvider(create: (_) => DriverLocationProvider()),
         ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
         ChangeNotifierProvider(create: (context) => WalletProvider()),

@@ -1,7 +1,7 @@
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/services/rating_services.dart';
 import 'package:drivio_app/driver/models/ride_request.dart';
-import 'package:drivio_app/driver/providers/driver_status_provider.dart';
+import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/material.dart';
@@ -179,7 +179,7 @@ Future<bool?> showRideRequestModal(
                 );
 
                 if (!context.mounted) return;
-                Provider.of<DriverStatusProvider>(
+                Provider.of<DriverProvider>(
                   context,
                   listen: false,
                 ).toggleStatus('on_trip');

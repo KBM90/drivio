@@ -1,4 +1,4 @@
-import 'package:drivio_app/driver/providers/driver_status_provider.dart';
+import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -26,10 +26,8 @@ class _CancelTripWidgetState extends State<CancelTripWidget> {
   ];
   @override
   Widget build(BuildContext context) {
-    final driverStatusProvider = Provider.of<DriverStatusProvider>(
-      context,
-      listen: false,
-    );
+    final driverProvider = Provider.of<DriverProvider>(context);
+
     return Positioned(
       bottom: 80,
       left: 0,
@@ -113,11 +111,11 @@ class _CancelTripWidgetState extends State<CancelTripWidget> {
 
             try {
               await DriverService.cancelTrip(_selectedReason!);
-              await driverStatusProvider.toggleStatus('inactive');
+              await driverProvider.toggleStatus('inactive');
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(driverStatusProvider.statusMessage!),
+                  content: Text(driverProvider.statusMessage!),
                   backgroundColor: const Color.fromARGB(255, 5, 105, 171),
                 ),
               );

@@ -14,7 +14,8 @@ class Driver {
   final Map<String, dynamic>? preferences;
   @JsonKey(name: 'driving_distance')
   final double? drivingDistance;
-  final DriverStatus status; // ✅ Change from bool to DriverStatus enum
+  DriverStatus status; // ✅ Change from bool to DriverStatus enum
+  int? acceptNewRequest;
 
   Driver({
     required this.id,
@@ -24,6 +25,7 @@ class Driver {
     this.preferences,
     this.drivingDistance,
     required this.status,
+    required this.acceptNewRequest,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class Driver {
               : json['status'] == 'inactive'
               ? DriverStatus.inactive
               : DriverStatus.onTrip,
+      acceptNewRequest: json['acceptNewRequest'] ?? 0,
     );
   }
 

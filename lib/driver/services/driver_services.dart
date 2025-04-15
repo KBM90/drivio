@@ -186,4 +186,80 @@ class DriverService {
       throw Exception('Error updating driver location: $e');
     }
   }
+
+  static Future<String> stopNewRequsts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      final response = await http.patch(
+        Uri.parse('${Api.baseUrl}/stopNewRequests'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['message'];
+      } else if (response.statusCode == 403) {
+        // Handle unauthorized access
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else if (response.statusCode == 404) {
+        // Handle Ride not found or driver not found
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else if (response.statusCode == 422) {
+        // Handle insertion validation error
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else {
+        // Handle other errors
+
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      }
+    } catch (e) {
+      throw Exception('Error updating driver availability: $e');
+    }
+  }
+
+  static Future<String> acceptNewRequests() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      final response = await http.patch(
+        Uri.parse('${Api.baseUrl}/acceptNewRequests'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['message'];
+      } else if (response.statusCode == 403) {
+        // Handle unauthorized access
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else if (response.statusCode == 404) {
+        // Handle Ride not found or driver not found
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else if (response.statusCode == 422) {
+        // Handle insertion validation error
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      } else {
+        // Handle other errors
+
+        final data = jsonDecode(response.body);
+        throw Exception(data['message']);
+      }
+    } catch (e) {
+      throw Exception('Error updating driver availability: $e');
+    }
+  }
 }

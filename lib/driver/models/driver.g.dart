@@ -20,6 +20,7 @@ Driver _$DriverFromJson(Map<String, dynamic> json) => Driver(
   preferences: json['preferences'] as Map<String, dynamic>?,
   drivingDistance: (json['driving_distance'] as num?)?.toDouble(),
   status: $enumDecode(_$DriverStatusEnumMap, json['status']),
+  acceptNewRequest: (json['acceptNewRequest'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$DriverToJson(Driver instance) => <String, dynamic>{
@@ -30,6 +31,7 @@ Map<String, dynamic> _$DriverToJson(Driver instance) => <String, dynamic>{
   'preferences': instance.preferences,
   'driving_distance': instance.drivingDistance,
   'status': _$DriverStatusEnumMap[instance.status]!,
+  'acceptNewRequest': instance.acceptNewRequest,
 };
 
 const _$DriverStatusEnumMap = {

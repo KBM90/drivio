@@ -3,12 +3,10 @@ import 'dart:math' as math;
 
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/models/location.dart';
-import 'package:drivio_app/common/widgets/marker.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
-import 'package:drivio_app/driver/providers/driver_status_provider.dart';
 import 'package:drivio_app/driver/ui/modals/ride_request_modal.dart';
 import 'package:drivio_app/driver/ui/widgets/cancel_trip_widget.dart';
 import 'package:flutter/material.dart';
@@ -20,9 +18,7 @@ import 'package:drivio_app/driver/ui/widgets/go_offline_widget.dart';
 import 'package:drivio_app/driver/ui/widgets/go_online_widget.dart';
 
 class MapView extends StatefulWidget {
-  final Driver? driver;
-
-  const MapView({super.key, this.driver});
+  const MapView({super.key});
 
   @override
   _MapViewState createState() => _MapViewState();
@@ -36,7 +32,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   bool _isMapReady = false; // 🔹 Track if the map is ready
   late DriverLocationProvider locationProvider;
   late RideRequestsProvider rideRequestsProvider;
-  late DriverStatusProvider driverStatusProvider;
   late DriverProvider driverProvider;
   Timer? _debounce;
 
@@ -56,10 +51,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       context,
       listen: false,
     );
-    driverStatusProvider = Provider.of<DriverStatusProvider>(
-      context,
-      listen: false,
-    );
+
     driverProvider = Provider.of<DriverProvider>(context, listen: false);
 
     // Delay the initialization until after first frame
@@ -137,7 +129,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
   Future<void> _initializeMap() async {
     try {
-      if (driverStatusProvider.driverStatus == "on_trip" &&
+      if (driverProvider.currentDriver?.status == DriverStatus.onTrip &&
           rideRequestsProvider.currentRideRequest == null) {
         await rideRequestsProvider.fetchPersistanceRideRequest();
       }
@@ -237,13 +229,14 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final driverStatusProvider = Provider.of<DriverStatusProvider>(context);
     final rideRequestsProvider = Provider.of<RideRequestsProvider>(context);
+    final driverProvider = Provider.of<DriverProvider>(context);
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (driverStatusProvider.driverStatus == 'inactive' && !_isLoading) {
+    if (driverProvider.currentDriver?.status == DriverStatus.inactive &&
+        !_isLoading) {
       setState(() {
         _routePolyline = [];
         _destination = null;
@@ -252,136 +245,143 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
     return Stack(
       children: [
-        FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            interactionOptions: InteractionOptions(flags: InteractiveFlag.all),
-            initialCenter:
-                locationProvider.currentLocation ?? LatLng(37.7749, -122.4194),
-            initialZoom: 13,
-            onMapReady: () async {
-              // 🔹 Set map as ready
-              setState(() {
-                _isMapReady = true;
-              });
+        driverProvider.currentDriver == null
+            ? const Center(child: CircularProgressIndicator())
+            : FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                interactionOptions: InteractionOptions(
+                  flags: InteractiveFlag.all,
+                ),
+                initialCenter:
+                    locationProvider.currentLocation ??
+                    LatLng(37.7749, -122.4194),
+                initialZoom: 13,
+                onMapReady: () async {
+                  // 🔹 Set map as ready
+                  setState(() {
+                    _isMapReady = true;
+                  });
 
-              // 🔹 Initialize map after it's ready
-              await _initializeMap();
-              _mapController.move(locationProvider.currentLocation!, 15.0);
+                  // 🔹 Initialize map after it's ready
+                  await _initializeMap();
+                  _mapController.move(locationProvider.currentLocation!, 15.0);
 
-              // Listen to ride requests updates
-            },
-          ),
-          children: [
-            TileLayer(urlTemplate: MapConstants.tileLayerUrl),
+                  // Listen to ride requests updates
+                },
+              ),
+              children: [
+                TileLayer(urlTemplate: MapConstants.tileLayerUrl),
 
-            Consumer<DriverLocationProvider>(
-              builder: (context, locationProvider, child) {
-                return MarkerLayer(
-                  markers: [
-                    // Driver's Current Location Marker with Rotation
-                    if (locationProvider.currentPosition != null)
-                      Marker(
-                        point: LatLng(
-                          locationProvider.currentPosition!.latitude,
-                          locationProvider.currentPosition!.longitude,
-                        ),
-                        child: Transform.rotate(
-                          angle:
-                              (locationProvider.currentPosition!.heading *
-                                  math.pi /
-                                  180), // Convert degrees to radians
-                          child: const Icon(
-                            Icons.navigation,
-                            size: 30,
-                            color: Color.fromARGB(255, 8, 8, 8),
+                Consumer<DriverLocationProvider>(
+                  builder: (context, locationProvider, child) {
+                    return MarkerLayer(
+                      markers: [
+                        // Driver's Current Location Marker with Rotation
+                        if (locationProvider.currentPosition != null)
+                          Marker(
+                            point: LatLng(
+                              locationProvider.currentPosition!.latitude,
+                              locationProvider.currentPosition!.longitude,
+                            ),
+                            child: Transform.rotate(
+                              angle:
+                                  (locationProvider.currentPosition!.heading *
+                                      math.pi /
+                                      180), // Convert degrees to radians
+                              child: const Icon(
+                                Icons.navigation,
+                                size: 30,
+                                color: Color.fromARGB(255, 8, 8, 8),
+                              ),
+                            ),
                           ),
+                      ],
+                    );
+                  },
+                ),
+
+                if (driverProvider.currentDriver?.status ==
+                        DriverStatus.active &&
+                    rideRequestsProvider.rideRequests.isNotEmpty)
+                  // ✅ Ride Request Markers
+                  MarkerLayer(
+                    markers:
+                        rideRequestsProvider.rideRequests.map((rideRequest) {
+                          return Marker(
+                            point: LatLng(
+                              rideRequest.pickupLocation.latitude!,
+                              rideRequest.pickupLocation.longitude!,
+                            ),
+                            child: GestureDetector(
+                              onTap: () async {
+                                // Get the tapped ride request
+                                await _getDestinationCoordinates(
+                                  rideRequest
+                                      .pickupLocation, // ✅ Pickup location
+                                  rideRequest
+                                      .destinationLocation, // ✅ Dropoff location (was wrong before)
+                                );
+                                _mapController.move(
+                                  locationProvider.currentLocation!,
+                                  15.0 - (rideRequest.distanceKm! / 10),
+                                );
+                                if (!context.mounted) return;
+                                showRideRequestModal(context, rideRequest).then(
+                                  (accepted) async {
+                                    if (accepted != true) {
+                                      setState(() {
+                                        _routePolyline = [];
+                                        _destination = null;
+                                      });
+                                    }
+                                  },
+                                );
+                              },
+                              child: const Icon(
+                                Icons.person_pin_circle,
+                                size: 40,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  ),
+
+                // Route Polyline
+                if (_routePolyline.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _routePolyline,
+                        color: const Color.fromARGB(255, 9, 9, 9),
+                        strokeWidth: 4,
+                      ),
+                    ],
+                  ),
+                if (_destination != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _destination!,
+                        child: const Icon(
+                          Icons.location_pin,
+                          size: 40,
+                          color: Color.fromARGB(255, 11, 3, 247),
                         ),
                       ),
-                  ],
-                );
-              },
+                      Marker(
+                        point: _pickup!,
+                        child: const Icon(
+                          Icons.person_pin_circle,
+                          size: 40,
+                          color: Color.fromARGB(255, 11, 3, 247),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
-
-            if (driverStatusProvider.driverStatus == 'active' &&
-                rideRequestsProvider.rideRequests.isNotEmpty)
-              // ✅ Ride Request Markers
-              MarkerLayer(
-                markers:
-                    rideRequestsProvider.rideRequests.map((rideRequest) {
-                      return Marker(
-                        point: LatLng(
-                          rideRequest.pickupLocation.latitude!,
-                          rideRequest.pickupLocation.longitude!,
-                        ),
-                        child: GestureDetector(
-                          onTap: () async {
-                            // Get the tapped ride request
-                            await _getDestinationCoordinates(
-                              rideRequest.pickupLocation, // ✅ Pickup location
-                              rideRequest
-                                  .destinationLocation, // ✅ Dropoff location (was wrong before)
-                            );
-                            _mapController.move(
-                              locationProvider.currentLocation!,
-                              15.0 - (rideRequest.distanceKm! / 10),
-                            );
-                            if (!context.mounted) return;
-                            showRideRequestModal(context, rideRequest).then((
-                              accepted,
-                            ) async {
-                              if (accepted != true) {
-                                setState(() {
-                                  _routePolyline = [];
-                                  _destination = null;
-                                });
-                              }
-                            });
-                          },
-                          child: const Icon(
-                            Icons.person_pin_circle,
-                            size: 40,
-                            color: Colors.orange,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-              ),
-
-            // Route Polyline
-            if (_routePolyline.isNotEmpty)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: _routePolyline,
-                    color: const Color.fromARGB(255, 9, 9, 9),
-                    strokeWidth: 4,
-                  ),
-                ],
-              ),
-            if (_destination != null)
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: _destination!,
-                    child: const Icon(
-                      Icons.location_pin,
-                      size: 40,
-                      color: Color.fromARGB(255, 11, 3, 247),
-                    ),
-                  ),
-                  Marker(
-                    point: _pickup!,
-                    child: const Icon(
-                      Icons.person_pin_circle,
-                      size: 40,
-                      color: Color.fromARGB(255, 11, 3, 247),
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
 
         /// GPS Button (Bottom Right)
         Positioned(
@@ -407,10 +407,12 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
           ),
         ),
 
-        if (driverStatusProvider.driverStatus == 'active') GoOfflineButton(),
-        if (driverStatusProvider.driverStatus == 'inactive')
+        if (driverProvider.currentDriver?.status == DriverStatus.active)
+          const GoOfflineButton(),
+        if (driverProvider.currentDriver?.status == DriverStatus.inactive)
           GoOnlineButton(mapController: _mapController),
-        if (driverStatusProvider.driverStatus == 'on_trip') CancelTripWidget(),
+        if (driverProvider.currentDriver?.status == DriverStatus.onTrip)
+          const CancelTripWidget(),
       ],
     );
   }
