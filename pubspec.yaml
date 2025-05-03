@@ -48,6 +48,8 @@ dependencies:
   pusher_channels_flutter: ^2.5.0
 #need to be deleted in production
   device_preview: ^1.2.0
+  html: ^0.15.5+1
+  intl: ^0.19.0
 
  
 

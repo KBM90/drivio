@@ -1,14 +1,20 @@
+import 'dart:async';
+
+import 'package:drivio_app/common/helpers/date_time_helpers.dart';
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/screens/chat_screen.dart';
 import 'package:drivio_app/common/widgets/distance_progress_widget.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
-import 'package:drivio_app/driver/providers/driver_status_provider.dart';
+import 'package:drivio_app/driver/providers/passenger_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
+import 'package:drivio_app/driver/services/notifications_services.dart';
 import 'package:drivio_app/driver/ui/modals/trip_guide_modal.dart';
+import 'package:drivio_app/driver/ui/screens/passenger_profile.dart';
 import 'package:drivio_app/driver/ui/widgets/preferences_button.dart';
 import 'package:drivio_app/driver/ui/widgets/recommanded_for_you_button.dart';
+import 'package:drivio_app/driver/ui/widgets/rider_notified_countdown_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -21,9 +27,56 @@ class StatusBar extends StatefulWidget {
 }
 
 class _StatusBarState extends State<StatusBar> {
+  Timer? _countdownTimer;
+  int _countdownSeconds = 120;
+  late double distance;
+  // Add this to your initState
+  @override
+  void initState() {
+    super.initState();
+    _countdownTimer?.cancel(); // Cancel any existing timer
+  }
+
+  // Add this to your dispose
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _startCountdown() async {
+    final result = await NotificationsServices().createNotification(
+      type: "driver_arrived",
+      title: "Rider Notified",
+      message: "The driver is near you",
+    );
+    if (result['success']) {
+      _countdownSeconds = 120;
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (_countdownSeconds > 0) {
+          setState(() => _countdownSeconds--);
+        } else {
+          timer.cancel();
+          _countdownTimer = null;
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant StatusBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (distance <= 50 && _countdownTimer == null) {
+      _startCountdown();
+    } else if (distance > 50) {
+      _countdownTimer?.cancel();
+      _countdownTimer = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final locationProvider = Provider.of<DriverLocationProvider>(context);
+    // final locationProvider = Provider.of<DriverLocationProvider>(context);
     final rideRequestProvider = Provider.of<RideRequestsProvider>(context);
     final driverProvider = Provider.of<DriverProvider>(context);
 
@@ -60,8 +113,13 @@ class _StatusBarState extends State<StatusBar> {
                         vertical: 0,
                       ),
                       color: const Color.fromARGB(255, 244, 241, 241),
-                      child: Consumer<DriverProvider>(
-                        builder: (context, driverProvider, child) {
+                      child: Consumer2<DriverProvider, DriverLocationProvider>(
+                        builder: (
+                          context,
+                          driverProvider,
+                          locationProvider,
+                          child,
+                        ) {
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -111,21 +169,13 @@ class _StatusBarState extends State<StatusBar> {
                                         rideRequestProvider
                                                 .currentRideRequest ==
                                             null) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
+                                      return SizedBox();
                                     } else if (snapshot.hasError) {
                                       return const Center(
                                         child: Text('Error loading route info'),
                                       );
                                     } else {
-                                      final duration =
-                                          snapshot.data!['duration']?.round() ??
-                                          0;
-                                      final distance =
-                                          snapshot.data!['distance']
-                                              ?.toStringAsFixed(1) ??
-                                          '0.0';
+                                      distance = snapshot.data!['distance'];
 
                                       return ConstrainedBox(
                                         constraints: BoxConstraints(
@@ -144,14 +194,57 @@ class _StatusBarState extends State<StatusBar> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              // Time and distance row - exactly like your screenshot
+                                              if (snapshot.data!['distance'] <=
+                                                  50) ...{
+                                                RiderNotifiedCountdown(
+                                                  shouldShow: true,
+                                                  passengerName:
+                                                      rideRequestProvider
+                                                          .currentRideRequest!
+                                                          .passenger
+                                                          .name,
+                                                ),
+                                              } else ...{
+                                                Row(
+                                                  // Your existing distance/time row
+                                                  children: [
+                                                    Text(
+                                                      '${snapshot.data!['duration']?.toStringAsFixed(1)} min',
+                                                    ),
+                                                    IconButton(
+                                                      icon: const Icon(
+                                                        Icons.person_4_rounded,
+                                                        color: Color.fromARGB(
+                                                          255,
+                                                          24,
+                                                          8,
+                                                          248,
+                                                        ),
+                                                      ),
+                                                      onPressed: () {
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder:
+                                                                (context) =>
+                                                                    const TripGuideModal(),
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                    Text(
+                                                      '${snapshot.data!['distance'].toStringAsFixed(1)} km',
+                                                    ),
+                                                  ],
+                                                ),
+                                              },
                                               Row(
                                                 mainAxisAlignment:
                                                     MainAxisAlignment
                                                         .spaceBetween,
                                                 children: [
                                                   Text(
-                                                    '$duration min',
+                                                    '${snapshot.data!['duration']?.toStringAsFixed(1)} min',
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                       fontWeight:
@@ -180,7 +273,7 @@ class _StatusBarState extends State<StatusBar> {
                                                     },
                                                   ),
                                                   Text(
-                                                    '$distance mi',
+                                                    '${snapshot.data!['distance'].toStringAsFixed(1)} km',
                                                     style: const TextStyle(
                                                       fontSize: 12,
                                                       fontWeight:
@@ -290,7 +383,31 @@ class _StatusBarState extends State<StatusBar> {
                           const Text('Melody', style: TextStyle(fontSize: 20)),
                           IconButton(
                             icon: const Icon(Icons.person),
-                            onPressed: () {},
+                            onPressed: () async {
+                              await Provider.of<PassengerProvider>(
+                                context,
+                                listen: false,
+                              ).getPassenger(
+                                rideRequestProvider
+                                    .currentRideRequest!
+                                    .passenger
+                                    .id,
+                              );
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => PassengerProfileScreen(
+                                        passengerId:
+                                            rideRequestProvider
+                                                .currentRideRequest!
+                                                .passenger
+                                                .userId,
+                                      ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -301,6 +418,20 @@ class _StatusBarState extends State<StatusBar> {
           ),
         );
       },
+    );
+  }
+
+  _buildNotifierCountDown(distance) {
+    return Column(
+      children: [
+        Center(child: Text("Rider Notified")),
+        Center(
+          child: Text(
+            formatCountdown(_countdownSeconds),
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+        ),
+      ],
     );
   }
 }

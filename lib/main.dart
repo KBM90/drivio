@@ -1,8 +1,8 @@
-import 'package:device_preview/device_preview.dart';
 import 'package:drivio_app/common/constants/routes.dart';
+import 'package:drivio_app/common/providers/map_reports_provider.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
-import 'package:drivio_app/driver/providers/driver_status_provider.dart';
+import 'package:drivio_app/driver/providers/passenger_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/providers/wallet_provider.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +22,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
         ChangeNotifierProvider(create: (context) => WalletProvider()),
         ChangeNotifierProvider(create: (context) => DriverProvider()),
+        ChangeNotifierProvider(create: (context) => PassengerProvider()),
+        ChangeNotifierProvider(create: (context) => MapReportsProvider()),
       ],
       child: MyApp(isLoggedIn: true, role: role),
     ),

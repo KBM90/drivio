@@ -1,6 +1,7 @@
 import 'package:drivio_app/common/widgets/safty_floating_button.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/wallet_provider.dart';
+import 'package:drivio_app/driver/ui/widgets/report_map_issue.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/map_view.dart';
@@ -36,18 +37,41 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           MapView(), // Displays the map
           // Earnings Widget (Centered at the Top)
           Positioned(
-            top: 40,
-            left: MediaQuery.of(context).size.width / 2 - 300,
-            right: MediaQuery.of(context).size.width / 2 - 300, // Centered
-            child: EarningsWidget(),
+            top:
+                MediaQuery.of(context).size.height *
+                0.05, // 5% of screen height
+            left: 0,
+            right: 0,
+            child: Center(
+              child: FractionallySizedBox(
+                widthFactor: 0.9, // 90% of screen width
+                child: EarningsWidget(),
+              ),
+            ),
           ),
 
-          // Menu Button (Left Side)
-          Positioned(top: 40, left: 20, child: MenuButton()),
+          // MenuButton (Top-Left, Responsive Padding)
+          Positioned(
+            top:
+                MediaQuery.of(context).padding.top +
+                MediaQuery.of(context).size.height *
+                    0.02, // SafeArea + 2% of screen height
+            left:
+                MediaQuery.of(context).size.width * 0.05, // 5% of screen width
+            child: MenuButton(),
+          ),
 
           // Search Button (Right Side)
-          Positioned(top: 40, right: 20, child: SearchButton()),
-
+          Positioned(
+            top:
+                MediaQuery.of(context).padding.top +
+                MediaQuery.of(context).size.height *
+                    0.02, // SafeArea + 2% of screen height
+            right:
+                MediaQuery.of(context).size.width * 0.05, // 5% of screen width
+            child: SearchButton(),
+          ),
+          ReportMapIssue(),
           SaftyFloatingButton(),
           StatusBar(),
         ],

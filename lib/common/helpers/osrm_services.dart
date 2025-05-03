@@ -2,6 +2,7 @@ import 'package:drivio_app/common/constants/map_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:html/parser.dart' show parse;
 
 import 'package:latlong2/latlong.dart';
 
@@ -58,6 +59,31 @@ class OSRMService {
       return getValidPlaceName(data);
     } else {
       return "Error fetching location";
+    }
+  }
+
+  Future<String> getPlaceNameFromGoogleMaps(double lat, double lng) async {
+    final String url =
+        "https://www.google.com/maps/@$lat,$lng,17z?entry=ttu&g_ep=EgoyMDI1MDQwOS4wIKXMDSoASAFQAw%3D%3D";
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      print(response.body);
+      if (response.statusCode == 200) {
+        // Parse the HTML content
+        var document = parse(response.body);
+        // Extract the place name (example: from the <title> tag)
+        var titleElement = document.querySelector('title');
+        String title = titleElement?.text ?? "Unknown location";
+
+        // The title might be something like "Nador, Oriental, Morocco - Google Maps"
+        // Clean it up to remove the "- Google Maps" suffix
+        return title.replaceAll(" - Google Maps", "").trim();
+      } else {
+        return "Error fetching location";
+      }
+    } catch (e) {
+      return "Error: $e";
     }
   }
 

@@ -9,6 +9,10 @@ part of 'passenger.dart';
 Passenger _$PassengerFromJson(Map<String, dynamic> json) => Passenger(
   id: (json['id'] as num).toInt(),
   userId: (json['userId'] as num).toInt(),
+  user:
+      json['user'] == null
+          ? null
+          : User.fromJson(json['user'] as Map<String, dynamic>),
   name: json['name'] as String,
   location:
       json['location'] == null
@@ -21,6 +25,7 @@ Passenger _$PassengerFromJson(Map<String, dynamic> json) => Passenger(
 Map<String, dynamic> _$PassengerToJson(Passenger instance) => <String, dynamic>{
   'id': instance.id,
   'userId': instance.userId,
+  'user': instance.user,
   'name': instance.name,
   'location': instance.location,
   'preferences': instance.preferences,

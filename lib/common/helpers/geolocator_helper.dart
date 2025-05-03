@@ -50,4 +50,22 @@ class GeolocatorHelper {
   static LatLng positionToLatLng(Position position) {
     return LatLng(position.latitude, position.longitude);
   }
+
+  static Future<double?> calculateDistance(LatLng end) async {
+    try {
+      LatLng? userCurrentLocation = await getCurrentLocation();
+      if (userCurrentLocation == null) {
+        return null; // Return null if location cannot be obtained
+      }
+      return Geolocator.distanceBetween(
+        userCurrentLocation.latitude,
+        userCurrentLocation.longitude,
+        end.latitude,
+        end.longitude,
+      );
+    } catch (e) {
+      print('Error calculating distance: $e');
+      return null; // Return null on error
+    }
+  }
 }

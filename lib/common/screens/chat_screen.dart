@@ -1,9 +1,8 @@
 // lib/screens/chat_screen.dart
 import 'dart:async';
+import 'package:drivio_app/common/helpers/date_time_helpers.dart';
 import 'package:drivio_app/common/services/message_services.dart';
-import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 class ChatScreen extends StatefulWidget {
   final int passengerId;
@@ -25,12 +24,10 @@ class _ChatScreenState extends State<ChatScreen> {
   late MessageService _messageService;
   // Replace with the authenticated driver's ID
   Timer? _pollingTimer;
-  late DriverProvider driverProvider;
 
   @override
   void initState() {
     super.initState();
-    driverProvider = Provider.of<DriverProvider>(context, listen: false);
     // Initialize MessageService
     _messageService = MessageService();
 
@@ -86,19 +83,70 @@ class _ChatScreenState extends State<ChatScreen> {
               itemBuilder: (context, index) {
                 final message = _messages[index];
                 final isDriver = message['sender_id'] == widget.driverId;
+
                 return Align(
                   alignment:
                       isDriver ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4.0),
-                    padding: const EdgeInsets.all(10.0),
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 4.0,
+                      horizontal: 8.0,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8.0,
+                      horizontal: 12.0,
+                    ),
+                    constraints: BoxConstraints(
+                      maxWidth:
+                          MediaQuery.of(context).size.width *
+                          0.7, // Limit bubble width
+                    ),
                     decoration: BoxDecoration(
                       color: isDriver ? Colors.blue[100] : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(10.0),
+                      borderRadius: BorderRadius.circular(12.0).copyWith(
+                        // Adjust border radius based on sender
+                        topLeft:
+                            isDriver
+                                ? const Radius.circular(12.0)
+                                : const Radius.circular(0),
+                        topRight:
+                            isDriver
+                                ? const Radius.circular(0)
+                                : const Radius.circular(12.0),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      message['message'],
-                      style: const TextStyle(fontSize: 16),
+                    child: Column(
+                      crossAxisAlignment:
+                          isDriver
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          message['message'],
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 4,
+                        ), // Space between message and timestamp
+                        Text(
+                          formatMessageDate(message['sent_at']),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );

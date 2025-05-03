@@ -3,12 +3,14 @@ import 'dart:math' as math;
 
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/models/location.dart';
+import 'package:drivio_app/common/providers/map_reports_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/ui/modals/ride_request_modal.dart';
 import 'package:drivio_app/driver/ui/widgets/cancel_trip_widget.dart';
+import 'package:drivio_app/driver/utils/map_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -65,7 +67,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     locationProvider.addListener(() {
       _debounce?.cancel(); // Cancel previous timer
       if (_debounce?.isActive ?? false) _debounce!.cancel();
-      _debounce = Timer(const Duration(seconds: 5), () async {
+      _debounce = Timer(const Duration(seconds: 1), () async {
         if (mounted &&
             locationProvider.currentLocation != null &&
             _isMapReady) {
@@ -135,7 +137,8 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       }
 
       if (rideRequestsProvider.currentRideRequest != null &&
-          locationProvider.currentLocation != null) {
+          locationProvider.currentLocation != null &&
+          _isMapReady) {
         _pickup = LatLng(
           rideRequestsProvider.currentRideRequest!.pickupLocation.latitude!,
           rideRequestsProvider.currentRideRequest!.pickupLocation.longitude!,
@@ -180,7 +183,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     Location pickupLocation,
     Location dropoffLocation,
   ) async {
-    print("_getDestinationCoordinates()");
     if (locationProvider.currentLocation != null) {
       await _fetchRoute(
         locationProvider.currentLocation!,
@@ -194,19 +196,15 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
           dropoffLocation.longitude!,
         );
       });
-    } else {
-      print("Driver location not available yet.");
-    }
+    } else {}
   }
 
   Future<void> _fetchRoute(LatLng driver, LatLng pickup, LatLng dropoff) async {
-    print("_fetchRoute()");
     // 🔹 Validate coordinates (0.0, 0.0 is invalid)
     if (pickup.latitude == 0.0 ||
         pickup.longitude == 0.0 ||
         dropoff.latitude == 0.0 ||
         dropoff.longitude == 0.0) {
-      print("Invalid pickup/dropoff coordinates.");
       return;
     }
 
@@ -220,18 +218,18 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       if (newPolyline.isNotEmpty) {
         setState(() => _routePolyline = newPolyline);
       } else {
-        print("OSRM returned an empty route.");
+        debugPrint("OSRM returned an empty route.");
       }
     } catch (e) {
-      print("Failed to fetch route: $e");
+      debugPrint("Failed to fetch route: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final rideRequestsProvider = Provider.of<RideRequestsProvider>(context);
-    final driverProvider = Provider.of<DriverProvider>(context);
-
+    final reportsProvider = Provider.of<MapReportsProvider>(context);
+    final reports = reportsProvider.reports;
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -256,7 +254,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                 initialCenter:
                     locationProvider.currentLocation ??
                     LatLng(37.7749, -122.4194),
-                initialZoom: 13,
+                initialZoom: 12,
                 onMapReady: () async {
                   // 🔹 Set map as ready
                   setState(() {
@@ -272,6 +270,22 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
               ),
               children: [
                 TileLayer(urlTemplate: MapConstants.tileLayerUrl),
+                // Add this new MarkerLayer for reports
+                MarkerLayer(
+                  markers: MapUtilities().putMarkers(
+                    reports
+                        .where(
+                          (r) =>
+                              r.pointLocation != null && r.routePoints == null,
+                        )
+                        .toList(),
+                  ),
+                ),
+                PolylineLayer(
+                  polylines: MapUtilities().drawPolylines(
+                    reports.where((r) => r.routePoints != null).toList(),
+                  ),
+                ),
 
                 Consumer<DriverLocationProvider>(
                   builder: (context, locationProvider, child) {

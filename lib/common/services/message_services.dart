@@ -24,6 +24,7 @@ class MessageService {
 
       if (response.statusCode == 200) {
         final List<dynamic> messagesJson = jsonDecode(response.body);
+        print(messagesJson.map((msg) => msg as Map<String, dynamic>).toList());
         return messagesJson.map((msg) => msg as Map<String, dynamic>).toList();
       } else {
         print('Failed to fetch messages: ${response.statusCode}');
