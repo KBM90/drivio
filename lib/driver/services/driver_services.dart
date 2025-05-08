@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:drivio_app/common/constants/api.dart';
+import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,35 +12,43 @@ class DriverService {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
 
-      if (token == null) {
-        throw Exception('No authentication token found');
+      // More detailed token validation
+      if (token == null || token.isEmpty) {
+        throw Exception('Authentication token not found or empty');
       }
 
-      final response = await http.get(
-        Uri.parse('${Api.baseUrl}/driver'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await http
+          .get(
+            Uri.parse('${Api.baseUrl}/driver'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return Driver.fromJson(data['driver']);
-      } else {
-        // Try to parse error message
-        try {
-          final errorData = jsonDecode(response.body);
-          print(errorData);
+      // Handle specific status codes
+      switch (response.statusCode) {
+        case 200:
+          final data = jsonDecode(response.body);
+          return Driver.fromJson(data['driver']);
+        case 401:
+          // Clear invalid token and trigger re-authentication
+          await SharedPreferencesHelper.clearAll();
+
+          throw Exception('Session expired. Please login again.');
+        case 403:
+          throw Exception('Forbidden: You don\'t have permission');
+        default:
           throw Exception(
-            errorData['message'] ?? 'Error ${response.statusCode}',
+            'Server error: ${response.statusCode} - ${response.body}',
           );
-        } catch (_) {
-          throw Exception('Server responded with: ${response.body}');
-        }
       }
     } on FormatException catch (e) {
       throw Exception('Invalid server response format: ${e.message}');
+    } on TimeoutException {
+      throw Exception('Request timed out. Please check your connection');
     } catch (e) {
       throw Exception('Failed to fetch driver: $e');
     }

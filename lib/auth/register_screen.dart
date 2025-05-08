@@ -1,6 +1,6 @@
 import 'package:drivio_app/common/constants/routes.dart';
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../common/services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationsServices {
   Future<Map<String, dynamic>> createNotification({
+    required userId,
     required String type,
     required String title,
     required String message,
@@ -22,6 +23,7 @@ class NotificationsServices {
           'Accept': 'application/json',
         },
         body: jsonEncode({
+          'user_id': userId,
           'type': type,
           'title': title,
           'message': message,

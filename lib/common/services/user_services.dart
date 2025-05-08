@@ -18,20 +18,6 @@ class UserService {
     }
   }
 
-  static Future<void> clearUser() async {
-    try {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await Future.wait([
-        prefs.remove('current_user'),
-        prefs.remove('auth_token'),
-        prefs.remove('role'),
-        prefs.remove('current_user_id'),
-      ]);
-    } catch (e) {
-      print('Error clearing user data: $e');
-    }
-  }
-
   static Future<void> saveUser(User user) async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();

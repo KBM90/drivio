@@ -1,6 +1,6 @@
 import 'package:drivio_app/common/constants/routes.dart';
 import 'package:flutter/material.dart';
-import 'package:drivio_app/services/auth_service.dart';
+import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {

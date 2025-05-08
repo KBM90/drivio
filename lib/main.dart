@@ -1,33 +1,22 @@
 import 'package:drivio_app/common/constants/routes.dart';
-import 'package:drivio_app/common/providers/map_reports_provider.dart';
-import 'package:drivio_app/driver/providers/driver_location_provider.dart';
-import 'package:drivio_app/driver/providers/driver_provider.dart';
-import 'package:drivio_app/driver/providers/passenger_provider.dart';
-import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
-import 'package:drivio_app/driver/providers/wallet_provider.dart';
+import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:provider/provider.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure async storage is ready
-  SharedPreferences prefs = await SharedPreferences.getInstance();
+  WidgetsFlutterBinding.ensureInitialized();
 
-  String? role = prefs.getString('role');
+  // Check once whether we have a stored "role" key.
+  final bool isLoggedIn = await SharedPreferencesHelper.containsKey('role');
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => DriverLocationProvider()),
-        ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
-        ChangeNotifierProvider(create: (context) => WalletProvider()),
-        ChangeNotifierProvider(create: (context) => DriverProvider()),
-        ChangeNotifierProvider(create: (context) => PassengerProvider()),
-        ChangeNotifierProvider(create: (context) => MapReportsProvider()),
-      ],
-      child: MyApp(isLoggedIn: true, role: role),
-    ),
-  );
+  // If logged in, pull the role; otherwise leave it null.
+  final String? role =
+      isLoggedIn
+          ? await SharedPreferencesHelper().getValue<String>('role')
+          : null;
+
+  runApp(MyApp(isLoggedIn: isLoggedIn, role: role));
 }
 
 class MyApp extends StatelessWidget {
@@ -39,6 +28,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       initialRoute: _getInitialRoute(),
       routes: AppRoutes.routes,
@@ -46,7 +36,7 @@ class MyApp extends StatelessWidget {
   }
 
   String _getInitialRoute() {
-    if (isLoggedIn) {
+    if (isLoggedIn && role != null) {
       if (role == 'driver') return AppRoutes.driverHome;
       if (role == 'passenger') return AppRoutes.passengerHome;
     }

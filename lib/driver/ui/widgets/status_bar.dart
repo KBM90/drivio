@@ -29,7 +29,7 @@ class StatusBar extends StatefulWidget {
 class _StatusBarState extends State<StatusBar> {
   Timer? _countdownTimer;
   int _countdownSeconds = 120;
-  late double distance;
+  double distance = 0;
   // Add this to your initState
   @override
   void initState() {
@@ -45,32 +45,45 @@ class _StatusBarState extends State<StatusBar> {
   }
 
   Future<void> _startCountdown() async {
-    final result = await NotificationsServices().createNotification(
-      type: "driver_arrived",
-      title: "Rider Notified",
-      message: "The driver is near you",
-    );
-    if (result['success']) {
-      _countdownSeconds = 120;
-      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_countdownSeconds > 0) {
-          setState(() => _countdownSeconds--);
-        } else {
-          timer.cancel();
-          _countdownTimer = null;
-        }
-      });
-    }
+    _countdownSeconds = 120;
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdownSeconds > 0) {
+        setState(() => _countdownSeconds--);
+      } else {
+        timer.cancel();
+        _countdownTimer = null;
+      }
+    });
   }
 
   @override
   void didUpdateWidget(covariant StatusBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (distance <= 50 && _countdownTimer == null) {
+    if (distance <= 50 && _countdownTimer == null && distance != 0) {
       _startCountdown();
     } else if (distance > 50) {
       _countdownTimer?.cancel();
       _countdownTimer = null;
+    }
+  }
+
+  // Elsewhere in your widget class
+  Future<void> _sendArrivalNotification(int userdId) async {
+    try {
+      await NotificationsServices().createNotification(
+        userId: userdId,
+        type: "driver_arrived",
+        title: "Rider Notified",
+        message: "The driver is near you",
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send notification: ${e.toString()}'),
+          ),
+        );
+      }
     }
   }
 
@@ -176,6 +189,17 @@ class _StatusBarState extends State<StatusBar> {
                                       );
                                     } else {
                                       distance = snapshot.data!['distance'];
+                                      if (distance <= 50) {
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                              _sendArrivalNotification(
+                                                rideRequestProvider
+                                                    .currentRideRequest!
+                                                    .passenger
+                                                    .userId,
+                                              ); // Call a separate async function
+                                            });
+                                      }
 
                                       return ConstrainedBox(
                                         constraints: BoxConstraints(

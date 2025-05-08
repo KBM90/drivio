@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drivio_app/common/constants/api.dart';
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,16 +59,23 @@ class ChangeStatus {
   Future<String?> goOffline() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('auth_token');
+    debugPrint('🚀 goOffline token is: $token');
 
-    final response = await http.patch(
-      Uri.parse('${Api.baseUrl}/toggleStatus'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization':
-            'Bearer $token', // Add this if using Sanctum token-based auth
-      },
-      body: jsonEncode({'status': 'inactive'}),
+    final response = await http
+        .patch(
+          Uri.parse('${Api.baseUrl}/toggleStatus'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization':
+                'Bearer $token', // Add this if using Sanctum token-based auth
+          },
+          body: jsonEncode({'status': 'inactive'}),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    debugPrint(
+      '🚀 goOffline response [${response.statusCode}]: ${response.body}',
     );
 
     if (response.statusCode == 200) {

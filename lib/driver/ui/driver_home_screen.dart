@@ -1,5 +1,9 @@
+import 'package:drivio_app/common/providers/map_reports_provider.dart';
 import 'package:drivio_app/common/widgets/safty_floating_button.dart';
+import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
+import 'package:drivio_app/driver/providers/passenger_provider.dart';
+import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/providers/wallet_provider.dart';
 import 'package:drivio_app/driver/ui/widgets/report_map_issue.dart';
 import 'package:flutter/material.dart';
@@ -10,14 +14,33 @@ import 'widgets/menu_button.dart';
 import '../../common/widgets/search_button.dart';
 import 'widgets/status_bar.dart';
 
-class DriverHomeScreen extends StatefulWidget {
+class DriverHomeScreen extends StatelessWidget {
   const DriverHomeScreen({super.key});
 
   @override
-  State<DriverHomeScreen> createState() => _DriverHomeScreenState();
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => DriverLocationProvider()),
+        ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
+        ChangeNotifierProvider(create: (context) => WalletProvider()),
+        ChangeNotifierProvider(create: (context) => DriverProvider()),
+        ChangeNotifierProvider(create: (context) => PassengerProvider()),
+        ChangeNotifierProvider(create: (context) => MapReportsProvider()),
+      ],
+      child: DriverHomeScreenwidget(),
+    );
+  }
 }
 
-class _DriverHomeScreenState extends State<DriverHomeScreen> {
+class DriverHomeScreenwidget extends StatefulWidget {
+  const DriverHomeScreenwidget({super.key});
+
+  @override
+  State<DriverHomeScreenwidget> createState() => _DriverHomeScreenWidgetState();
+}
+
+class _DriverHomeScreenWidgetState extends State<DriverHomeScreenwidget> {
   @override
   void initState() {
     super.initState();
