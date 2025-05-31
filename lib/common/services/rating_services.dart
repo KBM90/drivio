@@ -1,4 +1,5 @@
 import 'package:drivio_app/common/constants/api.dart';
+import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -9,8 +10,12 @@ class RatingService {
 
   static Future<Map<String, dynamic>?> getRating(int ratedUserId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
       final uri = Uri.parse('$baseUrl/getUserRatings?rated_user=$ratedUserId');
       final response = await http.get(
         uri,

@@ -1,17 +1,16 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'transporttype.dart';
+part of 'payment_method.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-TransportType _$TransportTypeFromJson(Map<String, dynamic> json) =>
-    TransportType(
+PaymentMethod _$PaymentMethodFromJson(Map<String, dynamic> json) =>
+    PaymentMethod(
       id: (json['id'] as num).toInt(),
       name: json['name'] as String,
-      description: json['description'] as String?,
-      priceMultiplier: (json['priceMultiplier'] as num?)?.toDouble(),
+      requiresDetails: json['requires_details'] as bool?,
       createdAt:
           json['created_at'] == null
               ? null
@@ -22,12 +21,11 @@ TransportType _$TransportTypeFromJson(Map<String, dynamic> json) =>
               : DateTime.parse(json['updated_at'] as String),
     );
 
-Map<String, dynamic> _$TransportTypeToJson(TransportType instance) =>
+Map<String, dynamic> _$PaymentMethodToJson(PaymentMethod instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
-      'description': instance.description,
-      'priceMultiplier': instance.priceMultiplier,
+      'requires_details': instance.requiresDetails,
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
     };

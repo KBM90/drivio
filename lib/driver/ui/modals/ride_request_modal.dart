@@ -1,12 +1,9 @@
 import 'package:drivio_app/common/helpers/osrm_services.dart';
+import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/common/services/rating_services.dart';
 import 'package:drivio_app/driver/models/ride_request.dart';
-import 'package:drivio_app/driver/providers/driver_provider.dart';
-import 'package:drivio_app/driver/providers/passenger_provider.dart';
-import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 Future<bool?> showRideRequestModal(
   BuildContext context,
@@ -178,22 +175,6 @@ Future<bool?> showRideRequestModal(
                   rideRequest.destinationLocation.latitude!,
                   rideRequest.destinationLocation.longitude!,
                 );
-
-                if (!context.mounted) return;
-                await Provider.of<DriverProvider>(
-                  context,
-                  listen: false,
-                ).toggleStatus('on_trip');
-                if (!context.mounted) return;
-                await Provider.of<RideRequestsProvider>(
-                  context,
-                  listen: false,
-                ).fetchRideRequest(rideRequest.id);
-                if (!context.mounted) return;
-                await Provider.of<PassengerProvider>(
-                  context,
-                  listen: false,
-                ).getPassenger(rideRequest.passenger.id);
 
                 if (!context.mounted) return;
                 Navigator.pop(

@@ -59,7 +59,6 @@ class ChangeStatus {
   Future<String?> goOffline() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('auth_token');
-    debugPrint('🚀 goOffline token is: $token');
 
     final response = await http
         .patch(
@@ -74,10 +73,6 @@ class ChangeStatus {
         )
         .timeout(const Duration(seconds: 10));
 
-    debugPrint(
-      '🚀 goOffline response [${response.statusCode}]: ${response.body}',
-    );
-
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       await prefs.setString('status', data['status']);
@@ -86,16 +81,19 @@ class ChangeStatus {
     } else if (response.statusCode == 403) {
       // Handle unauthorized access
       final data = jsonDecode(response.body);
-      throw Exception(data['message']);
+      debugPrint(data['message']);
+      return data['message'];
     } else if (response.statusCode == 404) {
       // Handle driver not found
       final data = jsonDecode(response.body);
-      throw Exception(data['message']);
+      debugPrint(data['message']);
+      return data['message'];
     } else {
       // Handle other errors
 
       final data = jsonDecode(response.body);
-      throw Exception(data['message']);
+      debugPrint(data['message']);
+      return data['message'];
     }
   }
 

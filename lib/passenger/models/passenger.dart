@@ -8,8 +8,8 @@ part 'passenger.g.dart';
 @JsonSerializable()
 class Passenger {
   final int id;
+  @JsonKey(name: 'userId')
   final int userId;
-  @JsonKey(name: 'user')
   final User? user;
   final String name; // Add name field
   final Location? location;
@@ -21,7 +21,7 @@ class Passenger {
     required this.userId,
     this.user,
     required this.name, // Add to constructor
-    required this.location,
+    this.location,
     required this.preferences,
     required this.drivingDistance,
   });
@@ -33,7 +33,9 @@ class Passenger {
       user: json['user'] != null ? User.fromJson(json['user']) : null,
       name: json['name'], // Add from JSON
       location:
-          json['location'] != null ? Location.fromJson(json['location']) : null,
+          json['location'] != null
+              ? Location.fromJson(json['location'])
+              : Location(latitude: null, longitude: null),
       preferences: json['preferences'] ?? {},
       drivingDistance: (json['drivingDistance'] as num?)?.toDouble() ?? 0.0,
     );

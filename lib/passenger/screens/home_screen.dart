@@ -1,3 +1,5 @@
+import 'package:drivio_app/passenger/modals/search_bottom_sheet.dart';
+import 'package:drivio_app/passenger/screens/passenger_map_view.dart';
 import 'package:drivio_app/passenger/widgets/passenger_bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:drivio_app/passenger/widgets/search_bar.dart';
@@ -50,9 +52,19 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
             ),
 
             // 2) Search bar
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
-              child: SearchBarWidget(),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PassengerMapScreen(),
+                    ),
+                  );
+                },
+                child: const SearchBarWidget(),
+              ),
             ),
 
             const SizedBox(height: 24),

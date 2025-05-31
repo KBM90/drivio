@@ -1,3 +1,4 @@
+import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:drivio_app/passenger/widgets/passenger_bottom_nav_bar.dart';
 
@@ -96,6 +97,32 @@ class PassengerAccountScreen extends StatelessWidget {
             const _InfoTile(
               title: 'Settings',
               leadingIcon: Icons.settings_outlined,
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                await AuthService().logout();
+                if (!context.mounted) return;
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                backgroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text(
+                "Log out",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),

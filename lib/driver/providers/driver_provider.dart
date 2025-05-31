@@ -22,15 +22,19 @@ class DriverProvider extends ChangeNotifier {
   }
 
   Future<void> toggleStatus(String status) async {
-    if (status == 'active') {
-      _statusMessage = await ChangeStatus().goOnline();
-      _currentDriver?.status = DriverStatus.active;
-    } else if (status == 'on_trip') {
-      _statusMessage = await ChangeStatus().onTrip();
-      _currentDriver?.status = DriverStatus.onTrip;
-    } else {
-      _statusMessage = await ChangeStatus().goOffline();
-      _currentDriver?.status = DriverStatus.inactive;
+    switch (status) {
+      case 'active':
+        _statusMessage = await ChangeStatus().goOnline();
+        _currentDriver?.status = DriverStatus.active;
+        break;
+      case 'on_trip':
+        _statusMessage = await ChangeStatus().onTrip();
+        _currentDriver?.status = DriverStatus.onTrip;
+        break;
+      case 'inactive':
+        _statusMessage = await ChangeStatus().goOffline();
+        _currentDriver?.status = DriverStatus.inactive;
+        break;
     }
 
     notifyListeners();

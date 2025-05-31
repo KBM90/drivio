@@ -1,33 +1,34 @@
 import 'dart:convert';
 import 'package:drivio_app/common/constants/api.dart';
-import 'package:drivio_app/driver/models/driver.dart';
-import 'package:drivio_app/driver/services/driver_services.dart';
+import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/ride_request.dart';
 
 class RideRequestService {
   /// Fetch ride requests within 10km from driver's location & matching preferences
-  static Future<List<RideRequest>> getRideRequests() async {
+  static Future<List<RideRequest>> getRideRequests(
+    LatLng driverLocation,
+  ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      Driver driver = await DriverService.getDriver();
-
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
       if (token == null) {
-        throw Exception("Authentication token is missing.");
+        throw Exception('Authentication token not found');
       }
+      // Driver driver = await DriverService.getDriver();
 
-      if (driver.location == null) {
+      /*  if (driver.location == null) {
         throw Exception("Driver location is missing.");
-      }
+      }*/
 
       // ✅ Construct the URL with query parameters
       final Uri url = Uri.parse('${Api.baseUrl}/getRideRequests').replace(
         queryParameters: {
-          'latitude': driver.location!.latitude.toString(),
-          'longitude': driver.location!.longitude.toString(),
+          'latitude': driverLocation.latitude.toString(),
+          'longitude': driverLocation.longitude.toString(),
         },
       );
 
@@ -51,6 +52,7 @@ class RideRequestService {
       if (response.statusCode == 500) {
         //handling no ride request found
         // ✅ Convert list items to RideRequest objects
+        print(response.body);
         return [];
       } else {
         throw Exception(
@@ -65,8 +67,9 @@ class RideRequestService {
   ///Fetch the choosen ride request
   static Future<RideRequest> getRideRequest(int id) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
 
       if (token == null) {
         throw Exception("Authentication token is missing.");

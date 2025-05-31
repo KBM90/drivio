@@ -1,5 +1,6 @@
 import 'package:drivio_app/common/constants/api.dart';
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
+import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/common/models/map_report.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -19,8 +20,12 @@ class MapReportService {
     String? description,
     // Bearer token for authentication
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    final token = await SharedPreferencesHelper().getValue<String>(
+      'auth_token',
+    );
+    if (token == null) {
+      throw Exception('Authentication token not found');
+    }
     final url = Uri.parse('$_baseUrl/create-map-report');
     final headers = {
       'Content-Type': 'application/json',
@@ -56,9 +61,13 @@ class MapReportService {
   }
 
   static Future<List<MapReport>> getReportsWithinRadius() async {
-    final prefs = await SharedPreferences.getInstance();
     final LatLng? driverLocation = await GeolocatorHelper.getCurrentLocation();
-    final token = prefs.getString('auth_token');
+    final token = await SharedPreferencesHelper().getValue<String>(
+      'auth_token',
+    );
+    if (token == null) {
+      throw Exception('Authentication token not found');
+    }
     final url = Uri.parse('$_baseUrl/get-map-reports');
     final headers = {
       'Content-Type': 'application/json',
@@ -80,7 +89,7 @@ class MapReportService {
       if (response.statusCode == 200) {
         if (responseData['success'] == true) {
           final List<dynamic> reportsJson = responseData['data'];
-          print(responseData['data']);
+
           return reportsJson.map((json) => MapReport.fromJson(json)).toList();
         } else {
           throw Exception(responseData['message'] ?? 'Failed to fetch reports');
@@ -95,8 +104,12 @@ class MapReportService {
   }
 
   static Future<List<MapReport>> getUserMapReports() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    final token = await SharedPreferencesHelper().getValue<String>(
+      'auth_token',
+    );
+    if (token == null) {
+      throw Exception('Authentication token not found');
+    }
     final url = Uri.parse('$_baseUrl/get-user-reports');
     final headers = {
       'Content-Type': 'application/json',

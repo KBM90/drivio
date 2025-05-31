@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:drivio_app/common/constants/api.dart';
+import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationsServices {
   Future<Map<String, dynamic>> createNotification({
@@ -12,8 +12,12 @@ class NotificationsServices {
     Map<String, dynamic>? data,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
 
       final response = await http.post(
         Uri.parse("${Api.baseUrl}/create-notification"),

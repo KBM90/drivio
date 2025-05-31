@@ -11,6 +11,7 @@ RideRequest _$RideRequestFromJson(Map<String, dynamic> json) => RideRequest(
   passenger: Passenger.fromJson(json['passenger'] as Map<String, dynamic>),
   driverId: (json['driver_id'] as num?)?.toInt(),
   transportTypeId: (json['transport_type_id'] as num?)?.toInt(),
+  paymentMethodId: (json['payment_method_id'] as num?)?.toInt(),
   transportType:
       json['transport_type'] == null
           ? null
@@ -28,7 +29,6 @@ RideRequest _$RideRequestFromJson(Map<String, dynamic> json) => RideRequest(
   preferences: json['preferences'] as Map<String, dynamic>?,
   distanceKm: (json['distance_km'] as num?)?.toDouble(),
   estimatedTimeMin: (json['estimated_time_min'] as num?)?.toInt(),
-  estimatedFare: (json['estimated_fare'] as num?)?.toDouble(),
   requestedAt:
       json['requested_at'] == null
           ? null
@@ -53,6 +53,7 @@ Map<String, dynamic> _$RideRequestToJson(RideRequest instance) =>
       'passenger': instance.passenger,
       'driver_id': instance.driverId,
       'transport_type_id': instance.transportTypeId,
+      'payment_method_id': instance.paymentMethodId,
       'transport_type': instance.transportType,
       'status': instance.status,
       'price': instance.price,
@@ -61,7 +62,6 @@ Map<String, dynamic> _$RideRequestToJson(RideRequest instance) =>
       'preferences': instance.preferences,
       'distance_km': instance.distanceKm,
       'estimated_time_min': instance.estimatedTimeMin,
-      'estimated_fare': instance.estimatedFare,
       'requested_at': instance.requestedAt?.toIso8601String(),
       'accepted_at': instance.acceptedAt?.toIso8601String(),
       'created_at': instance.createdAt?.toIso8601String(),

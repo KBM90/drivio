@@ -4,12 +4,18 @@ import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 class GoOnlineButton extends StatelessWidget {
   final MapController mapController;
+  final LatLng driverLocation;
 
-  const GoOnlineButton({super.key, required this.mapController});
+  const GoOnlineButton({
+    super.key,
+    required this.mapController,
+    required this.driverLocation,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +43,7 @@ class GoOnlineButton extends StatelessWidget {
               await driverProvider.toggleStatus('active');
 
               // 3. Fetch ride requests
-              await rideRequestsProvider.fetchRideRequests();
+              await rideRequestsProvider.fetchRideRequests(driverLocation);
               if (!context.mounted) return;
               // ✅ Move map to new location
               if (locationProvider.currentLocation != null) {
@@ -60,10 +66,10 @@ class GoOnlineButton extends StatelessWidget {
               }
             } catch (e) {
               // ❌ If an error occurs, don't update driverStatus
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
-                  content: Text(e.toString()),
-                  backgroundColor: Colors.red,
+                  content: Text(driverProvider.statusMessage!),
+                  backgroundColor: const Color.fromARGB(255, 247, 6, 6),
                 ),
               );
             }

@@ -5,6 +5,7 @@ import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/models/location.dart';
 import 'package:drivio_app/common/providers/map_reports_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
+import 'package:drivio_app/driver/providers/passenger_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
@@ -36,7 +37,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   late RideRequestsProvider rideRequestsProvider;
   late DriverProvider driverProvider;
   Timer? _debounce;
-
   LatLng? _destination;
   LatLng? _pickup;
 
@@ -55,6 +55,10 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     );
 
     driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    if (!locationProvider.isLoading &&
+        driverProvider.currentDriver!.status == DriverStatus.active) {
+      rideRequestsProvider.fetchRideRequests(locationProvider.currentLocation!);
+    }
 
     // Delay the initialization until after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -263,7 +267,12 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
                   // 🔹 Initialize map after it's ready
                   await _initializeMap();
-                  _mapController.move(locationProvider.currentLocation!, 15.0);
+                  if (locationProvider.currentLocation != null && _isMapReady) {
+                    _mapController.move(
+                      locationProvider.currentLocation!,
+                      15.0,
+                    );
+                  }
 
                   // Listen to ride requests updates
                 },
@@ -315,52 +324,112 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                   },
                 ),
 
-                if (driverProvider.currentDriver?.status ==
+                /* if (driverProvider.currentDriver?.status ==
                         DriverStatus.active &&
-                    rideRequestsProvider.rideRequests.isNotEmpty)
-                  // ✅ Ride Request Markers
-                  MarkerLayer(
-                    markers:
-                        rideRequestsProvider.rideRequests.map((rideRequest) {
-                          return Marker(
-                            point: LatLng(
-                              rideRequest.pickupLocation.latitude!,
-                              rideRequest.pickupLocation.longitude!,
-                            ),
-                            child: GestureDetector(
-                              onTap: () async {
-                                // Get the tapped ride request
-                                await _getDestinationCoordinates(
-                                  rideRequest
-                                      .pickupLocation, // ✅ Pickup location
-                                  rideRequest
-                                      .destinationLocation, // ✅ Dropoff location (was wrong before)
-                                );
-                                _mapController.move(
-                                  locationProvider.currentLocation!,
-                                  15.0 - (rideRequest.distanceKm! / 10),
-                                );
-                                if (!context.mounted) return;
-                                showRideRequestModal(context, rideRequest).then(
-                                  (accepted) async {
-                                    if (accepted != true) {
-                                      setState(() {
-                                        _routePolyline = [];
-                                        _destination = null;
-                                      });
-                                    }
+                    rideRequestsProvider.rideRequests.isNotEmpty)*/
+                // ✅ Ride Request Markers
+                Consumer<DriverProvider>(
+                  builder: (context, driverProvider, child) {
+                    final isDriverActive =
+                        driverProvider.currentDriver?.status ==
+                        DriverStatus.active;
+
+                    if (rideRequestsProvider.rideRequests.isNotEmpty &&
+                        isDriverActive) {
+                      return MarkerLayer(
+                        markers:
+                            rideRequestsProvider.rideRequests.map((
+                              rideRequest,
+                            ) {
+                              return Marker(
+                                point: LatLng(
+                                  rideRequest.pickupLocation.latitude!,
+                                  rideRequest.pickupLocation.longitude!,
+                                ),
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    await _getDestinationCoordinates(
+                                      rideRequest.pickupLocation,
+                                      rideRequest.destinationLocation,
+                                    );
+                                    _mapController.move(
+                                      locationProvider.currentLocation!,
+                                      15.0 - (rideRequest.distanceKm! / 10),
+                                    );
+
+                                    if (!context.mounted) return;
+                                    showRideRequestModal(
+                                      context,
+                                      rideRequest,
+                                    ).then((accepted) async {
+                                      if (accepted != true) {
+                                        setState(() {
+                                          _routePolyline = [];
+                                          _destination = null;
+                                        });
+                                      } else {
+                                        if (!context.mounted) return;
+                                        await driverProvider.toggleStatus(
+                                          'on_trip',
+                                        );
+                                        if (!context.mounted) return;
+                                        await Provider.of<RideRequestsProvider>(
+                                          context,
+                                          listen: false,
+                                        ).fetchRideRequest(rideRequest.id);
+                                        if (!context.mounted) return;
+                                        await Provider.of<PassengerProvider>(
+                                          context,
+                                          listen: false,
+                                        ).getPassenger(
+                                          rideRequest.passenger.id,
+                                        );
+                                      }
+                                    });
                                   },
-                                );
-                              },
-                              child: const Icon(
-                                Icons.person_pin_circle,
-                                size: 40,
-                                color: Colors.orange,
+                                  child: const Icon(
+                                    Icons.person_pin_circle,
+                                    size: 40,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                      );
+                    } else {
+                      return const SizedBox.shrink();
+                    }
+                  },
+                ),
+                Consumer<DriverProvider>(
+                  builder: (context, driverProvider, child) {
+                    final isDriverActive =
+                        driverProvider.currentDriver?.status ==
+                        DriverStatus.active;
+
+                    if (!isDriverActive) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return PolygonLayer(
+                      polygons:
+                          rideRequestsProvider.rideRequests.map((rideRequest) {
+                            return Polygon(
+                              points: OSRMService().squareAround(
+                                LatLng(
+                                  rideRequest.pickupLocation.latitude!,
+                                  rideRequest.pickupLocation.longitude!,
+                                ),
+                                40, // 40m side length
                               ),
-                            ),
-                          );
-                        }).toList(),
-                  ),
+                              color: Colors.green.withOpacity(0.2),
+                              borderColor: Colors.green,
+                              borderStrokeWidth: 2,
+                            );
+                          }).toList(),
+                    );
+                  },
+                ),
 
                 // Route Polyline
                 if (_routePolyline.isNotEmpty)
@@ -420,13 +489,23 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
             child: Icon(Icons.my_location, color: Colors.black, size: 20),
           ),
         ),
-
-        if (driverProvider.currentDriver?.status == DriverStatus.active)
-          const GoOfflineButton(),
-        if (driverProvider.currentDriver?.status == DriverStatus.inactive)
-          GoOnlineButton(mapController: _mapController),
-        if (driverProvider.currentDriver?.status == DriverStatus.onTrip)
-          const CancelTripWidget(),
+        Consumer<DriverProvider>(
+          builder: (context, driverProvider, child) {
+            final status = driverProvider.currentDriver?.status;
+            if (status == DriverStatus.active) {
+              return const GoOfflineButton();
+            } else if (status == DriverStatus.inactive) {
+              return GoOnlineButton(
+                mapController: _mapController,
+                driverLocation: locationProvider.currentLocation!,
+              );
+            } else if (status == DriverStatus.onTrip) {
+              return const CancelTripWidget();
+            } else {
+              return const SizedBox(); // fallback
+            }
+          },
+        ),
       ],
     );
   }

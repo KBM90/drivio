@@ -1,17 +1,18 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'transporttype.dart';
+part of 'user_payment_method.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-TransportType _$TransportTypeFromJson(Map<String, dynamic> json) =>
-    TransportType(
+UserPaymentMethod _$UserPaymentMethodFromJson(Map<String, dynamic> json) =>
+    UserPaymentMethod(
       id: (json['id'] as num).toInt(),
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      priceMultiplier: (json['priceMultiplier'] as num?)?.toDouble(),
+      userId: (json['user_id'] as num).toInt(),
+      paymentMethodId: (json['payment_method_id'] as num).toInt(),
+      details: json['details'] as Map<String, dynamic>?,
+      isDefault: json['is_default'] as bool,
       createdAt:
           json['created_at'] == null
               ? null
@@ -22,12 +23,13 @@ TransportType _$TransportTypeFromJson(Map<String, dynamic> json) =>
               : DateTime.parse(json['updated_at'] as String),
     );
 
-Map<String, dynamic> _$TransportTypeToJson(TransportType instance) =>
+Map<String, dynamic> _$UserPaymentMethodToJson(UserPaymentMethod instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'name': instance.name,
-      'description': instance.description,
-      'priceMultiplier': instance.priceMultiplier,
+      'user_id': instance.userId,
+      'payment_method_id': instance.paymentMethodId,
+      'details': instance.details,
+      'is_default': instance.isDefault,
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
     };

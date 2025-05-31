@@ -4,29 +4,27 @@ import 'package:drivio_app/common/constants/api.dart';
 import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class DriverService {
   static Future<Driver> getDriver() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
 
       // More detailed token validation
       if (token == null || token.isEmpty) {
         throw Exception('Authentication token not found or empty');
       }
 
-      final response = await http
-          .get(
-            Uri.parse('${Api.baseUrl}/driver'),
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
-            },
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await http.get(
+        Uri.parse('${Api.baseUrl}/driver'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
 
       // Handle specific status codes
       switch (response.statusCode) {
@@ -59,8 +57,12 @@ class DriverService {
     double longitude,
   ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
 
       final response = await http.patch(
         Uri.parse('${Api.baseUrl}/updateLocation'),
@@ -89,8 +91,12 @@ class DriverService {
     double longitude,
   ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
 
       final response = await http.patch(
         Uri.parse('${Api.baseUrl}/updateDropOffLocation'),
@@ -120,8 +126,12 @@ class DriverService {
     double longitude,
   ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
 
       final response = await http.patch(
         Uri.parse('${Api.baseUrl}/acceptRide'),
@@ -137,6 +147,7 @@ class DriverService {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        SharedPreferencesHelper().setInt("currentRideId", rideId);
         return data['message'];
       } else if (response.statusCode == 403) {
         // Handle unauthorized access
@@ -159,9 +170,16 @@ class DriverService {
 
   static Future<String?> cancelTrip(String reason) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      final int? rideId = prefs.getInt('currentRideId');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
+
+      final int? rideId = await SharedPreferencesHelper().getInt(
+        "currentRideId",
+      );
 
       final response = await http.patch(
         Uri.parse('${Api.baseUrl}/cancelTrip'),
@@ -199,8 +217,12 @@ class DriverService {
 
   static Future<String> stopNewRequsts() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
 
       final response = await http.patch(
         Uri.parse('${Api.baseUrl}/stopNewRequests'),
@@ -237,8 +259,12 @@ class DriverService {
 
   static Future<String> acceptNewRequests() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+      if (token == null) {
+        throw Exception('Authentication token not found');
+      }
 
       final response = await http.patch(
         Uri.parse('${Api.baseUrl}/acceptNewRequests'),

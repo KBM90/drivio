@@ -7,10 +7,9 @@ class TransportType {
   final int id;
   final String name;
   final String? description;
-
+  final double? priceMultiplier;
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
-
   @JsonKey(name: 'updated_at')
   final DateTime? updatedAt;
 
@@ -18,6 +17,7 @@ class TransportType {
     required this.id,
     required this.name,
     this.description,
+    this.priceMultiplier,
     this.createdAt,
     this.updatedAt,
   });

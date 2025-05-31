@@ -1,4 +1,5 @@
 import 'package:drivio_app/common/constants/routes.dart';
+import 'package:drivio_app/common/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,12 +18,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService authService = AuthService();
 
   void login() async {
-    await authService.login(emailController.text, passwordController.text);
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('auth_token');
+    final User? user = await authService.login(
+      emailController.text,
+      passwordController.text,
+    );
 
     if (!mounted) return; // Ensure the widget is still active
-    if (token != null) {
+    if (user != null) {
       Navigator.pushReplacementNamed(
         context,
         AppRoutes.driverHome,

@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
-import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
-class DriverLocationProvider extends ChangeNotifier {
+class PassengerLocationProvider extends ChangeNotifier {
   Position? _currentPosition; // Change to Position? instead of LatLng?
   StreamSubscription<Position>? _positionStream;
   LatLng? _destination;
-  bool _isLoading = false;
 
   LatLng? get currentLocation =>
       _currentPosition != null
@@ -17,35 +15,22 @@ class DriverLocationProvider extends ChangeNotifier {
           : null;
   Position? get currentPosition => _currentPosition; // Add getter for Position
   LatLng? get destination => _destination;
-  bool get isLoading => _isLoading;
 
-  DriverLocationProvider() {
+  PassengerLocationProvider() {
     getCurrentLocation();
     _startListening();
   }
   Future<void> getCurrentLocation() async {
-    _isLoading = true;
+    LatLng? location = await GeolocatorHelper.getCurrentLocation();
+
+    _currentPosition = GeolocatorHelper.latLngToPosition(location!);
+
     notifyListeners();
-
-    try {
-      LatLng? location = await GeolocatorHelper.getCurrentLocation();
-
-      if (location != null) {
-        _currentPosition = GeolocatorHelper.latLngToPosition(location);
-      }
-    } catch (e) {
-      // Optionally handle the error
-      print('Error getting location: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   void _startListening() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      print("Location services are disabled.");
       return;
     }
 
@@ -53,7 +38,6 @@ class DriverLocationProvider extends ChangeNotifier {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        print("Location permission denied.");
         return;
       }
     }
@@ -82,10 +66,10 @@ class DriverLocationProvider extends ChangeNotifier {
         _currentPosition = position; // Store the full Position object
 
         // 🔹 Ensure the API call doesn't block UI updates
-        await DriverService.updateDriverLocation(
+        /*  await DriverService.updateDriverLocation(
           position.latitude,
           position.longitude,
-        );
+        );*/
 
         notifyListeners();
       } catch (e) {
@@ -94,14 +78,14 @@ class DriverLocationProvider extends ChangeNotifier {
     });
   }
 
-  Future<void> getDestination(LatLng passengerDestination) async {
+  /*  Future<void> getDestination(LatLng passengerDestination) async {
     await DriverService.updateDriverDropOffLocation(
       passengerDestination.latitude,
       passengerDestination.longitude,
     );
     _destination = passengerDestination;
     notifyListeners();
-  }
+  }*/
 
   @override
   void dispose() {

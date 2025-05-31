@@ -1,17 +1,11 @@
 import 'package:drivio_app/driver/providers/driver_provider.dart';
-import 'package:drivio_app/driver/providers/driver_status_provider.dart';
-import 'package:drivio_app/driver/services/change_status.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class GoOfflineButton extends StatefulWidget {
+class GoOfflineButton extends StatelessWidget {
   const GoOfflineButton({super.key});
 
-  @override
-  State<GoOfflineButton> createState() => _GoOfflineButtonState();
-}
-
-class _GoOfflineButtonState extends State<GoOfflineButton> {
   @override
   Widget build(BuildContext context) {
     final driverProvider = Provider.of<DriverProvider>(context);
@@ -24,26 +18,25 @@ class _GoOfflineButtonState extends State<GoOfflineButton> {
         child: FloatingActionButton(
           heroTag: "stop_button", // Unique hero tag
           onPressed: () async {
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
             try {
-              final message = await ChangeStatus().goOffline();
-
-              if (!context.mounted) return;
+              // if (!context.mounted) return;
 
               // ✅ Only update status if no exception was thrown
-              driverProvider.toggleStatus('inactive');
+              await driverProvider.toggleStatus('inactive');
 
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
-                  content: Text(message!),
-                  backgroundColor: const Color.fromARGB(255, 245, 5, 5),
+                  content: Text(driverProvider.statusMessage!),
+                  backgroundColor: Colors.green,
                 ),
               );
             } catch (e) {
               // ❌ If an error occurs, don't update driverStatus
-              ScaffoldMessenger.of(context).showSnackBar(
+              scaffoldMessenger.showSnackBar(
                 SnackBar(
-                  content: Text(e.toString()),
-                  backgroundColor: Colors.red,
+                  content: Text(driverProvider.statusMessage!),
+                  backgroundColor: const Color.fromARGB(255, 242, 5, 5),
                 ),
               );
             }

@@ -1,3 +1,4 @@
+import 'package:drivio_app/common/models/user.dart';
 import 'package:json_annotation/json_annotation.dart';
 import '../../common/models/location.dart'; // ✅ Import Location
 
@@ -8,6 +9,7 @@ class Driver {
   final int id;
   @JsonKey(name: 'user_id')
   final int userId;
+  final User? user;
   final Location? location;
   @JsonKey(name: 'dropoff_location')
   final Location? dropoffLocation;
@@ -20,6 +22,7 @@ class Driver {
   Driver({
     required this.id,
     required this.userId,
+    this.user,
     this.location,
     this.dropoffLocation,
     this.preferences,
@@ -32,6 +35,7 @@ class Driver {
     return Driver(
       id: json['id'] ?? 0,
       userId: json['user_id'] ?? 0,
+      user: json['user'] != null ? User.fromJson(json['user']) : null,
       location:
           json['location'] != null ? Location.fromJson(json['location']) : null,
       dropoffLocation:

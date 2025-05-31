@@ -1,6 +1,8 @@
 import 'package:drivio_app/driver/models/ride_request.dart';
 import 'package:drivio_app/driver/services/ride_request_services.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RideRequestsProvider with ChangeNotifier {
@@ -17,15 +19,15 @@ class RideRequestsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   RideRequestsProvider() {
-    fetchRideRequests();
+    //fetchRideRequests(driverLocation);
   }
 
-  Future<void> fetchRideRequests() async {
+  Future<void> fetchRideRequests(LatLng driverLocation) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      _rideRequests = await RideRequestService.getRideRequests();
+      _rideRequests = await RideRequestService.getRideRequests(driverLocation);
     } catch (e) {
       debugPrint("Error fetching ride requests: $e");
     }
@@ -35,9 +37,6 @@ class RideRequestsProvider with ChangeNotifier {
   }
 
   Future<void> fetchRideRequest(int id) async {
-    _isLoading = true;
-    notifyListeners();
-    print("fetchRideRequest");
     try {
       // 1. Check local list first
       try {
@@ -69,7 +68,6 @@ class RideRequestsProvider with ChangeNotifier {
   }
 
   Future<void> fetchPersistanceRideRequest() async {
-    print("fetchPersistanceRideRequest");
     _isLoading = true;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();

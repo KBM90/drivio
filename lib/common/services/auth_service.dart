@@ -7,7 +7,6 @@ import 'package:drivio_app/driver/services/change_status.dart';
 import 'package:drivio_app/main.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   Future<String?> register(
@@ -50,36 +49,49 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
 
         // Parse the user model
         final user = User.fromJson(data['user']);
 
         // Store authentication token
-        await prefs.setString('auth_token', data['auth_token']);
+        await SharedPreferencesHelper.clearAll();
+        await SharedPreferencesHelper().setString(
+          'auth_token',
+          data['auth_token'],
+        );
+
         // Store user role
-        await prefs.setString('role', data['role']);
+
+        await SharedPreferencesHelper().setString('role', data['role']);
+
         // Store complete user model as JSON
-        await prefs.setString('current_user', jsonEncode(user.toJson()));
+
+        await SharedPreferencesHelper().setString(
+          "current_user",
+          jsonEncode(user.toJson()),
+        );
 
         return user;
       } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Login failed');
+        //  final errorData = jsonDecode(response.body);
+        return null;
       }
     } catch (e) {
-      throw Exception('Login error: $e');
+      return null;
+      // throw Exception('Login error: $e');
     }
   }
 
   Future<void> logout() async {
     try {
       // 1. Get the auth token
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      await ChangeStatus().goOffline();
+      final token = await SharedPreferencesHelper().getValue<String>(
+        'auth_token',
+      );
+
       // 2. Make API call if token exists
       if (token != null) {
+        await ChangeStatus().goOffline();
         final response = await http
             .post(
               Uri.parse('${Api.baseUrl}/logout'),

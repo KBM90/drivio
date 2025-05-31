@@ -1,3 +1,4 @@
+import 'package:drivio_app/common/models/location.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -49,6 +50,10 @@ class GeolocatorHelper {
 
   static LatLng positionToLatLng(Position position) {
     return LatLng(position.latitude, position.longitude);
+  }
+
+  static LatLng locationToLatLng(Location position) {
+    return LatLng(position.latitude!, position.longitude!);
   }
 
   static Future<double?> calculateDistance(LatLng end) async {

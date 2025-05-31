@@ -86,4 +86,34 @@ class SharedPreferencesHelper {
   Future<double?> getDouble(String key) async => getValue<double>(key);
   Future<List<String>?> getStringList(String key) async =>
       getValue<List<String>>(key);
+
+  /// Set a String value
+  Future<bool> setString(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    return await prefs.setString(key, value);
+  }
+
+  /// Set an int value
+  Future<bool> setInt(String key, int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    return await prefs.setInt(key, value);
+  }
+
+  /// Set a bool value
+  Future<bool> setBool(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    return await prefs.setBool(key, value);
+  }
+
+  /// Set a double value
+  Future<bool> setDouble(String key, double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    return await prefs.setDouble(key, value);
+  }
+
+  /// Set a List<String> value
+  Future<bool> setStringList(String key, List<String> value) async {
+    final prefs = await SharedPreferences.getInstance();
+    return await prefs.setStringList(key, value);
+  }
 }
