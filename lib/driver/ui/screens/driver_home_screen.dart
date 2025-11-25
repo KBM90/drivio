@@ -115,7 +115,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     await Provider.of<RideRequestsProvider>(
                       context,
                       listen: false,
-                    ).fetchRideRequests(
+                    ).getNearByRideRequests(
                       LatLng(
                         driver.location!.latitude!,
                         driver.location!.longitude!,

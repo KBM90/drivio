@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:drivio_app/common/helpers/osrm_services.dart';
+import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/common/models/location.dart';
 import 'package:drivio_app/common/providers/map_reports_provider.dart';
 import 'package:drivio_app/common/widgets/cached_tile_layer.dart';
@@ -58,21 +59,55 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     );
 
     driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    if (!locationProvider.isLoading &&
-        driverProvider.currentDriver!.status == DriverStatus.active) {
-      rideRequestsProvider.fetchRideRequests(locationProvider.currentLocation!);
-    }
-    if (locationProvider.isLoading &&
-        driverProvider.currentDriver?.status == DriverStatus.onTrip &&
-        rideRequestsProvider.currentRideRequest == null) {
-      ChangeStatus().goOffline();
-    }
 
-    // Delay the initialization until after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeMap();
-      _setupLocationListener();
+    // Delay the initialization until after first frame (when driver data is loaded)
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Now check driver status after data is loaded
+      debugPrint("Driver Status is: ${driverProvider.currentDriver?.status}");
+
+      // Fetch ride requests if driver is active
+      if (!locationProvider.isLoading &&
+          driverProvider.currentDriver?.status == DriverStatus.active) {
+        rideRequestsProvider.getNearByRideRequests(
+          locationProvider.currentLocation!,
+        );
+      }
+
+      // Fetch current ride request if driver is on_trip (for app restart scenario)
+      if (driverProvider.currentDriver?.status == DriverStatus.onTrip) {
+        await _loadCurrentRideRequest();
+      }
     });
+  }
+
+  // Load current ride request from SharedPreferences when app restarts
+  Future<void> _loadCurrentRideRequest() async {
+    try {
+      final currentRideId = await SharedPreferencesHelper().getInt(
+        "currentRideId",
+      );
+
+      if (currentRideId != null) {
+        debugPrint("📍 Loading current ride request: $currentRideId");
+        await rideRequestsProvider.fetchRideRequest(currentRideId);
+
+        // Verify the ride request was actually loaded
+        if (rideRequestsProvider.currentRideRequest == null) {
+          debugPrint("⚠️ Failed to load ride request, going offline");
+          await ChangeStatus().goOffline();
+          await SharedPreferencesHelper.remove("currentRideId");
+        } else {
+          debugPrint("✅ Current ride request loaded");
+        }
+      } else {
+        debugPrint("⚠️ No current ride ID found, going offline");
+        await ChangeStatus().goOffline();
+      }
+    } catch (e) {
+      debugPrint("❌ Error loading current ride request: $e");
+      await ChangeStatus().goOffline();
+      await SharedPreferencesHelper.remove("currentRideId");
+    }
   }
 
   void _setupLocationListener() {
@@ -272,6 +307,10 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
           _routePolyline = pickupToDropoff;
         });
         debugPrint("✅ Routes stored in state");
+        debugPrint(
+          "   _routePolylineDriverToPickup length: ${_routePolylineDriverToPickup.length}",
+        );
+        debugPrint("   _routePolyline length: ${_routePolyline.length}");
       }
     } catch (e) {
       debugPrint("❌ Failed to fetch route: $e");
@@ -304,10 +343,10 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                 ),
                 // ✅ Use default center until Firestore loads
                 initialCenter: LatLng(
-                  31.7917, // latitude (rough center of Morocco)
-                  -7.0926, // longitude (rough center of Morocco)
+                  locationProvider.currentLocation!.latitude,
+                  locationProvider.currentLocation!.longitude,
                 ), // Your default location
-                initialZoom: 6.0,
+                initialZoom: 15,
                 onMapReady: () async {
                   setState(() {
                     _isMapReady = true;
@@ -315,10 +354,47 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
                   await _initializeMap();
 
-                  // ✅ Move to driver location from DriverLocationProvider
+                  // Wait for the map controller to fully initialize
+                  await Future.delayed(const Duration(milliseconds: 500));
+
+                  // Setup location listener after map is ready
+                  _setupLocationListener();
+
+                  // Wait a bit more before trying to fetch routes
+                  await Future.delayed(const Duration(milliseconds: 500));
+
+                  // ✅ Move to driver location initially
                   final driverLocation = locationProvider.currentLocation;
-                  if (driverLocation != null && _isMapReady) {
-                    _mapController.move(driverLocation, 15.0);
+                  if (driverLocation != null && mounted) {
+                    // ✅ Fetch routes if there's an active ride request (for app restart)
+                    if (rideRequestsProvider.currentRideRequest != null) {
+                      debugPrint(
+                        "🗺️ Fetching routes for active ride request on map ready",
+                      );
+                      await _fetchRoute(
+                        driverLocation,
+                        LatLng(
+                          rideRequestsProvider
+                              .currentRideRequest!
+                              .pickupLocation
+                              .latitude!,
+                          rideRequestsProvider
+                              .currentRideRequest!
+                              .pickupLocation
+                              .longitude!,
+                        ),
+                        LatLng(
+                          rideRequestsProvider
+                              .currentRideRequest!
+                              .destinationLocation
+                              .latitude!,
+                          rideRequestsProvider
+                              .currentRideRequest!
+                              .destinationLocation
+                              .longitude!,
+                        ),
+                      );
+                    }
                   }
                 },
               ),
@@ -509,7 +585,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                                             }
                                           }
                                           Future.delayed(
-                                            const Duration(milliseconds: 200),
+                                            const Duration(milliseconds: 50),
                                             () {
                                               if (!context.mounted) return;
 

@@ -28,11 +28,13 @@ class RideRequestsProvider with ChangeNotifier {
     //fetchRideRequests(driverLocation);
   }
 
-  Future<void> fetchRideRequests(LatLng driverLocation) async {
+  Future<void> getNearByRideRequests(LatLng driverLocation) async {
     _isLoading = true;
     notifyListeners();
 
-    _rideRequests = await RideRequestService.getRideRequests(driverLocation);
+    _rideRequests = await RideRequestService.getNearByRideRequests(
+      driverLocation,
+    );
     pickupPlacesNames.clear();
     destinationPlacesNames.clear();
 

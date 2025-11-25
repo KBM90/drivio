@@ -48,7 +48,7 @@ class GoOnlineButton extends StatelessWidget {
               );
 
               // 3. Fetch ride requests
-              await rideRequestsProvider.fetchRideRequests(driverLocation);
+              await rideRequestsProvider.getNearByRideRequests(driverLocation);
 
               // ✅ Move map to new location
               if (locationProvider.currentLocation != null) {

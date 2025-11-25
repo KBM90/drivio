@@ -7,7 +7,7 @@ import '../../common/models/ride_request.dart';
 
 class RideRequestService {
   /// Fetch ride requests within the driver's configured range (or 10km default)
-  static Future<List<RideRequest>> getRideRequests(
+  static Future<List<RideRequest>> getNearByRideRequests(
     LatLng driverLocation,
   ) async {
     try {
