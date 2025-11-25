@@ -124,6 +124,8 @@ class RideRequest {
       destinationLocation:
           json['destination_location'] != null
               ? Location.fromJson(json['destination_location'])
+              : json['dropoff_location'] != null
+              ? Location.fromJson(json['dropoff_location'])
               : Location(latitude: null, longitude: null),
     );
   }

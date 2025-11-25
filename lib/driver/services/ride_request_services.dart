@@ -73,6 +73,8 @@ class RideRequestService {
               .eq('id', id)
               .single();
 
+      debugPrint("🔍 Raw Ride Request Response: $response");
+
       return RideRequest.fromJson(response);
     } catch (e) {
       debugPrint('❌ Error fetching ride request: $e');

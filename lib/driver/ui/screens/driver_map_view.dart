@@ -44,6 +44,9 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   LatLng? _destination;
   LatLng? _pickup;
 
+  bool _hasLoadedRideRequest = false;
+  bool _hasInitialFetchDone = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,24 +63,42 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
     driverProvider = Provider.of<DriverProvider>(context, listen: false);
 
-    // Delay the initialization until after first frame (when driver data is loaded)
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Now check driver status after data is loaded
-      debugPrint("Driver Status is: ${driverProvider.currentDriver?.status}");
+    // Listen to driver updates to handle async loading
+    driverProvider.addListener(_onDriverChanged);
 
-      // Fetch ride requests if driver is active
-      if (!locationProvider.isLoading &&
-          driverProvider.currentDriver?.status == DriverStatus.active) {
-        rideRequestsProvider.getNearByRideRequests(
-          locationProvider.currentLocation!,
-        );
-      }
-
-      // Fetch current ride request if driver is on_trip (for app restart scenario)
-      if (driverProvider.currentDriver?.status == DriverStatus.onTrip) {
-        await _loadCurrentRideRequest();
-      }
+    // Check immediately in case driver is already loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onDriverChanged();
     });
+  }
+
+  Future<void> _onDriverChanged() async {
+    if (!mounted) return;
+
+    final driver = driverProvider.currentDriver;
+    if (driver == null) return;
+
+    // Check driver status
+    debugPrint("🔍 _onDriverChanged - Driver Status is: ${driver.status}");
+
+    // Fetch current ride request if driver is on_trip (for app restart scenario)
+    if (driver.status == DriverStatus.onTrip && !_hasLoadedRideRequest) {
+      debugPrint("🔍 Driver is onTrip, calling _loadCurrentRideRequest");
+      _hasLoadedRideRequest = true;
+      await _loadCurrentRideRequest();
+    }
+
+    // Fetch ride requests if driver is active
+    if (driver.status == DriverStatus.active &&
+        !locationProvider.isLoading &&
+        locationProvider.currentLocation != null &&
+        !_hasInitialFetchDone) {
+      debugPrint("🔍 Driver is active, fetching nearby ride requests");
+      _hasInitialFetchDone = true;
+      rideRequestsProvider.getNearByRideRequests(
+        locationProvider.currentLocation!,
+      );
+    }
   }
 
   // Load current ride request from SharedPreferences when app restarts
@@ -162,6 +183,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     _mapController.dispose();
     _debounce?.cancel();
     locationProvider.removeListener(_onLocationUpdate);
+    driverProvider.removeListener(_onDriverChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -370,32 +392,29 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                   final driverLocation = locationProvider.currentLocation;
                   if (driverLocation != null && mounted) {
                     // ✅ Fetch routes if there's an active ride request (for app restart)
-                    if (rideRequestsProvider.currentRideRequest != null) {
+                    final currentRide = rideRequestsProvider.currentRideRequest;
+                    if (currentRide != null &&
+                        currentRide.pickupLocation.latitude != null &&
+                        currentRide.pickupLocation.longitude != null &&
+                        currentRide.destinationLocation.latitude != null &&
+                        currentRide.destinationLocation.longitude != null) {
                       debugPrint(
                         "🗺️ Fetching routes for active ride request on map ready",
                       );
                       await _fetchRoute(
                         driverLocation,
                         LatLng(
-                          rideRequestsProvider
-                              .currentRideRequest!
-                              .pickupLocation
-                              .latitude!,
-                          rideRequestsProvider
-                              .currentRideRequest!
-                              .pickupLocation
-                              .longitude!,
+                          currentRide.pickupLocation.latitude!,
+                          currentRide.pickupLocation.longitude!,
                         ),
                         LatLng(
-                          rideRequestsProvider
-                              .currentRideRequest!
-                              .destinationLocation
-                              .latitude!,
-                          rideRequestsProvider
-                              .currentRideRequest!
-                              .destinationLocation
-                              .longitude!,
+                          currentRide.destinationLocation.latitude!,
+                          currentRide.destinationLocation.longitude!,
                         ),
+                      );
+                    } else {
+                      debugPrint(
+                        "⚠️ Skipping route fetch: Missing coordinates in ride request",
                       );
                     }
                   }
