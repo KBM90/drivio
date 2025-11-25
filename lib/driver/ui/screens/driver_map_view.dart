@@ -342,11 +342,14 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                   flags: InteractiveFlag.all,
                 ),
                 // ✅ Use default center until Firestore loads
-                initialCenter: LatLng(
-                  locationProvider.currentLocation!.latitude,
-                  locationProvider.currentLocation!.longitude,
-                ), // Your default location
-                initialZoom: 15,
+                initialCenter:
+                    locationProvider.currentLocation != null
+                        ? LatLng(
+                          locationProvider.currentLocation!.latitude,
+                          locationProvider.currentLocation!.longitude,
+                        )
+                        : LatLng(31.7917, -7.0926), // Your default location
+                initialZoom: locationProvider.currentLocation != null ? 13 : 6,
                 onMapReady: () async {
                   setState(() {
                     _isMapReady = true;

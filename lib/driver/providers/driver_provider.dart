@@ -32,6 +32,9 @@ class DriverProvider extends ChangeNotifier {
   /// Validates driver status and fixes inconsistencies
   /// If driver is on_trip but has no active ride, resets to active
   Future<void> _validateDriverStatus() async {
+    debugPrint("🔍 _validateDriverStatus called");
+    debugPrint("   Current driver status: ${_currentDriver?.status}");
+
     if (_currentDriver?.status == DriverStatus.onTrip) {
       try {
         // Check if there's an active ride in SharedPreferences
@@ -52,6 +55,7 @@ class DriverProvider extends ChangeNotifier {
         } else {
           // Check if the ride actually exists and belongs to this driver
           try {
+            debugPrint("🔍 Checking ride $currentRideId in database...");
             final ride =
                 await Supabase.instance.client
                     .from('ride_requests')
@@ -59,12 +63,14 @@ class DriverProvider extends ChangeNotifier {
                     .eq('id', currentRideId)
                     .maybeSingle();
 
+            debugPrint("🔍 Ride query result: $ride");
+
             if (ride == null) {
               debugPrint("⚠️ Ride $currentRideId not found in database");
               shouldReset = true;
             } else if (ride['driver_id'] != _currentDriver?.id) {
               debugPrint(
-                "⚠️ Ride $currentRideId does not belong to this driver (driver_id: ${ride['driver_id']}, current: ${_currentDriver?.id})",
+                "⚠️ Ride $currentRideId does not belong to this driver",
               );
               shouldReset = true;
             } else if (ride['status'] == 'cancelled_by_driver' ||
@@ -72,10 +78,12 @@ class DriverProvider extends ChangeNotifier {
                 ride['status'] == 'completed') {
               debugPrint("⚠️ Ride $currentRideId is ${ride['status']}");
               shouldReset = true;
+            } else {
+              debugPrint("✅ Ride $currentRideId is valid: ${ride['status']}");
             }
           } catch (e) {
             debugPrint("⚠️ Error checking ride in database: $e");
-            shouldReset = true;
+            // Don't reset on network error
           }
         }
 
@@ -83,13 +91,8 @@ class DriverProvider extends ChangeNotifier {
           debugPrint(
             "⚠️ Driver marked as on_trip but no valid active ride. Resetting to active...",
           );
-
-          // Clear SharedPreferences
           await SharedPreferencesHelper.remove("currentRideId");
-
-          // Reset driver status to active
           await toggleStatus('active');
-
           debugPrint("✅ Driver status reset to active");
         } else {
           debugPrint("✅ Driver status is valid - active ride exists");
