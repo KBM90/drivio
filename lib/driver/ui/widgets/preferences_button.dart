@@ -1,4 +1,3 @@
-import 'package:drivio_app/driver/ui/modals/preferences_modal_modal.dart';
 import 'package:drivio_app/driver/ui/screens/preferences_page.dart';
 import 'package:flutter/material.dart';
 

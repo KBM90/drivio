@@ -37,25 +37,24 @@ class GoOnlineButton extends StatelessWidget {
             final scaffoldMessenger = ScaffoldMessenger.of(context);
             try {
               // 1. First check if we still have a valid context
-              if (!context.mounted) return;
 
               // 2. Update status
               await driverProvider.toggleStatus('active');
-
-              // 3. Fetch ride requests
-              await rideRequestsProvider.fetchRideRequests(driverLocation);
-              if (!context.mounted) return;
-              // ✅ Move map to new location
-              if (locationProvider.currentLocation != null) {
-                mapController.move(locationProvider.currentLocation!, 15.0);
-              }
-
               scaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text(driverProvider.statusMessage!),
                   backgroundColor: Colors.green,
                 ),
               );
+
+              // 3. Fetch ride requests
+              await rideRequestsProvider.fetchRideRequests(driverLocation);
+
+              // ✅ Move map to new location
+              if (locationProvider.currentLocation != null) {
+                mapController.move(locationProvider.currentLocation!, 15.0);
+              }
+
               if (rideRequestsProvider.rideRequests.isEmpty) {
                 scaffoldMessenger.showSnackBar(
                   SnackBar(

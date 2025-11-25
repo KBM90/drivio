@@ -1,45 +1,53 @@
 import 'package:drivio_app/common/constants/routes.dart';
-import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
+import 'package:drivio_app/common/widgets/auth_gate.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> initApp() async {
+  await dotenv.load(fileName: ".env");
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
+  // ✅ Initialize tile caching
+  await FMTCObjectBoxBackend().initialise();
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Check once whether we have a stored "role" key.
-  final bool isLoggedIn = await SharedPreferencesHelper.containsKey('role');
+  // Initialize app
+  await initApp();
 
-  // If logged in, pull the role; otherwise leave it null.
-  final String? role =
-      isLoggedIn
-          ? await SharedPreferencesHelper().getValue<String>('role')
-          : null;
+  // ✅ Check if store exists before creating
+  final store = FMTCStore('mapStore');
+  final storeExists = await store.manage.ready;
 
-  runApp(MyApp(isLoggedIn: isLoggedIn, role: role));
+  if (!storeExists) {
+    await store.manage.create();
+    debugPrint('✅ Created new map store');
+  } else {
+    debugPrint('ℹ️ Map store already exists');
+  }
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final bool isLoggedIn;
-  final String? role;
-
-  const MyApp({super.key, required this.isLoggedIn, required this.role});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      initialRoute: _getInitialRoute(),
+      home: const AuthGate(), // AuthGate will provide providers
       routes: AppRoutes.routes,
     );
-  }
-
-  String _getInitialRoute() {
-    if (isLoggedIn && role != null) {
-      if (role == 'driver') return AppRoutes.driverHome;
-      if (role == 'passenger') return AppRoutes.passengerHome;
-    }
-    return AppRoutes.login;
   }
 }

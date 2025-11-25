@@ -1,16 +1,19 @@
 import 'package:drivio_app/common/helpers/osrm_services.dart';
-import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/common/services/rating_services.dart';
-import 'package:drivio_app/driver/models/ride_request.dart';
-import 'package:drivio_app/driver/services/driver_services.dart';
+import 'package:drivio_app/common/models/ride_request.dart';
+import 'package:drivio_app/driver/models/driver.dart';
+import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:flutter/material.dart';
 
 Future<bool?> showRideRequestModal(
   BuildContext context,
   RideRequest rideRequest,
+  RideRequestsProvider rideRequestProvider,
+  Driver driver,
 ) async {
   return showModalBottomSheet(
     context: context,
+    useRootNavigator: false,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
     ),
@@ -28,14 +31,14 @@ Future<bool?> showRideRequestModal(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      rideRequest.transportType!.name,
+                      rideRequest.transportType?.name ?? "Ride",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
                     Text(
-                      "\$${rideRequest.price!.toStringAsFixed(2)}",
+                      "\$${rideRequest.price?.toStringAsFixed(2) ?? "0.00"}",
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -91,8 +94,8 @@ Future<bool?> showRideRequestModal(
                 Expanded(
                   child: FutureBuilder<String>(
                     future: OSRMService().getPlaceName(
-                      rideRequest.pickupLocation.latitude!,
-                      rideRequest.pickupLocation.longitude!,
+                      rideRequest.pickupLocation.latitude ?? 0.0,
+                      rideRequest.pickupLocation.longitude ?? 0.0,
                     ),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -131,8 +134,8 @@ Future<bool?> showRideRequestModal(
                 Expanded(
                   child: FutureBuilder<String>(
                     future: OSRMService().getPlaceName(
-                      rideRequest.destinationLocation.latitude!,
-                      rideRequest.destinationLocation.longitude!,
+                      rideRequest.destinationLocation.latitude ?? 0.0,
+                      rideRequest.destinationLocation.longitude ?? 0.0,
                     ),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -170,10 +173,11 @@ Future<bool?> showRideRequestModal(
                 minimumSize: const Size(double.infinity, 40),
               ),
               onPressed: () async {
-                await DriverService.acceptRideRequest(
+                await rideRequestProvider.acceptRideRequest(
                   rideRequest.id,
-                  rideRequest.destinationLocation.latitude!,
-                  rideRequest.destinationLocation.longitude!,
+                  driver.id!,
+                  rideRequest.destinationLocation.latitude ?? 0.0,
+                  rideRequest.destinationLocation.longitude ?? 0.0,
                 );
 
                 if (!context.mounted) return;

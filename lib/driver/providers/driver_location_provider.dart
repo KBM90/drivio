@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
+import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,19 +11,28 @@ class DriverLocationProvider extends ChangeNotifier {
   StreamSubscription<Position>? _positionStream;
   LatLng? _destination;
   bool _isLoading = false;
+  Driver? _currentDriver;
 
   LatLng? get currentLocation =>
       _currentPosition != null
           ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
           : null;
   Position? get currentPosition => _currentPosition; // Add getter for Position
+  double get heading => _currentPosition?.heading ?? 0.0;
   LatLng? get destination => _destination;
   bool get isLoading => _isLoading;
+  Driver? get currentDriver => _currentDriver;
 
   DriverLocationProvider() {
+    getDriver();
     getCurrentLocation();
     _startListening();
   }
+
+  Future<void> getDriver() async {
+    _currentDriver = await DriverService.getDriver();
+  }
+
   Future<void> getCurrentLocation() async {
     _isLoading = true;
     notifyListeners();
@@ -74,18 +84,22 @@ class DriverLocationProvider extends ChangeNotifier {
             position.longitude,
           );
 
+          // Skip if moved less than 5 meters
           if (distanceMoved < 5) {
-            return; // Skip API update if movement is less than 5 meters
+            return;
           }
         }
 
         _currentPosition = position; // Store the full Position object
 
-        // 🔹 Ensure the API call doesn't block UI updates
-        await DriverService.updateDriverLocation(
-          position.latitude,
-          position.longitude,
-        );
+        // Update location in Supabase drivers table only
+        // Update location in Supabase drivers table only if driver is loaded
+        if (_currentDriver != null) {
+          await DriverService.updateDriverLocation(
+            position.latitude,
+            position.longitude,
+          );
+        }
 
         notifyListeners();
       } catch (e) {

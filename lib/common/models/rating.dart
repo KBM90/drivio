@@ -1,4 +1,4 @@
-import 'package:drivio_app/driver/models/ride_request.dart';
+import 'package:drivio_app/common/models/ride_request.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'user.dart';
 
@@ -7,8 +7,7 @@ part 'rating.g.dart';
 @JsonSerializable()
 class Rating {
   final int id;
-  @JsonKey(name: 'ride_request_id')
-  final int rideRequestId;
+
   @JsonKey(name: 'rated_user')
   final int ratedUser;
   @JsonKey(name: 'rated_by')
@@ -26,7 +25,6 @@ class Rating {
 
   Rating({
     required this.id,
-    required this.rideRequestId,
     required this.ratedUser,
     required this.ratedBy,
     this.rating = 5,

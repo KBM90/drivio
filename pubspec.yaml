@@ -49,9 +49,22 @@ dependencies:
 #need to be deleted in production
   device_preview: ^1.2.0
   html: ^0.15.5+1
-  intl: ^0.19.0
+  intl: ^0.20.2
   flutter_svg:
   gif: ^2.3.0
+  flutter_local_notifications: ^19.5.0  #caching 
+  flutter_map_tile_caching: ^10.1.1
+  #used for qr code and can be used for crypting
+  uuid: ^4.5.1
+  crypto: ^3.0.6
+  qr_flutter: ^4.1.0
+  #supabase
+  supabase_flutter: ^2.10.3
+ 
+  #Easily configure any flutter application with global variables using a `.env` file.
+  flutter_dotenv: ^6.0.0
+  
+
 
  
 
@@ -84,6 +97,7 @@ flutter:
     - assets/cars/
     - assets/persons/
     - assets/others/
+    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -12,7 +12,6 @@ class UserReportsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mapReportsProvider = Provider.of<MapReportsProvider>(context);
-    final reports = mapReportsProvider.userReports;
 
     return Scaffold(
       appBar: AppBar(title: const Text('My Reports')),

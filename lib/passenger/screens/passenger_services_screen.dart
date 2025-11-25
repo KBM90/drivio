@@ -2,7 +2,7 @@ import 'package:drivio_app/passenger/widgets/passenger_bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 
 class PassengerServicesScreen extends StatelessWidget {
-  const PassengerServicesScreen({Key? key}) : super(key: key);
+  const PassengerServicesScreen({super.key});
 
   // Define your service entries here
   final List<Map<String, dynamic>> _services = const [
@@ -77,11 +77,10 @@ class _ServiceCard extends StatelessWidget {
   final bool promo;
 
   const _ServiceCard({
-    Key? key,
     required this.icon,
     required this.label,
     this.promo = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

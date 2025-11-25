@@ -6,40 +6,47 @@ part 'user.g.dart';
 class User {
   final int id;
   final String name;
-
-  final String? email;
+  final String email;
   final String? phone;
   final String? sexe;
   final String? city;
   final String? role;
-  final String? profile_image_path;
-  final bool? banned;
-  final DateTime? email_verified_at;
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  final String? password;
+  @JsonKey(name: 'profile_image_path')
+  final String? profileImagePath;
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  final String? remember_token;
+  final bool banned;
 
-  final DateTime? created_at;
-  final DateTime? updated_at;
+  @JsonKey(name: 'email_verified_at')
+  final DateTime? emailVerifiedAt;
 
-  User({
+  @JsonKey(name: 'remember_token')
+  final String? rememberToken;
+
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
+
+  @JsonKey(name: 'updated_at')
+  final DateTime? updatedAt;
+
+  @JsonKey(name: 'user_id')
+  final String? userId; // UUID from auth.users
+
+  const User({
     required this.id,
     required this.name,
-    this.email,
+    required this.email,
     this.phone,
     this.sexe,
     this.city,
-    this.role,
-    this.profile_image_path,
-    this.banned,
-    this.email_verified_at,
-    this.password,
-    this.remember_token,
-    this.created_at,
-    this.updated_at,
+    required this.role,
+    this.profileImagePath,
+    this.banned = false,
+    this.emailVerifiedAt,
+    this.rememberToken,
+    this.createdAt,
+    this.updatedAt,
+    this.userId,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

@@ -9,9 +9,9 @@ part of 'map_report.dart';
 MapReport _$MapReportFromJson(Map<String, dynamic> json) => MapReport(
   id: (json['id'] as num).toInt(),
   reportType: json['report_type'] as String,
-  pointLatitude: (json['point_latitude'] as num?)?.toDouble(),
-  pointLongitude: (json['point_longitude'] as num?)?.toDouble(),
+  pointLocation: MapReport._locationFromPostGIS(json['point_location']),
   routePoints: MapReport._locationListFromJson(json['route_points'] as List?),
+  userId: (json['user_id'] as num?)?.toInt(),
   user:
       json['user'] == null
           ? null
@@ -25,9 +25,9 @@ MapReport _$MapReportFromJson(Map<String, dynamic> json) => MapReport(
 Map<String, dynamic> _$MapReportToJson(MapReport instance) => <String, dynamic>{
   'id': instance.id,
   'report_type': instance.reportType,
-  'point_latitude': instance.pointLatitude,
-  'point_longitude': instance.pointLongitude,
+  'point_location': MapReport._locationToPostGIS(instance.pointLocation),
   'route_points': instance.routePoints?.map((e) => e.toJson()).toList(),
+  'user_id': instance.userId,
   'user': instance.user?.toJson(),
   'status': instance.status,
   'description': instance.description,

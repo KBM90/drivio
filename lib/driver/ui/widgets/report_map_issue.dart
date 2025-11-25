@@ -1,9 +1,11 @@
+import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/ui/screens/report_map.dart';
 import 'package:drivio_app/driver/ui/screens/user_map_reports_screen.dart';
 import 'package:flutter/material.dart';
 
 class ReportMapIssue extends StatelessWidget {
-  const ReportMapIssue({super.key});
+  final Driver driver;
+  const ReportMapIssue({super.key, required this.driver});
 
   @override
   Widget build(BuildContext context) {
@@ -73,8 +75,10 @@ class ReportMapIssue extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder:
-                              (context) =>
-                                  const ReportMap(reportType: 'Traffic'),
+                              (context) => ReportMap(
+                                reportType: 'Traffic',
+                                driver: driver,
+                              ),
                         ),
                       );
                     },
@@ -89,8 +93,10 @@ class ReportMapIssue extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder:
-                              (context) =>
-                                  const ReportMap(reportType: 'Accident'),
+                              (context) => ReportMap(
+                                reportType: 'Accident',
+                                driver: driver,
+                              ),
                         ),
                       );
                     },
@@ -104,8 +110,10 @@ class ReportMapIssue extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder:
-                              (context) =>
-                                  const ReportMap(reportType: 'Closure'),
+                              (context) => ReportMap(
+                                reportType: 'Closure',
+                                driver: driver,
+                              ),
                         ),
                       );
                     },
@@ -120,7 +128,10 @@ class ReportMapIssue extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder:
-                              (context) => const ReportMap(reportType: 'Radar'),
+                              (context) => ReportMap(
+                                reportType: 'Radar',
+                                driver: driver,
+                              ),
                         ),
                       );
                     },
@@ -139,8 +150,10 @@ class ReportMapIssue extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder:
-                          (context) =>
-                              const ReportMap(reportType: 'Wrong Directions'),
+                          (context) => ReportMap(
+                            reportType: 'Wrong Directions',
+                            driver: driver,
+                          ),
                     ),
                   );
                 },

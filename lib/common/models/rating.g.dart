@@ -8,7 +8,6 @@ part of 'rating.dart';
 
 Rating _$RatingFromJson(Map<String, dynamic> json) => Rating(
   id: (json['id'] as num).toInt(),
-  rideRequestId: (json['ride_request_id'] as num).toInt(),
   ratedUser: (json['rated_user'] as num).toInt(),
   ratedBy: (json['rated_by'] as num).toInt(),
   rating: (json['rating'] as num?)?.toInt() ?? 5,
@@ -33,7 +32,6 @@ Rating _$RatingFromJson(Map<String, dynamic> json) => Rating(
 
 Map<String, dynamic> _$RatingToJson(Rating instance) => <String, dynamic>{
   'id': instance.id,
-  'ride_request_id': instance.rideRequestId,
   'rated_user': instance.ratedUser,
   'rated_by': instance.ratedBy,
   'rating': instance.rating,

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">https://opvtpxagwfjqthcgxbxb.supabase.co</domain>
+        <!-- Add other domains if necessary -->
+    </domain-config>
+    <!-- Use the following for temporary debugging (less secure): -->
+    <!-- <base-config cleartextTrafficPermitted="true"> -->
+    <!-- </base-config> -->
+</network-security-config>

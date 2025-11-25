@@ -1,25 +1,46 @@
 import 'package:drivio_app/common/constants/map_constants.dart';
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
 import 'package:drivio_app/common/providers/map_reports_provider.dart';
-import 'package:drivio_app/driver/providers/driver_provider.dart';
+import 'package:drivio_app/common/widgets/cached_tile_layer.dart';
+import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/services/map_report_services.dart';
-import 'package:drivio_app/driver/ui/screens/map_view.dart';
 import 'package:drivio_app/driver/utils/map_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
-class ReportMap extends StatefulWidget {
+class ReportMap extends StatelessWidget {
   final String reportType;
-
-  const ReportMap({super.key, required this.reportType});
+  final Driver driver;
+  const ReportMap({super.key, required this.reportType, required this.driver});
 
   @override
-  State<ReportMap> createState() => _ReportMapState();
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => MapReportsProvider()),
+      ],
+      child: ReportMapScreen(reportType: reportType, driver: driver),
+    );
+  }
 }
 
-class _ReportMapState extends State<ReportMap> {
+class ReportMapScreen extends StatefulWidget {
+  final String reportType;
+  final Driver driver;
+
+  const ReportMapScreen({
+    super.key,
+    required this.reportType,
+    required this.driver,
+  });
+
+  @override
+  State<ReportMapScreen> createState() => _ReportMapScreenState();
+}
+
+class _ReportMapScreenState extends State<ReportMapScreen> {
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -29,12 +50,10 @@ class _ReportMapState extends State<ReportMap> {
   bool _isDrawingRoute = false; // Toggle between point and route mode
   String? _description;
   bool _isMapReady = false;
-  late DriverProvider driverProvider;
 
   @override
   void initState() {
     super.initState();
-    driverProvider = Provider.of<DriverProvider>(context, listen: false);
     setState(() {
       _isDrawingRoute = widget.reportType == 'Traffic';
     });
@@ -59,10 +78,10 @@ class _ReportMapState extends State<ReportMap> {
 
   Future<void> _initializeMap() async {
     try {
-      if (driverProvider.currentDriver?.location != null) {
+      if (widget.driver.location != null) {
         LatLng driverLocation = LatLng(
-          driverProvider.currentDriver!.location!.latitude!,
-          driverProvider.currentDriver!.location!.longitude!,
+          widget.driver.location!.latitude!,
+          widget.driver.location!.longitude!,
         );
 
         // Move the map to the driver's location
@@ -116,9 +135,11 @@ class _ReportMapState extends State<ReportMap> {
 
   @override
   Widget build(BuildContext context) {
-    final reportsProvider = Provider.of<MapReportsProvider>(context);
+    final reportsProvider = Provider.of<MapReportsProvider>(
+      context,
+      listen: false,
+    );
     final reports = reportsProvider.reports;
-    final driverProvider = Provider.of<DriverProvider>(context);
 
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
@@ -132,13 +153,16 @@ class _ReportMapState extends State<ReportMap> {
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter:
-                      driverProvider.currentDriver?.location != null
+                      widget.driver.location != null
                           ? LatLng(
-                            driverProvider.currentDriver!.location!.latitude!,
-                            driverProvider.currentDriver!.location!.longitude!,
+                            widget.driver.location!.latitude!,
+                            widget.driver.location!.longitude!,
                           )
-                          : const LatLng(37.7749, -122.4194), // San Francisco
-                  initialZoom: 15.0,
+                          : const LatLng(
+                            31.7917, // latitude (rough center of Morocco)
+                            -7.0926, // longitude (rough center of Morocco)
+                          ), // San Francisco
+                  initialZoom: 6.0,
                   onTap: _handleMapTap,
                   onMapReady: () async {
                     setState(() => _isMapReady = true);
@@ -147,7 +171,7 @@ class _ReportMapState extends State<ReportMap> {
                 ),
                 children: [
                   // Tile Layer (OpenStreetMap)
-                  TileLayer(urlTemplate: MapConstants.tileLayerUrl),
+                  CachedTileLayer(),
 
                   // Add this new MarkerLayer for reports
                   MarkerLayer(

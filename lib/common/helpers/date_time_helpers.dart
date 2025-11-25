@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:intl/intl.dart';
 
 String formatMessageDate(String dateString) {

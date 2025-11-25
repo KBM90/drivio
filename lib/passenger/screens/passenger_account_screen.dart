@@ -101,13 +101,7 @@ class PassengerAccountScreen extends StatelessWidget {
 
             ElevatedButton(
               onPressed: () async {
-                await AuthService().logout();
-                if (!context.mounted) return;
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/login',
-                  (route) => false,
-                );
+                await AuthService.signOut();
               },
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(

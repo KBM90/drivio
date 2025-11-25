@@ -1,6 +1,6 @@
 // lib/passenger/ui/passenger_profile_screen.dart
 import 'package:drivio_app/common/services/rating_services.dart';
-import 'package:drivio_app/driver/providers/passenger_provider.dart';
+import 'package:drivio_app/driver/providers/driver_passenger_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -32,7 +32,7 @@ class _PassengerProfileScreenState extends State<PassengerProfileScreen> {
   // Simulate fetching the rating based on passenger.id
   @override
   Widget build(BuildContext context) {
-    final passengerProvider = Provider.of<PassengerProvider>(
+    final passengerProvider = Provider.of<DriverPassengerProvider>(
       context,
       listen: false,
     );
@@ -139,7 +139,7 @@ class _PassengerProfileScreenState extends State<PassengerProfileScreen> {
                       ),
                     ),
                     Text(
-                      '${passengerProvider.currentPassenger!.drivingDistance.toStringAsFixed(1)} km',
+                      '${passengerProvider.currentPassenger?.drivingDistance?.toStringAsFixed(1)} km',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w500,

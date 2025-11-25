@@ -1,20 +1,22 @@
 // lib/widgets/trip_guide_modal.dart
+import 'package:drivio_app/driver/models/driver.dart';
+import 'package:drivio_app/common/models/ride_request.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
-import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class TripGuideModal extends StatelessWidget {
-  const TripGuideModal({super.key});
+  final Driver driver;
+  final RideRequest rideRequest;
+  const TripGuideModal({
+    super.key,
+    required this.driver,
+    required this.rideRequest,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    final rideRequestProvider = Provider.of<RideRequestsProvider>(
-      context,
-      listen: false,
-    );
-
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.8, // Prevent overflow
@@ -55,18 +57,14 @@ class TripGuideModal extends StatelessWidget {
 
               // Trip Steps
               _buildTripStep(
-                title:
-                    "Pickup · ${rideRequestProvider.currentRideRequest!.transportType!.name}",
-                subtitle:
-                    "Passenger : ${rideRequestProvider.currentRideRequest!.passenger.name}",
+                title: "Pickup · ${rideRequest.transportType!.name}",
+                subtitle: "Passenger : ${rideRequest.passenger.name}",
                 isPickup: true,
               ),
               const SizedBox(height: 16),
               _buildTripStep(
-                title:
-                    "Dropoff ·${rideRequestProvider.currentRideRequest!.transportType!.name}",
-                subtitle:
-                    "Passenger : ${rideRequestProvider.currentRideRequest!.passenger.name}",
+                title: "Dropoff ·${rideRequest.transportType!.name}",
+                subtitle: "Passenger : ${rideRequest.passenger.name}",
                 isPickup: false,
               ),
 
@@ -96,9 +94,9 @@ class TripGuideModal extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Footer with buttons
-              if (driverProvider.currentDriver?.acceptNewRequest == 1)
+              if (driver.acceptNewRequest == 1)
                 _buildFooter(Colors.red, "Stop New Requests", context),
-              if (driverProvider.currentDriver?.acceptNewRequest == 0)
+              if (driver.acceptNewRequest == 0)
                 _buildFooter(Colors.green, "Accept New Requests", context),
             ],
           );
@@ -132,11 +130,7 @@ class TripGuideModal extends StatelessWidget {
               icon: const Icon(Icons.pan_tool, color: Colors.white, size: 30),
               onPressed: () async {
                 // Handle stop ride requests action
-                if (Provider.of<DriverProvider>(
-                      context,
-                      listen: false,
-                    ).currentDriver?.acceptNewRequest ==
-                    1) {
+                if (driver.acceptNewRequest == 1) {
                   await Provider.of<DriverProvider>(
                     context,
                     listen: false,

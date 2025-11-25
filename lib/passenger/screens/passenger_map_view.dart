@@ -1,50 +1,33 @@
-import 'package:drivio_app/common/constants/map_constants.dart';
+import 'package:drivio_app/common/constants/routes.dart';
 import 'package:drivio_app/common/constants/transport_constants.dart';
+import 'package:drivio_app/common/helpers/error_handler.dart';
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
-import 'package:drivio_app/common/helpers/markers_routes_helpers.dart';
 import 'package:drivio_app/common/helpers/osrm_services.dart';
+import 'package:drivio_app/common/providers/device_location_provider.dart';
+import 'package:drivio_app/common/widgets/cached_tile_layer.dart';
 import 'package:drivio_app/common/widgets/cancel_trip_dialog.dart';
-import 'package:drivio_app/driver/providers/passenger_provider.dart';
 import 'package:drivio_app/passenger/modals/search_bottom_sheet.dart';
-import 'package:drivio_app/passenger/modals/suggested_price_tansport_modal.dart';
-import 'package:drivio_app/passenger/providers/passenger_location_provider.dart';
-import 'package:drivio_app/passenger/providers/ride_request_provider.dart';
-import 'package:drivio_app/passenger/widgets/ride_request_card.dart';
+import 'package:drivio_app/passenger/modals/final_ride_confirmation_modal.dart';
+import 'package:drivio_app/passenger/providers/passenger_ride_request_provider.dart';
+import 'package:drivio_app/passenger/widgets/confirm_ride_request_card.dart';
 import 'package:drivio_app/passenger/widgets/search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
-class PassengerMapScreen extends StatelessWidget {
+class PassengerMapScreen extends StatefulWidget {
   const PassengerMapScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => PassengerProvider()),
-        ChangeNotifierProvider(
-          create: (context) => PassengerLocationProvider(),
-        ),
-        ChangeNotifierProvider(create: (context) => RideRequestProvider()),
-      ],
-      child: PassengerMapScreenWidget(),
-    );
-  }
+  createState() => _PassengerMapScreenState();
 }
 
-class PassengerMapScreenWidget extends StatefulWidget {
-  const PassengerMapScreenWidget({super.key});
-
-  @override
-  createState() => _PassengerMapScreenWidgetState();
-}
-
-class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
+class _PassengerMapScreenState extends State<PassengerMapScreen> {
   bool _hasExistingRequest = false;
   final MapController _mapController = MapController();
   LatLng? _destination;
+  LatLng? _pickupLocation;
   List<LatLng> _routePolyline = [];
   List<LatLng> _routePolylineDriverToPickup = [];
   final OSRMService _osrmService = OSRMService();
@@ -59,49 +42,60 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final locationProvider = Provider.of<PassengerLocationProvider>(
+      DeviceLocationProvider deviceLocationProvider =
+          Provider.of<DeviceLocationProvider>(context, listen: false);
+
+      final rideRequestProvider = Provider.of<PassengerRideRequestProvider>(
         context,
         listen: false,
       );
 
-      final rideRequestProvider = Provider.of<RideRequestProvider>(
-        context,
-        listen: false,
-      );
-
-      // Listen to user location
-      locationProvider.addListener(() {
-        _currentLocation = locationProvider.currentLocation;
+      deviceLocationProvider.addListener(() {
+        setState(() {
+          _currentLocation = deviceLocationProvider.currentLocation;
+        });
         if (_currentLocation != null) {
           _mapController.move(_currentLocation!, 16.0);
-          addMarkerToMap(_currentLocation!);
         }
       });
 
       // 🔹 Fetch existing ride request
       await rideRequestProvider.fetchCurrentRideRequest();
-      final currentRequest = rideRequestProvider.currentRideRequest;
 
-      if (currentRequest != null) {
+      if (rideRequestProvider.currentRideRequest != null) {
         setState(() {
           _hasExistingRequest = true;
           _destination = GeolocatorHelper.locationToLatLng(
-            currentRequest.destinationLocation,
+            rideRequestProvider.currentRideRequest?.destinationLocation,
           );
-          _currentLocation = GeolocatorHelper.locationToLatLng(
-            currentRequest.pickupLocation,
+          //here we set _pickupLocation because the _currentLocation(device's location) may change
+          _pickupLocation = GeolocatorHelper.locationToLatLng(
+            rideRequestProvider.currentRideRequest?.pickupLocation,
           );
         });
 
         // Draw route to destination
-        await _fetchRoute(_currentLocation!, _destination!);
-        await _fetchRouteFromDriver(
-          LatLng(
-            currentRequest.driver!.location!.latitude!,
-            currentRequest.driver!.location!.longitude!,
-          ),
-          _destination!,
-        );
+        //here we use _pickupLocation because the _currentLocation(device's location) may change
+        await _fetchRoute(_pickupLocation!, _destination!);
+        if (rideRequestProvider.currentRideRequest?.status == "accepted") {
+          await _fetchRouteFromDriver(
+            LatLng(
+              (rideRequestProvider
+                      .currentRideRequest
+                      ?.driver!
+                      .location!
+                      .latitude!)!
+                  .toDouble(),
+              (rideRequestProvider
+                      .currentRideRequest
+                      ?.driver!
+                      .location!
+                      .longitude!)!
+                  .toDouble(),
+            ),
+            _destination!,
+          );
+        }
       }
     });
   }
@@ -117,7 +111,7 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
 
     try {
       List<LatLng> newPolyline = await _osrmService
-          .getRouteBetweenPickupAndDropoff(pickup, dropoff);
+          .getRouteBetweenPickupAndDropoff(pickup, dropoff, context);
 
       if (newPolyline.isNotEmpty) {
         final distance = await _osrmService.getDistance(pickup, dropoff);
@@ -126,12 +120,27 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
           _routePolyline = newPolyline;
           _distance = distance;
         });
+        _fitCameraToRoute(newPolyline);
       } else {
-        debugPrint("OSRM returned an empty route.");
+        if (newPolyline.isEmpty && mounted) {
+          handleAppError(context, 'No route found');
+        }
       }
     } catch (e) {
       debugPrint("Failed to fetch route: $e");
+      if (mounted) {
+        handleAppError(context, 'Failed to fetch route');
+      }
     }
+  }
+
+  void _fitCameraToRoute(List<LatLng> routePoints) {
+    if (routePoints.isEmpty) return;
+
+    final bounds = LatLngBounds.fromPoints(routePoints);
+    _mapController.fitCamera(
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50.0)),
+    );
   }
 
   Future<void> _fetchRouteFromDriver(
@@ -148,7 +157,7 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
 
     try {
       List<LatLng> newPolyline = await _osrmService
-          .getRouteBetweenPickupAndDropoff(driverLocation, pickup);
+          .getRouteBetweenPickupAndDropoff(driverLocation, pickup, context);
 
       if (newPolyline.isNotEmpty) {
         final distance = await _osrmService.getDistance(driverLocation, pickup);
@@ -165,24 +174,11 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
     }
   }
 
-  void addMarkerToMap(LatLng position) async {
-    final marker = await MarkersRoutesHelpers().createGifMarker(
-      position,
-      'assets/others/current_location.gif',
-      width: 40,
-      height: 40,
-    );
-    setState(() {
-      markers.add(marker);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    RideRequestProvider _rideRequestProvider = Provider.of<RideRequestProvider>(
-      context,
-      listen: false,
-    );
+    PassengerRideRequestProvider rideRequestProvider =
+        Provider.of<PassengerRideRequestProvider>(context, listen: false);
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: true, // Shows the default back button
@@ -193,90 +189,125 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
       ),
       body: Stack(
         children: [
+          // Add this as a child in your Stack containing the map
+          Positioned(
+            top: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF00FF00), width: 2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Los Santos',
+                    style: TextStyle(
+                      color: const Color(0xFF00FF00),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Courier', // Retro font
+                    ),
+                  ),
+                  Text(
+                    '12:00',
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
           // Flutter Map
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: LatLng(51.509865, -0.118092), // London center
+              initialCenter:
+                  _currentLocation ??
+                  LatLng(
+                    31.7917, // latitude (rough center of Morocco)
+                    -7.0926, // longitude (rough center of Morocco)
+                  ), // London center
               initialZoom: 5.5,
               onTap: (tapPosition, latLng) async {
-                if (_hasExistingRequest) return;
+                if (!_hasExistingRequest) {
+                  //fetch route from actual location because there is no registred ride request yet
+                  //so _pickupLocation will be null
 
-                setState(() {
-                  _destination = latLng;
-                });
-                await _fetchRoute(_currentLocation!, _destination!);
+                  setState(() {
+                    _destination = latLng;
+                  });
+                  await _fetchRoute(_currentLocation!, _destination!);
+                }
               },
-              onMapReady:
-                  () => showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.white,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
+              onMapReady: () async {
+                final result = await showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.white,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
-                    builder: (_) => const SearchBottomSheet(),
                   ),
+                  builder: (_) => const SearchBottomSheet(),
+                );
+
+                if (result != null && result is Map) {
+                  final pickup = result['pickup'] as LatLng?;
+                  final destination = result['destination'] as LatLng?;
+
+                  if (pickup != null && destination != null) {
+                    setState(() {
+                      _pickupLocation = pickup;
+                      _destination = destination;
+                    });
+                    await _fetchRoute(pickup, destination);
+                  }
+                }
+              },
             ),
             children: [
-              TileLayer(urlTemplate: MapConstants.tileLayerUrl),
+              CachedTileLayer(),
               MarkerLayer(
                 markers: [
-                  if (Provider.of<PassengerLocationProvider>(
-                        context,
-                      ).currentLocation !=
-                      null)
+                  if (_currentLocation != null)
                     //marker on current passenger location
-                    // markers[0],
                     Marker(
-                      point:
-                          Provider.of<PassengerLocationProvider>(
-                            context,
-                          ).currentLocation!,
-                      width: 40,
-                      height: 40,
+                      point: _currentLocation!,
+
                       child: Image.asset(
-                        'assets/others/current_location.gif',
-                        width: 100,
-                        height: 100,
+                        'assets/persons/current_location.png',
+                        width: 50,
+                        height: 50,
+                        color: Colors.red,
                       ),
                     ),
                   //marker in pickup location
-                  if (_rideRequestProvider.currentRideRequest != null)
+                  if (rideRequestProvider.currentRideRequest != null)
                     Marker(
                       point: GeolocatorHelper.locationToLatLng(
-                        _rideRequestProvider.currentRideRequest!.pickupLocation,
+                        rideRequestProvider.currentRideRequest?.pickupLocation,
                       ),
-                      width: 40,
-                      height: 40,
-                      child: Image.asset(
-                        'assets/persons/person_raising_hand.png',
-                        width: 100,
-                        height: 100,
-                      ),
+                      child: Icon(Icons.person_pin_circle, color: Colors.red),
                     ),
                   //marker on destination location
                   if (_destination != null)
                     Marker(
                       point: _destination!,
-                      width: 40,
-                      height: 40,
-                      child: Image.asset(
-                        'assets/persons/person_raising_hand.png',
-                        width: 50,
-                        height: 50,
-                      ),
+
+                      child: Icon(Icons.flag, color: Colors.red),
                     ),
                   //marker on driver location
                   if (_hasExistingRequest &&
-                      _rideRequestProvider.currentRideRequest!.driver != null)
+                      rideRequestProvider.currentRideRequest?.driver != null)
                     Marker(
                       point: GeolocatorHelper.locationToLatLng(
-                        _rideRequestProvider
-                            .currentRideRequest!
-                            .driver!
+                        rideRequestProvider
+                            .currentRideRequest
+                            ?.driver!
                             .location!,
                       ),
                       child: Image.asset(
@@ -288,19 +319,17 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
                 ],
               ),
               // Square arrounf pickup location
-              if (_rideRequestProvider.currentRideRequest != null)
+              if (rideRequestProvider.currentRideRequest != null)
                 PolygonLayer(
                   polygons: [
-                    if (Provider.of<PassengerLocationProvider>(
-                          context,
-                        ).currentLocation !=
-                        null)
+                    //here we can use _pickupLocation because there is already a registred ride request
+                    if (_pickupLocation != null)
                       Polygon(
                         points: OSRMService().squareAround(
                           GeolocatorHelper.locationToLatLng(
-                            _rideRequestProvider
-                                .currentRideRequest!
-                                .pickupLocation,
+                            rideRequestProvider
+                                .currentRideRequest
+                                ?.pickupLocation,
                           ),
                           40,
                         ), // 10m side length
@@ -342,23 +371,37 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
               left: 16,
               right: 16,
               child: GestureDetector(
-                onTap:
-                    () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.white,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
+                onTap: () async {
+                  final result = await showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
                       ),
-                      builder: (_) => const SearchBottomSheet(),
                     ),
+                    builder: (_) => const SearchBottomSheet(),
+                  );
+
+                  if (result != null && result is Map) {
+                    final pickup = result['pickup'] as LatLng?;
+                    final destination = result['destination'] as LatLng?;
+
+                    if (pickup != null && destination != null) {
+                      setState(() {
+                        _pickupLocation = pickup;
+                        _destination = destination;
+                      });
+                      await _fetchRoute(pickup, destination);
+                    }
+                  }
+                },
                 child: const SearchBarWidget(),
               ),
             ),
           // Confirm Destination Button
-          if (_destination != null && !_confirmed! && !_hasExistingRequest)
+          if (_destination != null && _confirmed == false)
             Positioned(
               bottom: 20,
               left: 16,
@@ -378,16 +421,36 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
                       ),
                     ),
                     builder:
-                        (_) => SuggestedPriceModal(
+                        (_) => FinalRideConfirmationModal(
                           distance: _distance,
                           initialTransport: TransportConstants.transports.first,
-
                           onConfirm: (
                             price,
                             transportType,
                             paymentMethod,
                           ) async {
-                            final message = await _rideRequestProvider
+                            setState(() {
+                              _confirmed = true;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Publishing ride request ...'),
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+
+                            if (_currentLocation == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Current location not available. Please wait...',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final message = await rideRequestProvider
                                 .createRequest(
                                   pickup: _currentLocation!,
                                   destination: _destination!,
@@ -395,18 +458,20 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
                                   price: price,
                                   paymentMethodId: paymentMethod.id,
                                 );
+
                             // Show the message in a SnackBar
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(message),
+                                  content: Text(message['message']),
                                   duration: const Duration(seconds: 3),
                                 ),
                               );
+                              Navigator.pushReplacementNamed(
+                                context,
+                                AppRoutes.passengerHome,
+                              );
                             }
-                            setState(() {
-                              _confirmed = true;
-                            });
                           },
                         ),
                   );
@@ -432,6 +497,7 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
                     _routePolyline.clear();
                     _distance = 0.0;
                     _confirmed = false;
+                    _hasExistingRequest = false;
                   });
                 },
                 child: const Icon(Icons.clear, color: Colors.red),
@@ -439,20 +505,41 @@ class _PassengerMapScreenWidgetState extends State<PassengerMapScreenWidget> {
             ),
           if (_hasExistingRequest)
             RideRequestCard(
-              status: _rideRequestProvider.currentRideRequest!.status!,
+              status:
+                  (rideRequestProvider.currentRideRequest?.status).toString(),
               price: 45.00,
               distanceKm: _distance,
               transportType:
-                  _rideRequestProvider.currentRideRequest!.transportType!.name,
+                  (rideRequestProvider.currentRideRequest?.transportType?.name)
+                      .toString(),
               driverName:
-                  _rideRequestProvider.currentRideRequest!.status! == 'accepted'
-                      ? '${_rideRequestProvider.currentRideRequest!.driver!.user!.name} (${_distanceFromDriverToPickup.toStringAsFixed(2)}km)'
+                  rideRequestProvider.currentRideRequest?.status! == 'accepted'
+                      ? '${rideRequestProvider.currentRideRequest?.driver!.user!.name} (${_distanceFromDriverToPickup.toStringAsFixed(2)}km)'
                       : null, // or 'Ahmed El Mansouri'
               onCancel: () async {
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
                 // Add your cancel logic here
                 final confirmed = await showCancelTripDialog(context, false);
 
                 if (confirmed == null) return;
+                if (confirmed.isNotEmpty) {
+                  await rideRequestProvider.cancelRideRequest(confirmed);
+                  // Show the message in a SnackBar
+
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(rideRequestProvider.operationMessage!),
+                    ),
+                  );
+                  if (rideRequestProvider.operationMessage ==
+                      'Ride request canceled successfully') {
+                    if (!context.mounted) return;
+                    Navigator.pushReplacementNamed(
+                      context,
+                      AppRoutes.passengerHome,
+                    );
+                  }
+                }
               },
             ),
         ],

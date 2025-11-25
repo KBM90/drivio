@@ -20,4 +20,23 @@ class MarkersRoutesHelpers {
       child: Image.memory(gifBytes, width: width, height: height),
     );
   }
+
+  Marker createMarker(
+    LatLng position,
+    String imagePath, {
+    double width = 50,
+    double height = 50,
+    Color? color,
+  }) {
+    return Marker(
+      point: position,
+
+      child: Image.asset(
+        'imagePath',
+        width: 50,
+        height: 50,
+        color: const Color.fromARGB(255, 0, 2, 5),
+      ),
+    );
+  }
 }

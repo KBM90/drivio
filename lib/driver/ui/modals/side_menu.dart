@@ -2,12 +2,12 @@ import 'package:drivio_app/common/models/user.dart';
 import 'package:drivio_app/common/screens/inbox_page.dart';
 import 'package:drivio_app/common/screens/opportunities_page.dart';
 import 'package:drivio_app/common/screens/refer_friends_page.dart';
+import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:drivio_app/common/services/user_services.dart';
 import 'package:drivio_app/driver/ui/screens/account_page.dart';
 import 'package:drivio_app/driver/ui/screens/driver_profile_page.dart';
 import 'package:drivio_app/driver/ui/screens/earning_page.dart';
 import 'package:drivio_app/driver/ui/screens/wallet_page.dart';
-import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class SideMenu extends StatefulWidget {
@@ -142,7 +142,7 @@ class _SideMenuState extends State<SideMenu> {
               child: Center(
                 child: ElevatedButton(
                   onPressed: () async {
-                    await AuthService().logout();
+                    await AuthService.signOut();
                     if (!mounted) return;
                     Navigator.pushNamedAndRemoveUntil(
                       context,

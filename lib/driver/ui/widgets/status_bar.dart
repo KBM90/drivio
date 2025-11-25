@@ -1,20 +1,17 @@
 import 'dart:async';
 
-import 'package:drivio_app/common/helpers/date_time_helpers.dart';
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/screens/chat_screen.dart';
 import 'package:drivio_app/common/widgets/distance_progress_widget.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
-import 'package:drivio_app/driver/providers/passenger_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/services/notifications_services.dart';
 import 'package:drivio_app/driver/ui/modals/trip_guide_modal.dart';
 import 'package:drivio_app/driver/ui/screens/passenger_profile.dart';
 import 'package:drivio_app/driver/ui/widgets/preferences_button.dart';
 import 'package:drivio_app/driver/ui/widgets/recommanded_for_you_button.dart';
-import 'package:drivio_app/driver/ui/widgets/rider_notified_countdown_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -139,18 +136,18 @@ class _StatusBarState extends State<StatusBar> {
                               PreferencesButton(),
                               if (driverProvider.currentDriver?.status ==
                                   DriverStatus.inactive)
-                                Text(
+                                const Text(
                                   "You're offline",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               if (driverProvider.currentDriver?.status ==
                                   DriverStatus.active)
-                                Text(
+                                const Text(
                                   "You're online",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -161,32 +158,35 @@ class _StatusBarState extends State<StatusBar> {
                                   rideRequestProvider.currentRideRequest !=
                                       null &&
                                   rideRequestProvider.isLoading == false)
-                                FutureBuilder<Map<String, dynamic>>(
-                                  future: OSRMService()
-                                      .getTimeAndDistanceToPickup(
-                                        locationProvider.currentLocation!,
-                                        LatLng(
-                                          rideRequestProvider
-                                              .currentRideRequest!
-                                              .pickupLocation
-                                              .latitude!,
-                                          rideRequestProvider
-                                              .currentRideRequest!
-                                              .pickupLocation
-                                              .longitude!,
+                                StreamBuilder<Map<String, dynamic>>(
+                                  // Update every 10 seconds instead of on every rebuild
+                                  stream: Stream.periodic(
+                                    const Duration(seconds: 10),
+                                    (_) => OSRMService()
+                                        .getTimeAndDistanceToPickup(
+                                          locationProvider.currentLocation!,
+                                          LatLng(
+                                            rideRequestProvider
+                                                .currentRideRequest!
+                                                .pickupLocation
+                                                .latitude!,
+                                            rideRequestProvider
+                                                .currentRideRequest!
+                                                .pickupLocation
+                                                .longitude!,
+                                          ),
                                         ),
-                                      ),
+                                  ).asyncMap((future) => future),
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState ==
                                             ConnectionState.waiting ||
                                         rideRequestProvider
                                                 .currentRideRequest ==
-                                            null) {
-                                      return SizedBox();
+                                            null ||
+                                        !snapshot.hasData) {
+                                      return const SizedBox();
                                     } else if (snapshot.hasError) {
-                                      return const Center(
-                                        child: Text('Error loading route info'),
-                                      );
+                                      return const SizedBox(); // Hide error silently
                                     } else {
                                       distance = snapshot.data!['distance'];
                                       if (distance <= 50) {
@@ -218,50 +218,6 @@ class _StatusBarState extends State<StatusBar> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              if (snapshot.data!['distance'] <=
-                                                  50) ...{
-                                                RiderNotifiedCountdown(
-                                                  shouldShow: true,
-                                                  passengerName:
-                                                      rideRequestProvider
-                                                          .currentRideRequest!
-                                                          .passenger
-                                                          .name,
-                                                ),
-                                              } else ...{
-                                                Row(
-                                                  // Your existing distance/time row
-                                                  children: [
-                                                    Text(
-                                                      '${snapshot.data!['duration']?.toStringAsFixed(1)} min',
-                                                    ),
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                        Icons.person_4_rounded,
-                                                        color: Color.fromARGB(
-                                                          255,
-                                                          24,
-                                                          8,
-                                                          248,
-                                                        ),
-                                                      ),
-                                                      onPressed: () {
-                                                        Navigator.push(
-                                                          context,
-                                                          MaterialPageRoute(
-                                                            builder:
-                                                                (context) =>
-                                                                    const TripGuideModal(),
-                                                          ),
-                                                        );
-                                                      },
-                                                    ),
-                                                    Text(
-                                                      '${snapshot.data!['distance'].toStringAsFixed(1)} km',
-                                                    ),
-                                                  ],
-                                                ),
-                                              },
                                               Row(
                                                 mainAxisAlignment:
                                                     MainAxisAlignment
@@ -290,8 +246,16 @@ class _StatusBarState extends State<StatusBar> {
                                                         context,
                                                         MaterialPageRoute(
                                                           builder:
-                                                              (context) =>
-                                                                  const TripGuideModal(),
+                                                              (
+                                                                context,
+                                                              ) => TripGuideModal(
+                                                                driver:
+                                                                    driverProvider
+                                                                        .currentDriver!,
+                                                                rideRequest:
+                                                                    rideRequestProvider
+                                                                        .currentRideRequest!,
+                                                              ),
                                                         ),
                                                       );
                                                     },
@@ -321,7 +285,7 @@ class _StatusBarState extends State<StatusBar> {
                                               // Pickup info - minimal version like your screenshot
                                               Text(
                                                 "Pickup ${rideRequestProvider.currentRideRequest!.passenger.name}",
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -346,7 +310,7 @@ class _StatusBarState extends State<StatusBar> {
                     ),
                     if (driverProvider.currentDriver?.status ==
                         DriverStatus.active)
-                      ListTile(
+                      const ListTile(
                         leading: Icon(Icons.car_repair, color: Colors.blue),
                         title: Text("Get 10-40% off car services"),
                         subtitle: Text("Save on maintenance & repair"),
@@ -354,7 +318,7 @@ class _StatusBarState extends State<StatusBar> {
                       ),
                     if (driverProvider.currentDriver?.status ==
                         DriverStatus.active)
-                      ListTile(
+                      const ListTile(
                         leading: Icon(Icons.local_offer, color: Colors.green),
                         title: Text("Enjoy more benefits with Drivio Pro"),
                         subtitle: Text("Exclusive savings and discounts"),
@@ -362,7 +326,7 @@ class _StatusBarState extends State<StatusBar> {
                       ),
                     if (driverProvider.currentDriver?.status ==
                         DriverStatus.inactive)
-                      ListTile(
+                      const ListTile(
                         leading: Icon(Icons.car_repair, color: Colors.blue),
                         title: Text("Get 10-40% off car services"),
                         subtitle: Text("Save on maintenance & repair"),
@@ -370,7 +334,7 @@ class _StatusBarState extends State<StatusBar> {
                       ),
                     if (driverProvider.currentDriver?.status ==
                         DriverStatus.inactive)
-                      ListTile(
+                      const ListTile(
                         leading: Icon(Icons.local_offer, color: Colors.green),
                         title: Text("Enjoy more benefits with Drivio Pro"),
                         subtitle: Text("Exclusive savings and discounts"),
@@ -390,15 +354,31 @@ class _StatusBarState extends State<StatusBar> {
                                 MaterialPageRoute(
                                   builder:
                                       (context) => ChatScreen(
-                                        passengerId:
+                                        otherUserId:
                                             rideRequestProvider
                                                 .currentRideRequest!
                                                 .passenger
                                                 .userId,
-                                        driverId:
+                                        currentUserId:
                                             driverProvider
                                                 .currentDriver!
                                                 .userId,
+                                        otherUserName:
+                                            rideRequestProvider
+                                                .currentRideRequest!
+                                                .passenger
+                                                .name,
+                                        currentUserName:
+                                            driverProvider
+                                                .currentDriver!
+                                                .user
+                                                ?.name,
+                                        currentUserRole:
+                                            driverProvider
+                                                .currentDriver!
+                                                .user
+                                                ?.role ??
+                                            "driver",
                                       ),
                                 ),
                               );
@@ -407,17 +387,7 @@ class _StatusBarState extends State<StatusBar> {
                           const Text('Melody', style: TextStyle(fontSize: 20)),
                           IconButton(
                             icon: const Icon(Icons.person),
-                            onPressed: () async {
-                              await Provider.of<PassengerProvider>(
-                                context,
-                                listen: false,
-                              ).getPassenger(
-                                rideRequestProvider
-                                    .currentRideRequest!
-                                    .passenger
-                                    .id,
-                              );
-
+                            onPressed: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -442,20 +412,6 @@ class _StatusBarState extends State<StatusBar> {
           ),
         );
       },
-    );
-  }
-
-  _buildNotifierCountDown(distance) {
-    return Column(
-      children: [
-        Center(child: Text("Rider Notified")),
-        Center(
-          child: Text(
-            formatCountdown(_countdownSeconds),
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -18,7 +18,7 @@ class UserService {
     }
   }
 
-  static Future<void> saveUser(User user) async {
+  static Future<void> saveUserToSharedPref(User user) async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('current_user', jsonEncode(user.toJson()));

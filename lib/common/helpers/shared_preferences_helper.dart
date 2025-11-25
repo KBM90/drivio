@@ -88,7 +88,7 @@ class SharedPreferencesHelper {
       getValue<List<String>>(key);
 
   /// Set a String value
-  Future<bool> setString(String key, String value) async {
+  static Future<bool> setString(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     return await prefs.setString(key, value);
   }

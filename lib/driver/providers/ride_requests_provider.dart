@@ -1,7 +1,7 @@
-import 'package:drivio_app/driver/models/ride_request.dart';
+import 'package:drivio_app/common/helpers/osrm_services.dart';
+import 'package:drivio_app/common/models/ride_request.dart';
 import 'package:drivio_app/driver/services/ride_request_services.dart';
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,11 +12,17 @@ class RideRequestsProvider with ChangeNotifier {
 
   bool _isLoading = true;
 
+  List<String> pickupPlacesNames = [];
+  List<String> destinationPlacesNames = [];
+
   List<RideRequest> get rideRequests => _rideRequests;
 
   RideRequest? get currentRideRequest => _currentRideRequest;
 
   bool get isLoading => _isLoading;
+
+  List<String> get pickupPlaces => pickupPlacesNames;
+  List<String> get destinationPlaces => destinationPlacesNames;
 
   RideRequestsProvider() {
     //fetchRideRequests(driverLocation);
@@ -26,14 +32,50 @@ class RideRequestsProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try {
-      _rideRequests = await RideRequestService.getRideRequests(driverLocation);
-    } catch (e) {
-      debugPrint("Error fetching ride requests: $e");
-    }
+    _rideRequests = await RideRequestService.getRideRequests(driverLocation);
+    pickupPlacesNames.clear();
+    destinationPlacesNames.clear();
 
-    _isLoading = false;
-    notifyListeners();
+    for (var request in _rideRequests) {
+      try {
+        if (request.pickupLocation.latitude != null &&
+            request.pickupLocation.longitude != null) {
+          pickupPlacesNames.add(
+            await OSRMService().getPlaceName(
+              request.pickupLocation.latitude!,
+              request.pickupLocation.longitude!,
+            ),
+          );
+        } else {
+          pickupPlacesNames.add("Unknown Location");
+        }
+
+        if (request.destinationLocation.latitude != null &&
+            request.destinationLocation.longitude != null) {
+          destinationPlacesNames.add(
+            await OSRMService().getPlaceName(
+              request.destinationLocation.latitude!,
+              request.destinationLocation.longitude!,
+            ),
+          );
+        } else {
+          destinationPlacesNames.add("Unknown Location");
+        }
+      } catch (e) {
+        debugPrint("Error fetching place names: $e");
+        // Ensure lists stay in sync even on error
+        if (pickupPlacesNames.length < _rideRequests.indexOf(request) + 1) {
+          pickupPlacesNames.add("Unknown Location");
+        }
+        if (destinationPlacesNames.length <
+            _rideRequests.indexOf(request) + 1) {
+          destinationPlacesNames.add("Unknown Location");
+        }
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> fetchRideRequest(int id) async {
@@ -100,5 +142,15 @@ class RideRequestsProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> acceptRideRequest(
+    int id,
+    int driverId,
+    double latitude,
+    double longitude,
+  ) async {
+    await RideRequestService.acceptRideRequest(id, latitude, longitude);
+    await fetchRideRequest(id);
   }
 }

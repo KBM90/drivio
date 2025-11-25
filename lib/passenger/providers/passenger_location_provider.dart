@@ -18,7 +18,7 @@ class PassengerLocationProvider extends ChangeNotifier {
 
   PassengerLocationProvider() {
     getCurrentLocation();
-    _startListening();
+    _startListening(); // we don't need to track passenger's location as he will choose a stable pickup
   }
   Future<void> getCurrentLocation() async {
     LatLng? location = await GeolocatorHelper.getCurrentLocation();
@@ -64,12 +64,6 @@ class PassengerLocationProvider extends ChangeNotifier {
         }
 
         _currentPosition = position; // Store the full Position object
-
-        // 🔹 Ensure the API call doesn't block UI updates
-        /*  await DriverService.updateDriverLocation(
-          position.latitude,
-          position.longitude,
-        );*/
 
         notifyListeners();
       } catch (e) {

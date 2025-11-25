@@ -1,0 +1,20 @@
+create table public.ride_details (
+  id bigserial not null,
+  passenger_id bigint null,
+  driver_id bigint null,
+  ride_payment_id bigint null,
+  report_id bigint null,
+  rating_id bigint null,
+  driver_payout_id bigint null,
+  price numeric(10, 2) not null,
+  distance numeric(10, 2) not null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  constraint ride_details_pkey primary key (id),
+  constraint ride_details_driver_payout_id_fkey foreign KEY (driver_payout_id) references driver_payouts (id) on delete CASCADE,
+  constraint ride_details_passenger_id_fkey foreign KEY (passenger_id) references passengers (id) on delete CASCADE,
+  constraint ride_details_driver_id_fkey foreign KEY (driver_id) references drivers (id) on delete CASCADE,
+  constraint ride_details_rating_id_fkey foreign KEY (rating_id) references ratings (id) on delete CASCADE,
+  constraint ride_details_report_id_fkey foreign KEY (report_id) references reports (id) on delete CASCADE,
+  constraint ride_details_ride_payment_id_fkey foreign KEY (ride_payment_id) references ride_payments (id) on delete CASCADE
+) TABLESPACE pg_default;

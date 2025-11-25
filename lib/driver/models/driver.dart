@@ -6,9 +6,9 @@ part 'driver.g.dart';
 
 @JsonSerializable()
 class Driver {
-  final int id;
+  final int? id;
   @JsonKey(name: 'user_id')
-  final int userId;
+  final int? userId;
   final User? user;
   final Location? location;
   @JsonKey(name: 'dropoff_location')
@@ -16,19 +16,21 @@ class Driver {
   final Map<String, dynamic>? preferences;
   @JsonKey(name: 'driving_distance')
   final double? drivingDistance;
-  DriverStatus status; // ✅ Change from bool to DriverStatus enum
+  DriverStatus? status; // ✅ Change from bool to DriverStatus enum
   int? acceptNewRequest;
+  double? range;
 
   Driver({
     required this.id,
-    required this.userId,
+    this.userId,
     this.user,
     this.location,
     this.dropoffLocation,
     this.preferences,
     this.drivingDistance,
-    required this.status,
-    required this.acceptNewRequest,
+    this.status,
+    this.acceptNewRequest,
+    this.range,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -42,7 +44,10 @@ class Driver {
           json['dropoff_location'] != null
               ? Location.fromJson(json['dropoff_location'])
               : null,
-      preferences: json['preferences'] != "[]" ? {} : null,
+      preferences:
+          json['preferences'] != null
+              ? json['preferences'] as Map<String, dynamic>
+              : null,
       drivingDistance: (json['driving_distance'] as num?)?.toDouble() ?? 0.0,
       status:
           json['status'] == 'active'
@@ -51,11 +56,13 @@ class Driver {
               ? DriverStatus.inactive
               : DriverStatus.onTrip,
       acceptNewRequest: json['acceptNewRequest'] ?? 0,
+      range: (json['range'] as num?)?.toDouble() ?? 5.0,
     );
   }
 
   /// **Method to convert to JSON**
   Map<String, dynamic> toJson() => _$DriverToJson(this);
+  //Firestore
 }
 
 enum DriverStatus {

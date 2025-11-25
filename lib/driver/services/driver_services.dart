@@ -1,88 +1,107 @@
 import 'dart:async';
-import 'dart:convert';
-import 'package:drivio_app/common/constants/api.dart';
-import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
+import 'package:drivio_app/common/helpers/custom_exceptions.dart';
+import 'package:drivio_app/common/helpers/geolocator_helper.dart';
+import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:drivio_app/driver/models/driver.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DriverService {
   static Future<Driver> getDriver() async {
     try {
-      final token = await SharedPreferencesHelper().getValue<String>(
-        'auth_token',
-      );
+      final supabase = Supabase.instance.client;
 
-      // More detailed token validation
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found or empty');
+      // Get authenticated user
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw UnauthorizedException(
+          'User not authenticated. Please login again.',
+        );
       }
 
-      final response = await http.get(
-        Uri.parse('${Api.baseUrl}/driver'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      // Get internal user ID
+      final userResponse =
+          await supabase
+              .from('users')
+              .select('id')
+              .eq('user_id', userId)
+              .single();
 
-      // Handle specific status codes
-      switch (response.statusCode) {
-        case 200:
-          final data = jsonDecode(response.body);
-          return Driver.fromJson(data['driver']);
-        case 401:
-          // Clear invalid token and trigger re-authentication
-          await SharedPreferencesHelper.clearAll();
+      final internalUserId = userResponse['id'] as int;
 
-          throw Exception('Session expired. Please login again.');
-        case 403:
-          throw Exception('Forbidden: You don\'t have permission');
-        default:
-          throw Exception(
-            'Server error: ${response.statusCode} - ${response.body}',
-          );
+      // Get driver data
+      final driverResponse =
+          await supabase
+              .from('drivers')
+              .select('''
+          id,
+          user_id,
+          location,
+          dropoff_location,
+          preferences,
+          driving_distance,
+          status,
+          acceptnewrequest,
+          range,
+          created_at,
+          updated_at
+        ''')
+              .eq('user_id', internalUserId)
+              .single();
+
+      // Add parsed coordinates to response
+      final driverData = Map<String, dynamic>.from(driverResponse);
+
+      // Parse location from GeoJSON (Supabase returns PostGIS as GeoJSON)
+      final coords = GeolocatorHelper.parseGeoJSON(driverResponse['location']);
+      if (coords != null) {
+        driverData['latitude'] = coords['latitude'];
+        driverData['longitude'] = coords['longitude'];
+      } else {
+        // Location is NULL - driver hasn't set location yet
+        driverData['latitude'] = null;
+        driverData['longitude'] = null;
       }
-    } on FormatException catch (e) {
-      throw Exception('Invalid server response format: ${e.message}');
-    } on TimeoutException {
-      throw Exception('Request timed out. Please check your connection');
+
+      return Driver.fromJson(driverData);
+    } on PostgrestException catch (e) {
+      if (e.code == 'PGRST116') {
+        throw NotFoundException('Driver not found.');
+      }
+      throw ServerErrorException('Database error: ${e.message}');
+    } on AuthException catch (e) {
+      throw UnauthorizedException('Authentication error: ${e.message}');
     } catch (e) {
+      debugPrint('❌ Error fetching driver: $e');
       throw Exception('Failed to fetch driver: $e');
     }
   }
 
-  static Future<bool> updateDriverLocation(
+  static Future<void> updateDriverLocation(
     double latitude,
     double longitude,
   ) async {
     try {
-      final token = await SharedPreferencesHelper().getValue<String>(
-        'auth_token',
-      );
-      if (token == null) {
-        throw Exception('Authentication token not found');
+      final driverId = await AuthService.getDriverId();
+
+      if (driverId == null) {
+        throw Exception('Driver profile not found');
       }
 
-      final response = await http.patch(
-        Uri.parse('${Api.baseUrl}/updateLocation'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
-      );
+      // Update location using PostGIS Point geometry
+      await Supabase.instance.client
+          .from('drivers')
+          .update({
+            'location':
+                'POINT($longitude $latitude)', // PostGIS format: POINT(lng lat)
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', driverId);
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(
-          errorData['message'] ?? 'Server error: ${response.statusCode}',
-        );
-      }
+      debugPrint('✅ Location updated: ($latitude, $longitude)');
     } catch (e) {
-      throw Exception('Error updating driver location: $e');
+      debugPrint('❌ Error updating location in supabase: $e');
+      rethrow;
     }
   }
 
@@ -91,211 +110,24 @@ class DriverService {
     double longitude,
   ) async {
     try {
-      final token = await SharedPreferencesHelper().getValue<String>(
-        'auth_token',
-      );
-      if (token == null) {
-        throw Exception('Authentication token not found');
+      final driverId = await AuthService.getDriverId();
+      if (driverId == null) {
+        throw Exception('Driver profile not found');
       }
 
-      final response = await http.patch(
-        Uri.parse('${Api.baseUrl}/updateDropOffLocation'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
-      );
+      await Supabase.instance.client
+          .from('drivers')
+          .update({
+            'dropoff_location': 'POINT($longitude $latitude)',
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', driverId);
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(
-          errorData['message'] ?? 'Server error: ${response.statusCode}',
-        );
-      }
+      debugPrint('✅ Drop-off location updated: ($latitude, $longitude)');
+      return true;
     } catch (e) {
+      debugPrint('❌ Error updating driver drop-off location: $e');
       throw Exception('Error updating driver location: $e');
-    }
-  }
-
-  static Future<String?> acceptRideRequest(
-    int rideId,
-    double latitude,
-    double longitude,
-  ) async {
-    try {
-      final token = await SharedPreferencesHelper().getValue<String>(
-        'auth_token',
-      );
-      if (token == null) {
-        throw Exception('Authentication token not found');
-      }
-
-      final response = await http.patch(
-        Uri.parse('${Api.baseUrl}/acceptRide'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'rideId': rideId,
-          'latitude': latitude,
-          'longitude': longitude,
-        }),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        SharedPreferencesHelper().setInt("currentRideId", rideId);
-        return data['message'];
-      } else if (response.statusCode == 403) {
-        // Handle unauthorized access
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else if (response.statusCode == 404) {
-        // Handle driver not found
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else {
-        // Handle other errors
-
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      }
-    } catch (e) {
-      throw Exception('Error updating driver location: $e');
-    }
-  }
-
-  static Future<String?> cancelTrip(String reason) async {
-    try {
-      final token = await SharedPreferencesHelper().getValue<String>(
-        'auth_token',
-      );
-      if (token == null) {
-        throw Exception('Authentication token not found');
-      }
-
-      final int? rideId = await SharedPreferencesHelper().getInt(
-        "currentRideId",
-      );
-
-      final response = await http.patch(
-        Uri.parse('${Api.baseUrl}/cancelTrip'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'reason': reason, 'ride_request_id': rideId}),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['message'];
-      } else if (response.statusCode == 403) {
-        // Handle unauthorized access
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else if (response.statusCode == 404) {
-        // Handle Ride not found or driver not found
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else if (response.statusCode == 422) {
-        // Handle insertion validation error
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else {
-        // Handle other errors
-
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      }
-    } catch (e) {
-      throw Exception('Error updating driver location: $e');
-    }
-  }
-
-  static Future<String> stopNewRequsts() async {
-    try {
-      final token = await SharedPreferencesHelper().getValue<String>(
-        'auth_token',
-      );
-      if (token == null) {
-        throw Exception('Authentication token not found');
-      }
-
-      final response = await http.patch(
-        Uri.parse('${Api.baseUrl}/stopNewRequests'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['message'];
-      } else if (response.statusCode == 403) {
-        // Handle unauthorized access
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else if (response.statusCode == 404) {
-        // Handle Ride not found or driver not found
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else if (response.statusCode == 422) {
-        // Handle insertion validation error
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else {
-        // Handle other errors
-
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      }
-    } catch (e) {
-      throw Exception('Error updating driver availability: $e');
-    }
-  }
-
-  static Future<String> acceptNewRequests() async {
-    try {
-      final token = await SharedPreferencesHelper().getValue<String>(
-        'auth_token',
-      );
-      if (token == null) {
-        throw Exception('Authentication token not found');
-      }
-
-      final response = await http.patch(
-        Uri.parse('${Api.baseUrl}/acceptNewRequests'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['message'];
-      } else if (response.statusCode == 403) {
-        // Handle unauthorized access
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else if (response.statusCode == 404) {
-        // Handle Ride not found or driver not found
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else if (response.statusCode == 422) {
-        // Handle insertion validation error
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      } else {
-        // Handle other errors
-
-        final data = jsonDecode(response.body);
-        throw Exception(data['message']);
-      }
-    } catch (e) {
-      throw Exception('Error updating driver availability: $e');
     }
   }
 }

@@ -1,7 +1,4 @@
-import 'dart:convert';
-import 'package:drivio_app/common/constants/api.dart';
-import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
-import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NotificationsServices {
   Future<Map<String, dynamic>> createNotification({
@@ -12,42 +9,25 @@ class NotificationsServices {
     Map<String, dynamic>? data,
   }) async {
     try {
-      final token = await SharedPreferencesHelper().getValue<String>(
-        'auth_token',
-      );
-      if (token == null) {
-        throw Exception('Authentication token not found');
-      }
+      final response = await Supabase.instance.client
+          .from('notifications')
+          .insert({
+            'user_id': userId,
+            'type': type,
+            'title': title,
+            'message': message,
+            'data': data,
+            'is_read': false,
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
 
-      final response = await http.post(
-        Uri.parse("${Api.baseUrl}/create-notification"),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'user_id': userId,
-          'type': type,
-          'title': title,
-          'message': message,
-          'data': data,
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        return {
-          'success': true,
-          'message': jsonDecode(response.body)['message'],
-          'notification': jsonDecode(response.body)['notification'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Failed to create notification',
-          'error': jsonDecode(response.body)['message'] ?? 'Unknown error',
-        };
-      }
+      return {
+        'success': true,
+        'message': 'Notification created successfully',
+        'notification': response,
+      };
     } catch (e) {
       return {
         'success': false,
