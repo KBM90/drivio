@@ -6,8 +6,11 @@ class SaftyFloatingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 80,
-      left: 2, // Adjust left
+      top:
+          MediaQuery.of(context).padding.top +
+          MediaQuery.of(context).size.height *
+              0.1, // SafeArea + 2% of screen height
+      left: MediaQuery.of(context).size.width * 0.05, // Adjust left
       child: FloatingActionButton(
         heroTag: "safty",
         onPressed: () {

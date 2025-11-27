@@ -3,19 +3,20 @@ import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DriverPassengerService {
-  static Future<Passenger> getPassenger(int passengerId) async {
+  static Future<Passenger> getPassenger(int userId) async {
     try {
-      debugPrint('🔍 Fetching passenger with ID: $passengerId');
+      debugPrint('🔍 Fetching passenger with user ID: $userId');
 
       // Query Supabase with join to get user data
+      // Note: We query by user_id, not by passenger id
       final response =
           await Supabase.instance.client
               .from('passengers')
               .select('''
           *,
-          user:users!passengers_user_id_fkey(*)
+          user:users(*)
         ''')
-              .eq('id', passengerId)
+              .eq('user_id', userId)
               .single(); // Use .single() instead of .maybeSingle() to throw if not found
 
       debugPrint('✅ Passenger data retrieved: $response');
@@ -28,7 +29,7 @@ class DriverPassengerService {
       // Handle specific error codes
       if (e.code == 'PGRST116') {
         // No rows returned
-        throw Exception('Passenger with ID $passengerId not found');
+        throw Exception('Passenger with user ID $userId not found');
       } else if (e.code == '42501') {
         // Permission denied
         throw Exception('Permission denied. Please check your authentication.');

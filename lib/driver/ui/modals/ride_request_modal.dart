@@ -3,6 +3,7 @@ import 'package:drivio_app/common/services/rating_services.dart';
 import 'package:drivio_app/common/models/ride_request.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
+import 'package:drivio_app/driver/ui/screens/passenger_profile.dart';
 import 'package:flutter/material.dart';
 
 Future<bool?> showRideRequestModal(
@@ -81,6 +82,38 @@ Future<bool?> showRideRequestModal(
                           } // Show the fetched place name
                         }
                       },
+                    ),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => PassengerProfileScreen(
+                                  passengerId: rideRequest.passenger.userId,
+                                ),
+                          ),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage:
+                            rideRequest.passenger.profileImage != null
+                                ? NetworkImage(
+                                  rideRequest.passenger.profileImage!,
+                                )
+                                : null,
+                        child:
+                            rideRequest.passenger.profileImage == null
+                                ? const Icon(
+                                  Icons.person,
+                                  size: 20,
+                                  color: Colors.grey,
+                                )
+                                : null,
+                      ),
                     ),
                   ],
                 ),

@@ -10,8 +10,11 @@ class ReportMapIssue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: MediaQuery.of(context).size.height * 0.2, // 2% from the bottom
-      right: MediaQuery.of(context).size.width * 0.015, // Adjust left
+      top:
+          MediaQuery.of(context).padding.top +
+          MediaQuery.of(context).size.height *
+              0.2, // SafeArea + 2% of screen height
+      left: MediaQuery.of(context).size.width * 0.05,
       child: FloatingActionButton(
         heroTag: "report_map_issue",
         onPressed: () {

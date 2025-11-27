@@ -1,6 +1,9 @@
 // passenger.dart
+import 'dart:convert';
+
 import 'package:drivio_app/common/models/location.dart';
 import 'package:drivio_app/common/models/user.dart';
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'passenger.g.dart';
@@ -67,15 +70,39 @@ class Passenger {
       return null;
     }
 
+    // Debug logging
+    debugPrint('📦 Parsing Passenger JSON keys: ${json.keys.toList()}');
+    debugPrint('👤 User data present: ${json.containsKey('user')}');
+    if (json.containsKey('user') && json['user'] != null) {
+      debugPrint('👤 User data type: ${json['user'].runtimeType}');
+      debugPrint('👤 User data: ${json['user']}');
+    }
+
+    User? parsedUser;
+    try {
+      if (json['user'] != null) {
+        parsedUser = User.fromJson(json['user'] as Map<String, dynamic>);
+        debugPrint('✅ User parsed successfully: ${parsedUser.name}');
+      } else {
+        debugPrint('⚠️ User data is null in JSON');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error parsing user: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
+      parsedUser = null;
+    }
+
     return Passenger(
       id: json['id'] as int,
       userId: json['user_id'] as int,
-      user: json['user'] != null ? User.fromJson(json['user']) : null,
+      user: parsedUser,
       location: parseLocation(json['location']),
       preferences:
-          json['preferences'] is Map<String, dynamic>
-              ? json['preferences'] as Map<String, dynamic>
-              : null,
+          json['preferences'] is Map
+              ? Map<String, dynamic>.from(json['preferences'] as Map)
+              : (json['preferences'] is String
+                  ? jsonDecode(json['preferences']) as Map<String, dynamic>
+                  : null),
       drivingDistance: (json['driving_distance'] as num?)?.toDouble(),
       createdAt:
           json['created_at'] != null
@@ -92,6 +119,15 @@ class Passenger {
 
   // Helper method to get passenger name from user
   String get name => user?.name ?? 'Unknown';
+
+  // Convenience getters for UI
+  String get firstName => name.split(' ').first;
+  String get lastName =>
+      name.split(' ').length > 1 ? name.split(' ').sublist(1).join(' ') : '';
+  String? get profileImage => user?.profileImagePath;
+  String? get phoneNumber => user?.phone;
+  double? get rating =>
+      5.0; // Placeholder as rating is not in User or Passenger model yet
 
   // Method to convert for API requests (if needed)
   Map<String, dynamic> toRequestJson() {

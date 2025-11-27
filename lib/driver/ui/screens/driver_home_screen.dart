@@ -145,7 +145,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ),
           if (driver != null) ReportMapIssue(driver: driver),
           SaftyFloatingButton(),
-          StatusBar(),
+          if (driver?.status != DriverStatus.onTrip) StatusBar(),
         ],
       ),
     );

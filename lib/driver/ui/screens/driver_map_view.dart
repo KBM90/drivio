@@ -13,7 +13,7 @@ import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/services/change_status.dart';
 import 'package:drivio_app/driver/ui/modals/ride_request_modal.dart';
-import 'package:drivio_app/driver/ui/widgets/cancel_trip_widget.dart';
+import 'package:drivio_app/driver/ui/widgets/trip_info_panel.dart';
 import 'package:drivio_app/driver/utils/map_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -21,6 +21,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:drivio_app/driver/ui/widgets/go_offline_widget.dart';
 import 'package:drivio_app/driver/ui/widgets/go_online_widget.dart';
+import 'package:drivio_app/common/widgets/map_location_button.dart';
 
 class MapView extends StatefulWidget {
   const MapView({super.key});
@@ -355,7 +356,8 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
     return Stack(
       children: [
-        driverProvider.currentDriver == null
+        driverProvider.currentDriver == null ||
+                locationProvider.currentLocation == null
             ? const Center(child: CircularProgressIndicator())
             : FlutterMap(
               mapController: _mapController,
@@ -371,7 +373,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                           locationProvider.currentLocation!.longitude,
                         )
                         : LatLng(31.7917, -7.0926), // Your default location
-                initialZoom: locationProvider.currentLocation != null ? 13 : 6,
+                initialZoom: locationProvider.currentLocation != null ? 15 : 6,
                 onMapReady: () async {
                   setState(() {
                     _isMapReady = true;
@@ -534,6 +536,48 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                                       onTap: () async {
                                         debugPrint("pickup clicked");
                                         try {
+                                          showRideRequestModal(
+                                            context,
+                                            rideRequest,
+                                            rideRequestsProvider,
+                                            driverProvider.currentDriver!,
+                                          ).then((accepted) async {
+                                            debugPrint(
+                                              "🏁 Modal closed. Accepted: $accepted",
+                                            );
+                                            if (accepted != true) {
+                                              setState(() {
+                                                _routePolyline = [];
+                                                _routePolylineDriverToPickup =
+                                                    [];
+                                                _destination = null;
+                                              });
+                                            } else {
+                                              if (!context.mounted) return;
+                                              await driverProvider.toggleStatus(
+                                                'on_trip',
+                                              );
+                                              if (!context.mounted) return;
+                                              await Provider.of<
+                                                RideRequestsProvider
+                                              >(
+                                                context,
+                                                listen: false,
+                                              ).fetchRideRequest(
+                                                rideRequest.id,
+                                              );
+                                              if (!context.mounted) return;
+                                              await Provider.of<
+                                                DriverPassengerProvider
+                                              >(
+                                                context,
+                                                listen: false,
+                                              ).getPassenger(
+                                                rideRequest.passenger.id,
+                                              );
+                                            }
+                                          });
+
                                           final success =
                                               await _getDestinationCoordinates(
                                                 rideRequest.pickupLocation,
@@ -606,53 +650,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                                               );
                                             }
                                           }
-                                          Future.delayed(
-                                            const Duration(milliseconds: 50),
-                                            () {
-                                              if (!context.mounted) return;
-
-                                              showRideRequestModal(
-                                                context,
-                                                rideRequest,
-                                                rideRequestsProvider,
-                                                driverProvider.currentDriver!,
-                                              ).then((accepted) async {
-                                                debugPrint(
-                                                  "🏁 Modal closed. Accepted: $accepted",
-                                                );
-                                                if (accepted != true) {
-                                                  setState(() {
-                                                    _routePolyline = [];
-                                                    _routePolylineDriverToPickup =
-                                                        [];
-                                                    _destination = null;
-                                                  });
-                                                } else {
-                                                  if (!context.mounted) return;
-                                                  await driverProvider
-                                                      .toggleStatus('on_trip');
-                                                  if (!context.mounted) return;
-                                                  await Provider.of<
-                                                    RideRequestsProvider
-                                                  >(
-                                                    context,
-                                                    listen: false,
-                                                  ).fetchRideRequest(
-                                                    rideRequest.id,
-                                                  );
-                                                  if (!context.mounted) return;
-                                                  await Provider.of<
-                                                    DriverPassengerProvider
-                                                  >(
-                                                    context,
-                                                    listen: false,
-                                                  ).getPassenger(
-                                                    rideRequest.passenger.id,
-                                                  );
-                                                }
-                                              });
-                                            },
-                                          );
                                         } catch (e, stack) {
                                           debugPrint(
                                             "❌ Error in pickup onTap: $e",
@@ -729,26 +726,14 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
         /// GPS Button (Bottom Right)
         Positioned(
-          bottom: 80,
-          right: 2,
-          child: FloatingActionButton(
-            onPressed: () async {
-              try {
-                // ✅ Get current location from DriverLocationProvider
-                final location = locationProvider.currentLocation;
-                if (location != null) {
-                  _mapController.move(location, 15.0);
-                }
-              } catch (e) {
-                print('Error updating location: $e');
-              }
-            },
-
-            backgroundColor: Colors.white,
-            elevation: 3,
-            mini: true,
-            shape: const CircleBorder(),
-            child: const Icon(Icons.my_location, color: Colors.black, size: 20),
+          top:
+              MediaQuery.of(context).padding.top +
+              MediaQuery.of(context).size.height *
+                  0.3, // SafeArea + 2% of screen height
+          left: MediaQuery.of(context).size.width * 0.05,
+          child: MapLocationButton(
+            mapController: _mapController,
+            currentLocation: locationProvider.currentLocation,
           ),
         ),
         // ✅ Remove DriverLocationProvider from Consumer2
@@ -775,9 +760,14 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                 },
               );
             } else if (status == DriverStatus.onTrip) {
-              return const CancelTripWidget();
+              if (rideRequestsProvider.currentRideRequest != null) {
+                return TripInfoPanel(
+                  rideRequest: rideRequestsProvider.currentRideRequest!,
+                );
+              }
+              return const SizedBox.shrink();
             } else {
-              return const SizedBox();
+              return const SizedBox.shrink();
             }
           },
         ),

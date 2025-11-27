@@ -1,5 +1,6 @@
 create table public.ride_payments (
   id bigserial not null,
+  ride_request_id bigint not null,
   user_payment_method_id bigint not null,
   amount numeric(10, 2) not null,
   payment_status character varying(20) null default 'pending'::character varying,
@@ -11,6 +12,7 @@ create table public.ride_payments (
   created_at timestamp with time zone null default CURRENT_TIMESTAMP,
   updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
   constraint ride_payments_pkey primary key (id),
+  constraint fk_ride_payments_ride_request_id foreign KEY (ride_request_id) references ride_requests (id) on delete CASCADE,
   constraint fk_ride_payments_user_payment_method_id foreign KEY (user_payment_method_id) references user_payment_methods (id) on delete CASCADE,
   constraint ride_payments_payment_status_check check (
     (
@@ -26,6 +28,8 @@ create table public.ride_payments (
     )
   )
 ) TABLESPACE pg_default;
+
+create index IF not exists idx_ride_payments_ride_request_id on public.ride_payments using btree (ride_request_id) TABLESPACE pg_default;
 
 create index IF not exists idx_ride_payments_user_payment_method_id on public.ride_payments using btree (user_payment_method_id) TABLESPACE pg_default;
 

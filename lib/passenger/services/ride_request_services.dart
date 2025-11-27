@@ -27,6 +27,9 @@ class RideRequestServices {
 
       debugPrint('🔍 Passenger ID: $passengerId');
 
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
+
       // Calculate distance and duration
       final distance = await OSRMService().getDistance(pickup, destination);
       final duration = await OSRMService().getDuration(pickup, destination);
@@ -109,7 +112,7 @@ class RideRequestServices {
             'title': 'Ride Requested',
             'body':
                 'Your ride request has been created successfully. Waiting for a driver...',
-            'data': {'ride_request_id': rideRequestId},
+            'data': {'ride_request_id': rideRequestId, 'category': 'system'},
             // 'created_at': DateTime.now().toUtc().toIso8601String(), // Let DB handle default
           });
           debugPrint('✅ Notification created for ride request');
@@ -173,6 +176,9 @@ class RideRequestServices {
         debugPrint('❌ Passenger ID is null, cannot fetch ride request');
         return null;
       }
+
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
 
       final response =
           await Supabase.instance.client
@@ -239,6 +245,9 @@ class RideRequestServices {
       if (passengerId == null) {
         throw Exception('Passenger profile not found. Please log in again.');
       }
+
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
 
       // Load the ride from DB
       final currentRide =

@@ -1,64 +1,450 @@
+import 'package:drivio_app/common/services/referral_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
-class ReferFriendsScreen extends StatelessWidget {
+class ReferFriendsScreen extends StatefulWidget {
   const ReferFriendsScreen({super.key});
+
+  @override
+  State<ReferFriendsScreen> createState() => _ReferFriendsScreenState();
+}
+
+class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
+  String? _referralCode;
+  Map<String, dynamic>? _stats;
+  List<Map<String, dynamic>> _referralHistory = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final code = await ReferralService.generateReferralCode();
+      final stats = await ReferralService.getReferralStats();
+      final history = await ReferralService.getReferralHistory();
+
+      setState(() {
+        _referralCode = code;
+        _stats = stats;
+        _referralHistory = history;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading referral data: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _copyCode() {
+    if (_referralCode != null) {
+      Clipboard.setData(ClipboardData(text: _referralCode!));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Referral code copied to clipboard!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _shareCode() {
+    if (_referralCode != null) {
+      final message =
+          'Join Drivio using my referral code: $_referralCode and earn rewards! Download the app now.';
+      Share.share(message);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Refer friends')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      appBar: AppBar(title: const Text('Refer Friends'), elevation: 0),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: _loadData,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Stats Card
+                      _buildStatsCard(),
+                      const SizedBox(height: 24),
+
+                      // Referral Code Card
+                      _buildReferralCodeCard(),
+                      const SizedBox(height: 24),
+
+                      // How it works
+                      _buildHowItWorks(),
+                      const SizedBox(height: 24),
+
+                      // Referral History
+                      _buildReferralHistory(),
+                    ],
+                  ),
+                ),
+              ),
+    );
+  }
+
+  Widget _buildStatsCard() {
+    final totalEarnings = _stats?['total_earnings'] ?? 0.0;
+    final pendingEarnings = _stats?['pending_earnings'] ?? 0.0;
+    final totalPoints = _stats?['total_points'] ?? 0;
+    final totalReferrals = _stats?['total_referrals'] ?? 0;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Check invitation progress',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            const Text(
+              'Your Earnings',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 8),
-            Text(
-              'You earned \$250',
-              style: TextStyle(fontSize: 16, color: Colors.green),
-            ),
-            SizedBox(height: 24),
-            Text(
-              'For every friend you invite, earn up to \$450',
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Share your referral link',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'You can invite friends who are new or returning to Uber. You can also invite delivery friends who haven’t tried rides yet.',
-              style: TextStyle(fontSize: 14),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Your friend activates their account',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Get \$45 for every 20 rides your friend completes',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 24),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle invite button press
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem(
+                  '\$${totalEarnings.toStringAsFixed(2)}',
+                  'Total Earned',
+                  Colors.green,
                 ),
-                child: Text('Invite'),
-              ),
+                _buildStatItem(
+                  '\$${pendingEarnings.toStringAsFixed(2)}',
+                  'Pending',
+                  Colors.orange,
+                ),
+              ],
+            ),
+            const Divider(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem('$totalPoints', 'Points', Colors.blue),
+                _buildStatItem('$totalReferrals', 'Referrals', Colors.purple),
+              ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String value, String label, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+      ],
+    );
+  }
+
+  Widget _buildReferralCodeCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your Referral Code',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _referralCode ?? 'Loading...',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy),
+                    onPressed: _copyCode,
+                    tooltip: 'Copy code',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _shareCode,
+                    icon: const Icon(Icons.share),
+                    label: const Text('Share Code'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHowItWorks() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'How It Works',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        _buildStep(
+          '1',
+          'Share your code',
+          'Send your referral code to friends via text, email, or social media.',
+          Icons.share,
+        ),
+        const SizedBox(height: 12),
+        _buildStep(
+          '2',
+          'Friend signs up',
+          'Your friend creates an account using your referral code.',
+          Icons.person_add,
+        ),
+        const SizedBox(height: 12),
+        _buildStep(
+          '3',
+          'Earn rewards',
+          'Get points when they sign up, and cash rewards as they complete rides!',
+          Icons.card_giftcard,
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.green.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Reward Milestones',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              _buildMilestone('Sign up', '50 points'),
+              _buildMilestone('1st ride', '\$5 + 100 points'),
+              _buildMilestone('5 rides', '\$10 + 200 points'),
+              _buildMilestone('10 rides', '\$15 + 300 points'),
+              _buildMilestone('20 rides', '\$25 + 500 points'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep(
+    String number,
+    String title,
+    String description,
+    IconData icon,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+          child: Center(child: Icon(icon, color: Colors.white, size: 20)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMilestone(String milestone, String reward) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('• $milestone'),
+          Text(
+            reward,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReferralHistory() {
+    if (_referralHistory.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Referral History',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.people_outline,
+                  size: 64,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No referrals yet',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Start sharing your code!',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Referral History',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _referralHistory.length,
+          itemBuilder: (context, index) {
+            final referral = _referralHistory[index];
+            final status = referral['status'] as String?;
+            final ridesCompleted = (referral['rides_completed'] as int?) ?? 0;
+            final referredUser =
+                referral['referred_user'] as Map<String, dynamic>?;
+            final name = referredUser?['name'] ?? 'Pending signup';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: _getStatusColor(status),
+                  child: Text(
+                    name[0].toUpperCase(),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                title: Text(name),
+                subtitle: Text('$ridesCompleted rides completed'),
+                trailing: _getStatusChip(status),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'completed':
+        return Colors.green;
+      case 'active':
+        return Colors.blue;
+      case 'pending':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _getStatusChip(String? status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getStatusColor(status).withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status?.toUpperCase() ?? 'UNKNOWN',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: _getStatusColor(status),
         ),
       ),
     );

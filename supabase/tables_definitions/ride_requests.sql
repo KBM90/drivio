@@ -43,7 +43,7 @@ create table public.ride_requests (
             'in_progress'::character varying,
             'completed'::character varying,
             'cancelled_by_driver'::character varying,
-            'cancelled_by_passenger'::character varying
+            'arrived'::character varying
           ]
         )::text[]
       )

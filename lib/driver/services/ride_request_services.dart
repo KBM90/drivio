@@ -68,7 +68,7 @@ class RideRequestService {
           await Supabase.instance.client
               .from('ride_requests')
               .select(
-                '*, passenger:passengers(*), driver:drivers(*), transport_type:transport_types(*)',
+                '*, passenger:passengers(*, user:users(*)), driver:drivers(*), transport_type:transport_types(*)',
               )
               .eq('id', id)
               .single();
@@ -200,6 +200,72 @@ class RideRequestService {
       return 'You are now receiving new requests';
     } catch (e) {
       throw Exception('Error updating driver availability: $e');
+    }
+  }
+
+  /// Mark driver as arrived at pickup location
+  static Future<void> driverArrived(int rideRequestId) async {
+    try {
+      final driverId = await AuthService.getDriverId();
+      if (driverId == null) throw Exception('Driver not found');
+
+      debugPrint('📍 Driver arrived for ride $rideRequestId');
+
+      await Supabase.instance.client
+          .from('ride_requests')
+          .update({
+            'status': 'arrived',
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', rideRequestId)
+          .eq('driver_id', driverId);
+
+      debugPrint('✅ Ride status updated to arrived');
+    } catch (e) {
+      debugPrint('❌ Error updating arrival status: $e');
+      throw Exception('Failed to update arrival status: $e');
+    }
+  }
+
+  /// Start trip after verifying QR code
+  static Future<void> startTrip(int rideRequestId, String qrCode) async {
+    try {
+      final driverId = await AuthService.getDriverId();
+      if (driverId == null) throw Exception('Driver not found');
+
+      debugPrint('🚀 Starting trip $rideRequestId with QR: $qrCode');
+
+      // Verify QR code and start trip via RPC or direct update
+      // For now, we'll verify locally and update
+
+      // 1. Fetch the ride request to check QR code
+      final ride =
+          await Supabase.instance.client
+              .from('ride_requests')
+              .select('qr_code, status')
+              .eq('id', rideRequestId)
+              .single();
+
+      if (ride['qr_code'] != qrCode) {
+        throw Exception('Invalid QR Code');
+      }
+
+      // 2. Update status to in_progress
+      await Supabase.instance.client
+          .from('ride_requests')
+          .update({
+            'status': 'in_progress',
+            'qr_code_scanned': true,
+            'updated_at': DateTime.now().toIso8601String(),
+            'start_time': DateTime.now().toIso8601String(),
+          })
+          .eq('id', rideRequestId)
+          .eq('driver_id', driverId);
+
+      debugPrint('✅ Trip started successfully');
+    } catch (e) {
+      debugPrint('❌ Error starting trip: $e');
+      throw Exception('Failed to start trip: $e');
     }
   }
 }

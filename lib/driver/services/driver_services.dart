@@ -19,6 +19,9 @@ class DriverService {
         );
       }
 
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
+
       // Get internal user ID
       final userResponse =
           await supabase
@@ -88,6 +91,9 @@ class DriverService {
         throw Exception('Driver profile not found');
       }
 
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
+
       // Update location using PostGIS Point geometry
       await Supabase.instance.client
           .from('drivers')
@@ -114,6 +120,9 @@ class DriverService {
       if (driverId == null) {
         throw Exception('Driver profile not found');
       }
+
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
 
       await Supabase.instance.client
           .from('drivers')

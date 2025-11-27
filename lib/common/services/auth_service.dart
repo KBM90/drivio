@@ -134,16 +134,51 @@ class AuthService {
   }
 
   /// Ensure the current session is valid and refresh if necessary
-  static Future<void> _ensureValidSession() async {
-    final session = _supabase.auth.currentSession;
-    if (session != null && session.isExpired) {
-      debugPrint('🔄 Token expired, refreshing session...');
-      try {
-        await _supabase.auth.refreshSession();
-        debugPrint('✅ Session refreshed');
-      } catch (e) {
-        debugPrint('❌ Failed to refresh session: $e');
-        // Don't throw here, let the subsequent call fail or succeed if it was a false alarm
+  static Future<void> ensureValidSession({bool forceRefresh = false}) async {
+    try {
+      final session = _supabase.auth.currentSession;
+
+      if (session == null) {
+        debugPrint('⚠️ No active session found');
+        return;
+      }
+
+      debugPrint(
+        '🔍 Session check: isExpired=${session.isExpired}, forceRefresh=$forceRefresh',
+      );
+
+      // Refresh if expired OR forced
+      if (session.isExpired || forceRefresh) {
+        debugPrint(
+          '🔄 Refreshing session (Expired: ${session.isExpired}, Forced: $forceRefresh)...',
+        );
+        try {
+          final response = await _supabase.auth.refreshSession();
+
+          if (response.session != null) {
+            debugPrint('✅ Session refreshed successfully');
+          } else {
+            debugPrint(
+              '❌ Session refresh returned null - user needs to re-login',
+            );
+            await signOut(); // Force logout
+            throw AuthException('Session refresh failed - please log in again');
+          }
+        } catch (refreshError) {
+          debugPrint('❌ Failed to refresh session: $refreshError');
+          debugPrint('⚠️ User needs to log out and log back in');
+          await signOut(); // Force logout
+          throw AuthException(
+            'Session expired and refresh failed - please log in again',
+          );
+        }
+      } else {
+        debugPrint('✅ Session is valid');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in ensureValidSession: $e');
+      if (e is AuthException) {
+        rethrow;
       }
     }
   }
@@ -153,22 +188,54 @@ class AuthService {
     if (_cachedInternalUserId != null) return _cachedInternalUserId;
 
     try {
-      await _ensureValidSession(); // Ensure valid token before DB call
+      await ensureValidSession(); // Ensure valid token before DB call
 
       final authUserId = _supabase.auth.currentUser?.id;
       if (authUserId == null) return null;
 
-      final response =
-          await _supabase
-              .from('users')
-              .select('id')
-              .eq('user_id', authUserId)
-              .single();
+      try {
+        final response =
+            await _supabase
+                .from('users')
+                .select('id')
+                .eq('user_id', authUserId)
+                .single();
 
-      _cachedInternalUserId = response['id'] as int?;
-      return _cachedInternalUserId;
+        _cachedInternalUserId = response['id'] as int?;
+        return _cachedInternalUserId;
+      } on PostgrestException catch (e) {
+        // 🚨 Handle JWT Expiration specifically
+        if (e.code == 'PGRST303') {
+          debugPrint(
+            '⚠️ JWT Expired during DB call. Forcing refresh and retrying...',
+          );
+
+          // Force refresh
+          await ensureValidSession(forceRefresh: true);
+
+          // Retry DB call
+          final response =
+              await _supabase
+                  .from('users')
+                  .select('id')
+                  .eq('user_id', authUserId)
+                  .single();
+
+          _cachedInternalUserId = response['id'] as int?;
+          return _cachedInternalUserId;
+        }
+        rethrow; // Rethrow other PostgrestExceptions
+      }
     } catch (e) {
       debugPrint('❌ Error getting internal user ID: $e');
+
+      // If we still fail after retry, it might be time to logout
+      if (e.toString().contains('JWT expired') ||
+          (e is PostgrestException && e.code == 'PGRST303')) {
+        debugPrint('❌ Unrecoverable JWT error. Signing out.');
+        await signOut();
+      }
+
       return null;
     }
   }

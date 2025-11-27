@@ -11,6 +11,9 @@ class WalletService {
         throw Exception('User not found');
       }
 
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
+
       final response =
           await Supabase.instance.client
               .from('wallets')

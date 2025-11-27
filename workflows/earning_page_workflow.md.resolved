@@ -1,0 +1,95 @@
+# Earnings Page Database Structure
+
+## Overview
+
+The earnings page displays driver earnings data including:
+- **Total Balance**: All trip earnings (cash + bank transfer + other methods)
+- **Online Time**: Time spent online (active status)
+- **Trip Count**: Number of completed trips
+- **Points**: Driver points/rewards
+- **Payment Breakdown**: Earnings by payment method with scheduled payment details
+
+Currently, the database lacks:
+1. A table to track driver online/offline sessions for accurate online time calculation
+2. A proper link between `ride_requests` and `ride_payments`
+3. A pivot/summary table to efficiently aggregate driver earnings data
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Database Schema Changes**
+> - Adding `ride_request_id` to `ride_payments` table (breaking change if existing data relies on current structure)
+> - Creating new `driver_online_sessions` table to track when drivers go online/offline
+> - Creating new `driver_earnings_summary` materialized view/table for performance optimization
+
+> [!WARNING]
+> **Online Time Tracking**
+> - The system will start tracking online time from when this is implemented forward
+> - Historical online time data cannot be calculated retroactively
+> - Requires triggers on driver status changes to automatically log sessions
+
+## Proposed Changes
+
+### Database Tables
+
+#### [NEW] [driver_online_sessions.sql](file:///c:/Users/ACER/AndroidStudioProjects/drivio/supabase/tables_definitions/driver_online_sessions.sql)
+
+New table to track driver online/offline sessions:
+- `driver_id`: Reference to drivers table
+- `session_start`: Timestamp when driver went online
+- `session_end`: Timestamp when driver went offline (null if currently online)
+- `total_duration_minutes`: Calculated duration of session
+- Automatically populated via triggers when driver status changes
+
+#### [MODIFY] [ride_payments.sql](file:///c:/Users/ACER/AndroidStudioProjects/drivio/supabase/tables_definitions/ride_payments.sql)
+
+Add missing link to ride requests:
+- Add `ride_request_id` column to link payments with specific trips
+- This enables accurate earnings calculation per trip
+- Allows grouping earnings by payment method
+
+#### [NEW] [driver_earnings_summary.sql](file:///c:/Users/ACER/AndroidStudioProjects/drivio/supabase/tables_definitions/driver_earnings_summary.sql)
+
+Pivot table combining all driver earnings data:
+- `driver_id`: Reference to driver
+- `period_start`, `period_end`: Date range for summary
+- `total_earnings`: Sum of all trip earnings
+- `cash_earnings`: Earnings from cash payments
+- `bank_transfer_earnings`: Earnings from bank transfer payments
+- `other_earnings`: Earnings from other payment methods
+- `total_trips`: Count of completed trips
+- `total_online_minutes`: Sum of online time
+- `points`: Driver reward points
+- `next_payout_date`: Scheduled payment date
+- `next_payout_amount`: Amount scheduled for payout
+
+---
+
+### Data Flow
+
+```mermaid
+graph TD
+    A[Driver] -->|goes online/offline| B[driver_online_sessions]
+    A -->|completes trip| C[ride_requests]
+    C -->|payment processed| D[ride_payments]
+    D -->|references| C
+    C -->|belongs to| A
+    B -->|aggregated| E[driver_earnings_summary]
+    D -->|aggregated| E
+    C -->|aggregated| E
+    E -->|displayed in| F[EarningsPage]
+```
+
+## Verification Plan
+
+### Automated Tests
+- Create test driver and simulate online/offline status changes
+- Verify `driver_online_sessions` records are created automatically
+- Create test ride requests with different payment methods
+- Verify earnings are correctly aggregated in `driver_earnings_summary`
+
+### Manual Verification
+- Test the earnings page displays correct total balance
+- Verify payment method breakdown shows correct amounts
+- Confirm online time calculation is accurate
+- Check that scheduled payment details appear correctly

@@ -42,6 +42,9 @@ class MapReportService {
                 .toList();
       }
 
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
+
       await Supabase.instance.client.from('map_reports').insert(data);
 
       return true;
@@ -58,6 +61,9 @@ class MapReportService {
       if (driverLocation == null) {
         throw Exception('Unable to get driver location');
       }
+
+      // Ensure session is valid before making DB calls
+      await AuthService.ensureValidSession();
 
       // Fetch all active reports
       final response = await Supabase.instance.client
