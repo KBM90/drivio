@@ -1,5 +1,5 @@
 class EarningsData {
-  final double totalBalance;
+  final double totalEarnings;
   final double cashEarnings;
   final double bankTransferEarnings;
   final double otherEarnings;
@@ -13,7 +13,7 @@ class EarningsData {
   final DateTime periodEnd;
 
   EarningsData({
-    required this.totalBalance,
+    required this.totalEarnings,
     required this.cashEarnings,
     required this.bankTransferEarnings,
     required this.otherEarnings,
@@ -29,14 +29,18 @@ class EarningsData {
 
   factory EarningsData.fromJson(Map<String, dynamic> json) {
     return EarningsData(
-      totalBalance: (json['total_balance'] as num?)?.toDouble() ?? 0.0,
+      totalEarnings: (json['total_earnings'] as num?)?.toDouble() ?? 0.0,
       cashEarnings: (json['cash_earnings'] as num?)?.toDouble() ?? 0.0,
       bankTransferEarnings:
           (json['bank_transfer_earnings'] as num?)?.toDouble() ?? 0.0,
       otherEarnings: (json['other_earnings'] as num?)?.toDouble() ?? 0.0,
       totalTrips: (json['total_trips'] as int?) ?? 0,
-      onlineHours: (json['online_hours'] as int?) ?? 0,
-      onlineMinutes: (json['online_minutes'] as int?) ?? 0,
+      onlineHours:
+          (json['online_hours'] as int?) ??
+          ((json['total_online_minutes'] as int?) ?? 0) ~/ 60,
+      onlineMinutes:
+          (json['online_minutes'] as int?) ??
+          ((json['total_online_minutes'] as int?) ?? 0) % 60,
       points: (json['points'] as int?) ?? 0,
       nextPayoutDate:
           json['next_payout_date'] != null
@@ -54,7 +58,7 @@ class EarningsData {
 
   Map<String, dynamic> toJson() {
     return {
-      'total_balance': totalBalance,
+      'total_earnings': totalEarnings,
       'cash_earnings': cashEarnings,
       'bank_transfer_earnings': bankTransferEarnings,
       'other_earnings': otherEarnings,
@@ -74,7 +78,7 @@ class EarningsData {
   }
 
   String get formattedTotalBalance {
-    return '\$${totalBalance.toStringAsFixed(2)}';
+    return '\$${totalEarnings.toStringAsFixed(2)}';
   }
 
   String get formattedCashEarnings {

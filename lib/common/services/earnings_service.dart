@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/earnings_data.dart';
+import '../models/trip_detail.dart';
 
 class EarningsService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -20,7 +22,7 @@ class EarningsService {
         final weekEnd = _getWeekEnd(weekStart);
 
         return EarningsData(
-          totalBalance: 0.0,
+          totalEarnings: 0.0,
           cashEarnings: 0.0,
           bankTransferEarnings: 0.0,
           otherEarnings: 0.0,
@@ -61,13 +63,20 @@ class EarningsService {
     DateTime endDate,
   ) async {
     try {
+      final pStart = startDate.toIso8601String().split('T')[0];
+      final pEnd = endDate.toIso8601String().split('T')[0];
+
+      debugPrint(
+        '🔄 Refreshing earnings for Driver $driverId: $pStart to $pEnd',
+      );
+
       // First refresh the summary for this period
       await _supabase.rpc(
         'refresh_driver_earnings_summary',
         params: {
           'p_driver_id': driverId,
-          'p_period_start': startDate.toIso8601String().split('T')[0],
-          'p_period_end': endDate.toIso8601String().split('T')[0],
+          'p_period_start': pStart,
+          'p_period_end': pEnd,
         },
       );
 
@@ -77,13 +86,16 @@ class EarningsService {
               .from('driver_earnings_summary')
               .select()
               .eq('driver_id', driverId)
-              .eq('period_start', startDate.toIso8601String().split('T')[0])
-              .eq('period_end', endDate.toIso8601String().split('T')[0])
+              .eq('period_start', pStart)
+              .eq('period_end', pEnd)
               .maybeSingle();
 
+      debugPrint('📊 Earnings response: $response');
+
       if (response == null) {
+        debugPrint('⚠️ No earnings summary found for period');
         return EarningsData(
-          totalBalance: 0.0,
+          totalEarnings: 0.0,
           cashEarnings: 0.0,
           bankTransferEarnings: 0.0,
           otherEarnings: 0.0,
@@ -104,8 +116,98 @@ class EarningsService {
 
       return EarningsData.fromJson(earningsData);
     } catch (e) {
-      print('Error fetching earnings for period: $e');
+      debugPrint('❌ Error fetching earnings for period: $e');
       rethrow;
+    }
+  }
+
+  /// Get earnings for a single day
+  Future<EarningsData?> getDailyEarnings(int driverId, DateTime date) async {
+    final dayStart = DateTime(date.year, date.month, date.day);
+    final dayEnd = DateTime(date.year, date.month, date.day, 23, 59, 59);
+    return getEarningsForPeriod(driverId, dayStart, dayEnd);
+  }
+
+  /// Get detailed trip information for a single day
+  Future<List<TripDetail>> getDailyTripDetails(
+    int driverId,
+    DateTime date,
+  ) async {
+    try {
+      final dateStr = date.toIso8601String().split('T')[0];
+
+      debugPrint('🔄 Fetching trip details for Driver $driverId on $dateStr');
+
+      final response = await _supabase
+          .from('ride_requests')
+          .select('''
+            id,
+            created_at,
+            distance,
+            price,
+            status,
+            ride_payments!inner(
+              driver_earnings,
+              commission_percentage,
+              user_payment_method_id
+            ),
+            payment_methods!ride_requests_payment_method_id_fkey(
+              name
+            )
+          ''')
+          .eq('driver_id', driverId)
+          .gte('created_at', '${dateStr}T00:00:00')
+          .lte('created_at', '${dateStr}T23:59:59')
+          .order('created_at', ascending: false);
+
+      debugPrint('📊 Trip details response: $response');
+
+      if (response == null || response.isEmpty) {
+        debugPrint('⚠️ No trips found for this day');
+        return [];
+      }
+
+      final trips = <TripDetail>[];
+      for (final trip in response) {
+        try {
+          final payments = trip['ride_payments'] as List;
+          if (payments.isEmpty) continue;
+
+          final payment = payments[0] as Map<String, dynamic>;
+          final paymentMethod =
+              trip['payment_methods'] as Map<String, dynamic>?;
+
+          final driverEarnings =
+              (payment['driver_earnings'] as num?)?.toDouble() ?? 0.0;
+          final commissionPct =
+              (payment['commission_percentage'] as num?)?.toDouble() ?? 0.0;
+          final price = (trip['price'] as num?)?.toDouble() ?? 0.0;
+          final commissionAmount = price * (commissionPct / 100);
+
+          trips.add(
+            TripDetail.fromJson({
+              'id': trip['id'],
+              'created_at': trip['created_at'],
+              'distance': trip['distance'],
+              'price': price,
+              'payment_method_name': paymentMethod?['name'] ?? 'Unknown',
+              'commission_percentage': commissionPct,
+              'commission_amount': commissionAmount,
+              'driver_earnings': driverEarnings,
+              'status': trip['status'],
+            }),
+          );
+        } catch (e) {
+          debugPrint('⚠️ Error parsing trip: $e');
+          continue;
+        }
+      }
+
+      debugPrint('✅ Found ${trips.length} trips');
+      return trips;
+    } catch (e) {
+      debugPrint('❌ Error fetching trip details: $e');
+      return [];
     }
   }
 

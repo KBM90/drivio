@@ -8,6 +8,7 @@ import 'package:drivio_app/driver/ui/screens/account_page.dart';
 import 'package:drivio_app/driver/ui/screens/driver_profile_page.dart';
 import 'package:drivio_app/driver/ui/screens/earning_page.dart';
 import 'package:drivio_app/driver/ui/screens/wallet_page.dart';
+import 'package:drivio_app/common/screens/services_page.dart';
 import 'package:flutter/material.dart';
 
 class SideMenu extends StatefulWidget {
@@ -118,7 +119,7 @@ class _SideMenuState extends State<SideMenu> {
                     badgeCount: 8,
                   ),
                   _buildMenuItem("Earnings", Icons.attach_money, context),
-                  _buildMenuItem("Drivio Pro", Icons.star, context),
+                  _buildMenuItem("Services", Icons.handyman, context),
                   _buildMenuItem(
                     "Wallet",
                     Icons.account_balance_wallet,
@@ -232,6 +233,12 @@ class _SideMenuState extends State<SideMenu> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const EarningsScreen()),
+          );
+        }
+        if (title == "Services") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ServicesPage()),
           );
         }
         if (title == "Wallet") {

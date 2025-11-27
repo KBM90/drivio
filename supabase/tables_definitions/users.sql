@@ -22,10 +22,11 @@ create table public.users (
     (
       role = any (
         array[
-          ('passenger'::character varying)::text,
-          ('driver'::character varying)::text,
-          ('courtier'::character varying)::text,
-          ('admin'::character varying)::text
+          'passenger'::text,
+          'driver'::text,
+          'courtier'::text,
+          'provider'::text,
+          'admin'::text
         ]
       )
     )

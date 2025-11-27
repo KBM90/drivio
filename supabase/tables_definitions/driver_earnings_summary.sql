@@ -1,5 +1,11 @@
 -- Pivot table combining all driver earnings data for efficient querying
 -- This table aggregates data from ride_requests, ride_payments, and driver_online_sessions
+-- Drop existing table and related objects if they exist
+DROP TABLE IF EXISTS public.driver_earnings_summary CASCADE;
+
+-- Drop functions if they exist
+DROP FUNCTION IF EXISTS refresh_driver_earnings_summary(bigint, date, date);
+DROP FUNCTION IF EXISTS get_driver_current_week_earnings(bigint);
 
 create table public.driver_earnings_summary (
   id bigserial not null,
@@ -78,8 +84,14 @@ begin
   where rr.driver_id = p_driver_id
     and rr.created_at::date between p_period_start and p_period_end;
 
-  -- Calculate total online time
-  select coalesce(sum(total_duration_minutes), 0)
+  -- Calculate total online time (completed sessions + active sessions)
+  select 
+    coalesce(sum(
+      case 
+        when session_end is not null then total_duration_minutes
+        else extract(epoch from (now() - session_start)) / 60
+      end
+    ), 0)::integer
   into v_total_online_minutes
   from driver_online_sessions
   where driver_id = p_driver_id
