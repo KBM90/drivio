@@ -98,6 +98,10 @@ flutter:
     - assets/others/
     - assets/services/
     - assets/services/mechanic/
+    - assets/services/cleaner/
+    - assets/services/electrician/
+    - assets/services/insurance/
+    - assets/services/other/
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
