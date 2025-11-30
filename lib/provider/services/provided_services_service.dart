@@ -267,4 +267,107 @@ class ProvidedServicesService {
       rethrow;
     }
   }
+
+  /// Update an existing service with optional image update
+  Future<void> updateService({
+    required int serviceId,
+    required String name,
+    required String description,
+    required double price,
+    required String category,
+    File? newImageFile,
+    bool removeCurrentImage = false,
+  }) async {
+    try {
+      await AuthService.ensureValidSession();
+
+      // 1. Update service details
+      await _supabase
+          .from('provided_services')
+          .update({
+            'name': name,
+            'description': description,
+            'price': price,
+            'category': category,
+          })
+          .eq('id', serviceId);
+
+      // 2. Handle image updates
+      if (removeCurrentImage || newImageFile != null) {
+        // Get current images
+        final serviceData =
+            await _supabase
+                .from('provided_services')
+                .select('provider_id, service_images(image_url)')
+                .eq('id', serviceId)
+                .single();
+
+        final providerId = serviceData['provider_id'];
+        final images = serviceData['service_images'] as List?;
+
+        // Delete old uploaded images from storage (skip default images)
+        if (images != null) {
+          for (final img in images) {
+            final imageUrl = img['image_url'] as String?;
+            if (imageUrl != null && !imageUrl.startsWith('default:')) {
+              try {
+                // Extract path from public URL
+                final uri = Uri.parse(imageUrl);
+                final pathSegments = uri.pathSegments;
+                if (pathSegments.length >= 2) {
+                  final storagePath = pathSegments
+                      .sublist(pathSegments.length - 3)
+                      .join('/');
+                  await _supabase.storage.from('service_images').remove([
+                    storagePath,
+                  ]);
+                }
+              } catch (e) {
+                debugPrint('⚠️ Error deleting old image from storage: $e');
+              }
+            }
+          }
+        }
+
+        // Delete image records
+        await _supabase
+            .from('service_images')
+            .delete()
+            .eq('service_id', serviceId);
+
+        // Upload new image if provided
+        if (newImageFile != null) {
+          final imageExtension = newImageFile.path.split('.').last;
+          final imageName = '${const Uuid().v4()}.$imageExtension';
+          final imagePath = '$providerId/$serviceId/$imageName';
+
+          await _supabase.storage
+              .from('service_images')
+              .upload(
+                imagePath,
+                newImageFile,
+                fileOptions: const FileOptions(
+                  cacheControl: '3600',
+                  upsert: false,
+                ),
+              );
+
+          final imageUrl = _supabase.storage
+              .from('service_images')
+              .getPublicUrl(imagePath);
+
+          // Insert new image record
+          await _supabase.from('service_images').insert({
+            'service_id': serviceId,
+            'image_url': imageUrl,
+          });
+        }
+      }
+
+      debugPrint('✅ Service updated successfully');
+    } catch (e) {
+      debugPrint('❌ Error updating service: $e');
+      rethrow;
+    }
+  }
 }

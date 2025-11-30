@@ -2,6 +2,7 @@ import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:drivio_app/provider/services/provided_services_service.dart';
 import 'package:flutter/material.dart';
 import '../../common/models/provided_service.dart';
+import 'edit_service_screen.dart';
 
 class MyServicesScreen extends StatefulWidget {
   final Function(VoidCallback)? onRefreshCallback;
@@ -266,13 +267,20 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () {
-                                  // TODO: Navigate to edit screen
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Edit feature coming soon'),
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => EditServiceScreen(
+                                            service: service,
+                                          ),
                                     ),
                                   );
+                                  // Reload services if edit was successful
+                                  if (result == true) {
+                                    _loadServices();
+                                  }
                                 },
                                 icon: const Icon(Icons.edit, size: 16),
                                 label: const Text('Edit'),

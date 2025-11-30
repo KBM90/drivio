@@ -1,67 +1,48 @@
 import 'dart:io';
-import 'package:drivio_app/common/services/auth_service.dart';
+import 'package:drivio_app/common/models/provided_service.dart';
 import 'package:drivio_app/provider/services/provided_services_service.dart';
-import 'package:drivio_app/provider/services/service_provider_services.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-class AddServiceScreen extends StatefulWidget {
-  const AddServiceScreen({super.key});
+class EditServiceScreen extends StatefulWidget {
+  final ProvidedService service;
+
+  const EditServiceScreen({super.key, required this.service});
 
   @override
-  State<AddServiceScreen> createState() => _AddServiceScreenState();
+  State<EditServiceScreen> createState() => _EditServiceScreenState();
 }
 
-class _AddServiceScreenState extends State<AddServiceScreen> {
+class _EditServiceScreenState extends State<EditServiceScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _priceController = TextEditingController();
-  // final _imageUrlController = TextEditingController(); // Removed
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _priceController;
 
   String? _selectedCategory;
-  String? _providerType;
-  File? _imageFile;
+  File? _newImageFile;
+  bool _removeCurrentImage = false;
   bool _isLoading = false;
 
-  List<String> _categories = [
-    'Maintenance',
-    'Cleaning',
-    'Repair',
-    'Inspection',
-    'Other',
-  ];
+  List<String> _categories = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchProviderType();
-  }
-
-  Future<void> _fetchProviderType() async {
-    try {
-      final userId = await AuthService.getInternalUserId();
-      debugPrint(userId.toString());
-      if (userId != null) {
-        final serviceProviderService = ServiceProviderService();
-        final providerType = await serviceProviderService.getProviderType(
-          userId,
-        );
-
-        if (providerType != null && mounted) {
-          setState(() {
-            _providerType = providerType;
-            _updateCategories();
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('Error fetching provider type: $e');
-    }
+    _nameController = TextEditingController(text: widget.service.name);
+    _descriptionController = TextEditingController(
+      text: widget.service.description ?? '',
+    );
+    _priceController = TextEditingController(
+      text: widget.service.price.toString(),
+    );
+    _selectedCategory = widget.service.category;
+    _updateCategories();
   }
 
   void _updateCategories() {
-    switch (_providerType) {
+    final providerType = widget.service.providerType;
+    switch (providerType) {
       case 'mechanic':
         _categories = [
           'Engine Repair',
@@ -71,7 +52,6 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
           'Diagnostics',
           'Other',
         ];
-
         break;
       case 'cleaner':
         _categories = ['Interior Cleaning', 'Exterior Wash', 'Upholstery'];
@@ -116,10 +96,6 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
           'Other',
         ];
     }
-    // Reset selected category if it's not in the new list
-    if (_selectedCategory != null && !_categories.contains(_selectedCategory)) {
-      _selectedCategory = null;
-    }
   }
 
   @override
@@ -127,7 +103,6 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    // _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -137,9 +112,17 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
 
     if (pickedFile != null) {
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _newImageFile = File(pickedFile.path);
+        _removeCurrentImage = false;
       });
     }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _newImageFile = null;
+      _removeCurrentImage = true;
+    });
   }
 
   Future<void> _submitForm() async {
@@ -150,29 +133,24 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
       ).showSnackBar(const SnackBar(content: Text('Please select a category')));
       return;
     }
-    // if (_imageFile == null) {
-    //   ScaffoldMessenger.of(
-    //     context,
-    //   ).showSnackBar(const SnackBar(content: Text('Please select an image')));
-    //   return;
-    // }
 
     setState(() => _isLoading = true);
 
     try {
       final serviceService = ProvidedServicesService();
-      await serviceService.createService(
+      await serviceService.updateService(
+        serviceId: widget.service.id,
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         price: double.parse(_priceController.text.trim()),
         category: _selectedCategory!,
-        imageFile: _imageFile,
-        providerType: _providerType,
+        newImageFile: _newImageFile,
+        removeCurrentImage: _removeCurrentImage,
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Service created successfully!')),
+          const SnackBar(content: Text('Service updated successfully!')),
         );
         Navigator.pop(context, true); // Return true to indicate success
       }
@@ -180,7 +158,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error creating service: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error updating service: $e')));
       }
     } finally {
       if (mounted) {
@@ -189,10 +167,80 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
     }
   }
 
+  Widget _buildCurrentImage() {
+    if (_removeCurrentImage) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('Image removed', style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    final imageUrl = widget.service.imageUrls?.firstOrNull;
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image, size: 50, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('No current image', style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child:
+          imageUrl.startsWith('assets/')
+              ? Image.asset(
+                imageUrl,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              )
+              : Image.network(
+                imageUrl,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add New Service')),
+      appBar: AppBar(
+        title: const Text('Edit Service'),
+        actions: [
+          if (widget.service.imageUrls?.isNotEmpty == true &&
+              !_removeCurrentImage)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _removeImage,
+              tooltip: 'Remove current image',
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -200,11 +248,11 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_providerType != null)
+              if (widget.service.providerType != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: Text(
-                    'Provider Type: ${_providerType!.toUpperCase()}',
+                    'Provider Type: ${widget.service.providerType!.toUpperCase()}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey,
@@ -217,7 +265,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText:
-                      _providerType == 'car_auto_parts'
+                      widget.service.providerType == 'car_auto_parts'
                           ? 'Part Name'
                           : 'Service Name',
                   border: const OutlineInputBorder(),
@@ -290,43 +338,58 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Image Picker
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey),
-                  ),
-                  child:
-                      _imageFile != null
-                          ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              _imageFile!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                            ),
-                          )
-                          : const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_a_photo,
-                                size: 50,
-                                color: Colors.grey,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Tap to add service image',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                ),
+              // Current Image
+              Text(
+                'Current Image',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
+              const SizedBox(height: 8),
+              _buildCurrentImage(),
+              const SizedBox(height: 16),
+
+              // New Image Picker
+              if (_newImageFile == null)
+                OutlinedButton.icon(
+                  onPressed: _pickImage,
+                  icon: const Icon(Icons.add_a_photo),
+                  label: const Text('Change Image'),
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'New Image',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            _newImageFile!,
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black54,
+                            ),
+                            onPressed:
+                                () => setState(() => _newImageFile = null),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               const SizedBox(height: 24),
 
               // Submit Button
@@ -334,14 +397,14 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
                 onPressed: _isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.green,
+                  backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                 ),
                 child:
                     _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
-                          'Create Service',
+                          'Update Service',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

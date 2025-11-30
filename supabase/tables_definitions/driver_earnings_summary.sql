@@ -61,7 +61,13 @@ declare
   v_completed_trips integer;
   v_total_online_minutes integer;
   v_points integer;
+  v_period_start_ts timestamp;
+  v_period_end_ts timestamp;
 begin
+  -- Convert dates to timestamps for comparison
+  v_period_start_ts := p_period_start::timestamp;
+  v_period_end_ts := (p_period_end + interval '1 day')::timestamp;
+
   -- Calculate total earnings from all payment methods
   select 
     coalesce(sum(rp.driver_earnings), 0),
@@ -84,18 +90,20 @@ begin
   where rr.driver_id = p_driver_id
     and rr.created_at::date between p_period_start and p_period_end;
 
-  -- Calculate total online time (completed sessions + active sessions)
+  -- Calculate total online time (intersection of session and period)
+  -- We look for sessions that overlap with the period
   select 
     coalesce(sum(
-      case 
-        when session_end is not null then total_duration_minutes
-        else extract(epoch from (now() - session_start)) / 60
-      end
+      extract(epoch from (
+        least(coalesce(session_end, now()), v_period_end_ts) - 
+        greatest(session_start, v_period_start_ts)
+      )) / 60
     ), 0)::integer
   into v_total_online_minutes
   from driver_online_sessions
   where driver_id = p_driver_id
-    and session_start::date between p_period_start and p_period_end;
+    and session_start < v_period_end_ts
+    and coalesce(session_end, now()) > v_period_start_ts;
 
   -- Calculate points (same as completed trips for now)
   v_points := v_completed_trips;

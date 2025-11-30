@@ -4,6 +4,8 @@ import '../../common/screens/login_screen.dart';
 import 'add_service_screen.dart';
 import 'my_services_screen.dart';
 
+import 'provider_profile_screen.dart';
+
 class ProviderHomeScreen extends StatefulWidget {
   const ProviderHomeScreen({super.key});
 
@@ -20,7 +22,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
       onRefreshCallback: (callback) => _refreshServices = callback,
     ), // My Services
     const Center(child: Text('My Bookings')), // Placeholder for Bookings
-    const Center(child: Text('Profile')), // Placeholder for Profile
+    const ProviderProfileScreen(), // Profile
   ];
 
   void _onItemTapped(int index) {
