@@ -1,0 +1,129 @@
+?column?
+CREATE UNIQUE INDEX campaign_participants_pkey ON public.campaign_participants USING btree (id);
+CREATE INDEX idx_campaign_participants_campaign ON public.campaign_participants USING btree (campaign_id);
+CREATE INDEX idx_campaign_participants_completed ON public.campaign_participants USING btree (is_completed);
+CREATE INDEX idx_campaign_participants_driver ON public.campaign_participants USING btree (driver_id);
+"CREATE INDEX idx_campaign_participants_leaderboard ON public.campaign_participants USING btree (campaign_id, leaderboard_rank);"
+CREATE INDEX idx_campaign_participants_status ON public.campaign_participants USING btree (status);
+"CREATE UNIQUE INDEX unique_driver_campaign ON public.campaign_participants USING btree (campaign_id, driver_id);"
+CREATE UNIQUE INDEX campaigns_pkey ON public.campaigns USING btree (id);
+CREATE INDEX idx_campaigns_city ON public.campaigns USING btree (city_restriction);
+"CREATE INDEX idx_campaigns_dates ON public.campaigns USING btree (start_date, end_date);"
+CREATE INDEX idx_campaigns_priority ON public.campaigns USING btree (priority DESC);
+CREATE INDEX idx_campaigns_status ON public.campaigns USING btree (status);
+CREATE INDEX idx_campaigns_type ON public.campaigns USING btree (campaign_type);
+CREATE UNIQUE INDEX cancelled_ride_requests_pkey ON public.cancelled_ride_requests USING btree (id);
+CREATE UNIQUE INDEX car_brands_pkey ON public.car_brands USING btree (id);
+CREATE UNIQUE INDEX chats_pkey ON public.chats USING btree (id);
+CREATE INDEX idx_chats_participants ON public.chats USING gin (participants);
+CREATE INDEX idx_chats_updated_at ON public.chats USING btree (updated_at DESC);
+CREATE UNIQUE INDEX delivery_persons_pkey ON public.delivery_persons USING btree (id);
+CREATE INDEX delivery_requests_delivery_location_idx ON public.delivery_requests USING gist (delivery_location);
+CREATE UNIQUE INDEX delivery_requests_pkey ON public.delivery_requests USING btree (id);
+CREATE UNIQUE INDEX driver_earnings_summary_pkey ON public.driver_earnings_summary USING btree (id);
+"CREATE UNIQUE INDEX driver_earnings_summary_unique_driver_period ON public.driver_earnings_summary USING btree (driver_id, period_start, period_end);"
+CREATE INDEX idx_driver_earnings_summary_driver_id ON public.driver_earnings_summary USING btree (driver_id);
+"CREATE INDEX idx_driver_earnings_summary_driver_period ON public.driver_earnings_summary USING btree (driver_id, period_start, period_end);"
+"CREATE INDEX idx_driver_earnings_summary_period ON public.driver_earnings_summary USING btree (period_start, period_end);"
+CREATE UNIQUE INDEX driver_online_sessions_pkey ON public.driver_online_sessions USING btree (id);
+"CREATE INDEX idx_driver_online_sessions_active ON public.driver_online_sessions USING btree (driver_id, session_end) WHERE (session_end IS NULL);"
+CREATE INDEX idx_driver_online_sessions_driver_id ON public.driver_online_sessions USING btree (driver_id);
+CREATE INDEX idx_driver_online_sessions_session_start ON public.driver_online_sessions USING btree (session_start DESC);
+CREATE UNIQUE INDEX driver_payouts_pkey ON public.driver_payouts USING btree (id);
+CREATE INDEX idx_driver_payouts_driver_id ON public.driver_payouts USING btree (driver_id);
+CREATE INDEX idx_driver_payouts_payout_date ON public.driver_payouts USING btree (payout_date);
+CREATE INDEX idx_driver_payouts_payout_status ON public.driver_payouts USING btree (payout_status);
+CREATE INDEX idx_driver_payouts_transaction_id ON public.driver_payouts USING btree (transaction_id);
+CREATE UNIQUE INDEX drivers_pkey ON public.drivers USING btree (id);
+CREATE UNIQUE INDEX events_pkey ON public.events USING btree (id);
+CREATE INDEX idx_events_city ON public.events USING btree (city);
+"CREATE INDEX idx_events_location ON public.events USING btree (latitude, longitude);"
+CREATE INDEX idx_events_start_time ON public.events USING btree (start_time);
+CREATE INDEX idx_events_status ON public.events USING btree (status);
+CREATE INDEX idx_events_type ON public.events USING btree (event_type);
+CREATE INDEX idx_map_reports_point_location ON public.map_reports USING gist (point_location);
+CREATE INDEX idx_map_reports_report_type ON public.map_reports USING btree (report_type);
+CREATE INDEX idx_map_reports_status ON public.map_reports USING btree (status);
+CREATE INDEX idx_map_reports_user_id ON public.map_reports USING btree (user_id);
+CREATE UNIQUE INDEX map_reports_pkey ON public.map_reports USING btree (id);
+CREATE INDEX idx_messages_chat_id ON public.messages USING btree (chat_id);
+"CREATE INDEX idx_messages_chat_timestamp ON public.messages USING btree (chat_id, ""timestamp"" DESC);"
+CREATE INDEX idx_messages_is_read ON public.messages USING btree (is_read) WHERE (is_read = false);
+CREATE INDEX idx_messages_receiver_id ON public.messages USING btree (receiver_id);
+CREATE INDEX idx_messages_sender_id ON public.messages USING btree (sender_id);
+"CREATE INDEX idx_messages_timestamp ON public.messages USING btree (""timestamp"" DESC);"
+"CREATE INDEX idx_messages_unread_by_receiver ON public.messages USING btree (receiver_id, chat_id, is_read) WHERE (is_read = false);"
+CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id);
+CREATE INDEX idx_notifications_created_at ON public.notifications USING btree (created_at DESC);
+CREATE INDEX idx_notifications_data ON public.notifications USING gin (data);
+CREATE INDEX idx_notifications_is_read ON public.notifications USING btree (is_read);
+CREATE INDEX idx_notifications_user_id ON public.notifications USING btree (user_id);
+"CREATE INDEX idx_notifications_user_id_is_read ON public.notifications USING btree (user_id, is_read);"
+CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id);
+CREATE UNIQUE INDEX passengers_pkey ON public.passengers USING btree (id);
+CREATE UNIQUE INDEX payment_methods_name_key ON public.payment_methods USING btree (name);
+CREATE UNIQUE INDEX payment_methods_pkey ON public.payment_methods USING btree (id);
+CREATE INDEX idx_provided_services_category ON public.provided_services USING btree (category);
+CREATE INDEX idx_provided_services_provider_id ON public.provided_services USING btree (provider_id);
+CREATE UNIQUE INDEX provided_services_pkey ON public.provided_services USING btree (id);
+CREATE UNIQUE INDEX ratings_pkey ON public.ratings USING btree (id);
+CREATE INDEX idx_referral_rewards_milestone ON public.referral_rewards USING btree (milestone);
+CREATE INDEX idx_referral_rewards_referral_id ON public.referral_rewards USING btree (referral_id);
+CREATE INDEX idx_referral_rewards_status ON public.referral_rewards USING btree (status);
+CREATE INDEX idx_referral_rewards_user_id ON public.referral_rewards USING btree (user_id);
+CREATE UNIQUE INDEX referral_rewards_pkey ON public.referral_rewards USING btree (id);
+CREATE INDEX idx_referrals_code ON public.referrals USING btree (referral_code);
+CREATE INDEX idx_referrals_referred_user_id ON public.referrals USING btree (referred_user_id);
+CREATE INDEX idx_referrals_referrer_id ON public.referrals USING btree (referrer_id);
+CREATE INDEX idx_referrals_status ON public.referrals USING btree (status);
+CREATE UNIQUE INDEX referrals_pkey ON public.referrals USING btree (id);
+CREATE UNIQUE INDEX referrals_referral_code_key ON public.referrals USING btree (referral_code);
+CREATE UNIQUE INDEX reports_pkey ON public.reports USING btree (id);
+CREATE UNIQUE INDEX ride_details_pkey ON public.ride_details USING btree (id);
+CREATE INDEX idx_ride_payments_payment_date ON public.ride_payments USING btree (payment_date);
+CREATE INDEX idx_ride_payments_payment_status ON public.ride_payments USING btree (payment_status);
+CREATE INDEX idx_ride_payments_ride_request_id ON public.ride_payments USING btree (ride_request_id);
+CREATE INDEX idx_ride_payments_transaction_id ON public.ride_payments USING btree (transaction_id);
+CREATE INDEX idx_ride_payments_user_payment_method_id ON public.ride_payments USING btree (user_payment_method_id);
+CREATE UNIQUE INDEX ride_payments_pkey ON public.ride_payments USING btree (id);
+CREATE INDEX idx_ride_requests_created_at ON public.ride_requests USING btree (created_at DESC);
+CREATE INDEX idx_ride_requests_driver_id ON public.ride_requests USING btree (driver_id);
+"CREATE INDEX idx_ride_requests_driver_status ON public.ride_requests USING btree (driver_id, status);"
+CREATE INDEX idx_ride_requests_dropoff_location ON public.ride_requests USING gist (dropoff_location);
+CREATE INDEX idx_ride_requests_passenger_id ON public.ride_requests USING btree (passenger_id);
+"CREATE INDEX idx_ride_requests_passenger_status ON public.ride_requests USING btree (passenger_id, status);"
+CREATE INDEX idx_ride_requests_pickup_location ON public.ride_requests USING gist (pickup_location);
+CREATE INDEX idx_ride_requests_status ON public.ride_requests USING btree (status);
+CREATE UNIQUE INDEX ride_requests_pkey ON public.ride_requests USING btree (id);
+CREATE INDEX idx_service_images_service_id ON public.service_images USING btree (service_id);
+CREATE UNIQUE INDEX service_images_pkey ON public.service_images USING btree (id);
+CREATE INDEX idx_service_providers_location ON public.service_providers USING gist (location);
+CREATE INDEX idx_service_providers_provider_type ON public.service_providers USING btree (provider_type);
+CREATE INDEX idx_service_providers_user_id ON public.service_providers USING btree (user_id);
+CREATE UNIQUE INDEX service_providers_pkey ON public.service_providers USING btree (id);
+CREATE UNIQUE INDEX spatial_ref_sys_pkey ON public.spatial_ref_sys USING btree (srid);
+CREATE UNIQUE INDEX transport_types_pkey ON public.transport_types USING btree (id);
+CREATE INDEX idx_user_payment_methods_is_default ON public.user_payment_methods USING btree (is_default);
+CREATE INDEX idx_user_payment_methods_payment_method_id ON public.user_payment_methods USING btree (payment_method_id);
+CREATE INDEX idx_user_payment_methods_user_id ON public.user_payment_methods USING btree (user_id);
+CREATE UNIQUE INDEX user_payment_methods_pkey ON public.user_payment_methods USING btree (id);
+CREATE INDEX idx_users_user_id ON public.users USING btree (user_id);
+CREATE UNIQUE INDEX unique_user_id ON public.users USING btree (user_id);
+CREATE INDEX users_banned_index ON public.users USING btree (banned);
+CREATE INDEX users_city_index ON public.users USING btree (city);
+CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email);
+CREATE UNIQUE INDEX users_phone_key ON public.users USING btree (phone);
+CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id);
+CREATE INDEX users_role_index ON public.users USING btree (role);
+CREATE INDEX idx_vehicle_images_vehicle_id ON public.vehicle_images USING btree (vehicle_id);
+CREATE UNIQUE INDEX vehicle_images_pkey ON public.vehicle_images USING btree (id);
+CREATE INDEX idx_vehicles_car_brand_id ON public.vehicles USING btree (car_brand_id);
+CREATE INDEX idx_vehicles_driver_id ON public.vehicles USING btree (driver_id);
+CREATE UNIQUE INDEX idx_vehicles_license_plate ON public.vehicles USING btree (license_plate);
+CREATE INDEX idx_vehicles_status ON public.vehicles USING btree (status);
+CREATE INDEX idx_vehicles_transport_type_id ON public.vehicles USING btree (transport_type_id);
+CREATE UNIQUE INDEX vehicles_license_plate_key ON public.vehicles USING btree (license_plate);
+CREATE UNIQUE INDEX vehicles_pkey ON public.vehicles USING btree (id);
+CREATE INDEX idx_wallets_balance ON public.wallets USING btree (balance);
+CREATE UNIQUE INDEX wallets_pkey ON public.wallets USING btree (id);
+CREATE UNIQUE INDEX wallets_user_id_unique ON public.wallets USING btree (user_id);

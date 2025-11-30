@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/provided_service.dart';
-import '../services/provided_services_service.dart';
+import '../../provider/services/provided_services_service.dart';
+import '../helpers/osrm_services.dart';
+import '../helpers/geolocator_helper.dart';
+import 'package:latlong2/latlong.dart';
 
 class ServicesPage extends StatefulWidget {
   const ServicesPage({super.key});
@@ -12,9 +16,17 @@ class ServicesPage extends StatefulWidget {
 
 class _ServicesPageState extends State<ServicesPage> {
   final ProvidedServicesService _servicesService = ProvidedServicesService();
+  final OSRMService _osrmService = OSRMService();
+  final TextEditingController _cityController = TextEditingController();
+
   List<ProvidedService> _services = [];
   bool _isLoading = true;
   String? _selectedCategory;
+  String? _selectedCity;
+  String? _userCountryCode;
+  LatLng? _currentUserLocation;
+  List<String> _citySuggestions = [];
+  Timer? _debounce;
 
   final List<String> _categories = [
     'All',
@@ -29,12 +41,55 @@ class _ServicesPageState extends State<ServicesPage> {
   void initState() {
     super.initState();
     _loadServices();
+    _getUserCountryCode();
+  }
+
+  @override
+  void dispose() {
+    _cityController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _getUserCountryCode() async {
+    try {
+      final location = await GeolocatorHelper.getCurrentLocation();
+
+      if (location != null) {
+        final countryCode = await _osrmService.getCountryCode(
+          location.latitude,
+          location.longitude,
+        );
+
+        if (mounted) {
+          setState(() {
+            _userCountryCode = countryCode;
+            _currentUserLocation = location;
+          });
+        }
+      } else {
+        debugPrint('⚠️ Location is null - user may have denied permission');
+      }
+    } catch (e) {
+      debugPrint('❌ Error getting country code: $e');
+    }
   }
 
   Future<void> _loadServices() async {
     setState(() => _isLoading = true);
     final category = _selectedCategory == 'All' ? null : _selectedCategory;
-    final services = await _servicesService.getServices(category: category);
+
+    // Normalize the city before passing it to getServices
+    String? city = _selectedCity?.trim();
+    if (city != null && city.isNotEmpty) {
+      city = OSRMService().normalizeCity(city);
+    }
+
+    final services = await _servicesService.getServices(
+      category: category,
+      city: city,
+    );
+
     if (mounted) {
       setState(() {
         _services = services;
@@ -50,6 +105,148 @@ class _ServicesPageState extends State<ServicesPage> {
     _loadServices();
   }
 
+  void _onCitySelected(String city) {
+    setState(() {
+      _selectedCity = city;
+      _cityController.text = city;
+    });
+    _loadServices();
+  }
+
+  Future<void> _searchCities(String query) async {
+    if (query.trim().length < 2) {
+      setState(() => _citySuggestions = []);
+      return;
+    }
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      // Retry fetching country code if null
+      if (_userCountryCode == null) {
+        debugPrint('⚠️ Country code is null, retrying fetch...');
+        await _getUserCountryCode();
+      }
+
+      try {
+        final suggestions = await _osrmService.searchCities(
+          query,
+          countryCode: _userCountryCode,
+          lat: _currentUserLocation?.latitude,
+          lon: _currentUserLocation?.longitude,
+        );
+
+        if (mounted) {
+          setState(() {
+            _citySuggestions = suggestions;
+          });
+        } else {
+          debugPrint('⚠️ Widget not mounted, skipping state update');
+        }
+      } catch (e) {
+        debugPrint('❌ Error searching cities: $e');
+      }
+    });
+  }
+
+  void _clearCityFilter() {
+    setState(() {
+      _selectedCity = null;
+      _cityController.clear();
+      _citySuggestions = [];
+    });
+    _loadServices();
+  }
+
+  Widget _buildCityFilter() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _cityController,
+                  decoration: InputDecoration(
+                    hintText: 'Search city...',
+                    prefixIcon: const Icon(
+                      Icons.location_city,
+                      color: Colors.green,
+                    ),
+
+                    suffixIcon:
+                        _selectedCity != null
+                            ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: _clearCityFilter,
+                            )
+                            : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.green[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.green[600]!,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.green[50],
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  onChanged: _searchCities,
+                ),
+              ),
+            ],
+          ),
+          if (_citySuggestions.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _citySuggestions.length,
+                itemBuilder: (context, index) {
+                  final city = _citySuggestions[index];
+                  return ListTile(
+                    leading: const Icon(Icons.location_on, size: 20),
+                    title: Text(city),
+                    onTap: () {
+                      _onCitySelected(city);
+                      setState(() => _citySuggestions = []);
+                    },
+                    dense: true,
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,7 +258,9 @@ class _ServicesPageState extends State<ServicesPage> {
       ),
       body: Column(
         children: [
+          _buildCityFilter(),
           _buildCategoryFilter(),
+
           Expanded(
             child:
                 _isLoading
@@ -123,29 +322,12 @@ class _ServicesPageState extends State<ServicesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (service.imageUrls.isNotEmpty)
+          if (service.imageUrls!.isNotEmpty)
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(12),
               ),
-              child: Image.network(
-                service.imageUrls.first,
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder:
-                    (context, error, stackTrace) => Container(
-                      height: 150,
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Icon(
-                          Icons.broken_image,
-                          size: 50,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
-              ),
+              child: _buildServiceImage(service.imageUrls!.first),
             )
           else
             Container(
@@ -246,6 +428,41 @@ class _ServicesPageState extends State<ServicesPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildServiceImage(String imageUrl) {
+    if (imageUrl.startsWith('default:')) {
+      final type = imageUrl.split(':')[1];
+      return Image.asset(
+        'assets/service/$type.png',
+        height: 150,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder:
+            (context, error, stackTrace) => Container(
+              height: 150,
+              color: Colors.grey[300],
+              child: const Center(
+                child: Icon(Icons.image, size: 50, color: Colors.grey),
+              ),
+            ),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      height: 150,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder:
+          (context, error, stackTrace) => Container(
+            height: 150,
+            color: Colors.grey[300],
+            child: const Center(
+              child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+            ),
+          ),
     );
   }
 }

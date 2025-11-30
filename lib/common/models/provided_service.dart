@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class ProvidedService {
   final int id;
   final int providerId;
@@ -6,11 +8,13 @@ class ProvidedService {
   final double price;
   final String currency;
   final String? category;
-  final List<String> imageUrls;
+  final List<String>? imageUrls;
   final DateTime createdAt;
 
   final String? providerName;
   final String? providerPhone;
+  final String? providerCity;
+  final String? providerType;
 
   ProvidedService({
     required this.id,
@@ -24,6 +28,8 @@ class ProvidedService {
     required this.createdAt,
     this.providerName,
     this.providerPhone,
+    this.providerCity,
+    this.providerType,
   });
 
   factory ProvidedService.fromJson(Map<String, dynamic> json) {
@@ -37,9 +43,21 @@ class ProvidedService {
 
     String? pName;
     String? pPhone;
+    String? pCity;
+    String? pType;
     if (json['service_providers'] != null) {
+      debugPrint(
+        '🔍 service_providers data in fromJson: ${json['service_providers']}',
+      );
       pName = json['service_providers']['business_name'];
-      pPhone = json['service_providers']['phone'];
+      pType = json['service_providers']['provider_type'];
+      debugPrint('🔍 Extracted provider_type: $pType');
+      if (json['service_providers']['users'] != null) {
+        pPhone = json['service_providers']['users']['phone'];
+        pCity = json['service_providers']['users']['city'];
+      }
+    } else {
+      debugPrint('⚠️ service_providers is NULL in JSON!');
     }
 
     return ProvidedService(
@@ -54,6 +72,8 @@ class ProvidedService {
       createdAt: DateTime.parse(json['created_at'] as String),
       providerName: pName,
       providerPhone: pPhone,
+      providerCity: pCity,
+      providerType: pType,
     );
   }
 }

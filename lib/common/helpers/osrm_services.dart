@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:html/parser.dart' show parse;
 
 import 'package:latlong2/latlong.dart';
+import 'package:geocoding/geocoding.dart' as geo;
 
 class OSRMService {
   static const String osrmBaseUrl = MapConstants.osrmBaseUrl;
@@ -304,19 +305,41 @@ class OSRMService {
   }
 
   Future<String?> getCountryCode(double lat, double lng) async {
-    final String url =
-        "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng";
     try {
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {"User-Agent": "Drivio"},
+      // 1. Try native geocoding first
+      List<geo.Placemark> placemarks = await geo.placemarkFromCoordinates(
+        lat,
+        lng,
       );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['address']['country_code'];
+      if (placemarks.isNotEmpty) {
+        return placemarks.first.isoCountryCode;
       }
     } catch (e) {
-      debugPrint("Error fetching country code: $e");
+      debugPrint("⚠️ Native geocoding failed: $e");
+      debugPrint("🔄 Attempting fallback to Photon API...");
+
+      try {
+        // 2. Fallback to Photon API
+        final url = "https://photon.komoot.io/reverse?lat=$lat&lon=$lng";
+        final response = await http
+            .get(Uri.parse(url), headers: {"User-Agent": "Drivio"})
+            .timeout(const Duration(seconds: 10));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final features = data['features'] as List;
+          if (features.isNotEmpty) {
+            final props = features.first['properties'];
+            final countryCode = props['countrycode'] as String?;
+            if (countryCode != null) {
+              debugPrint("✅ Fallback successful: $countryCode");
+              return countryCode.toUpperCase();
+            }
+          }
+        }
+      } catch (fallbackError) {
+        debugPrint("❌ Fallback geocoding also failed: $fallbackError");
+      }
     }
     return null;
   }
@@ -334,7 +357,9 @@ class OSRMService {
     }
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -390,5 +415,92 @@ class OSRMService {
       debugPrint("Error searching places: $e");
     }
     return [];
+  }
+
+  /// Search for cities by name, optionally filtered by country code
+  /// Search for cities by name, optionally filtered by country code
+  Future<List<String>> searchCities(
+    String query, {
+    String? countryCode,
+    double? lat,
+    double? lon,
+  }) async {
+    if (query.trim().isEmpty) return [];
+
+    try {
+      // URL encode the query to handle special characters properly
+      final encodedQuery = Uri.encodeComponent(query);
+
+      String url =
+          "https://photon.komoot.io/api/?q=$encodedQuery&osm_tag=place:city&osm_tag=place:town&limit=10";
+
+      if (lat != null && lon != null) {
+        url += "&lat=$lat&lon=$lon";
+      }
+
+      final response = await http
+          .get(Uri.parse(url), headers: {"User-Agent": "Drivio"})
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final features = data['features'] as List;
+
+        final cities = <String>{};
+
+        for (var feature in features) {
+          final props = feature['properties'];
+          final featureCountryCode = props['countrycode'] as String?;
+          String? name = props['name'] as String?;
+
+          // Filter by country code if provided
+          if (countryCode != null && countryCode.isNotEmpty) {
+            if (featureCountryCode == null ||
+                featureCountryCode.toLowerCase() != countryCode.toLowerCase()) {
+              continue;
+            }
+          }
+
+          // Clean the name to get only the Latin/Western script part
+          if (name != null) {
+            // Updated regex to include Latin Extended characters (accented letters)
+            // This matches: a-z, A-Z, accented characters (À-ÿ), spaces, hyphens, apostrophes
+            final latinRegex = RegExp(r"^[a-zA-ZÀ-ÿ\s\-']+");
+            final match = latinRegex.firstMatch(name);
+            if (match != null) {
+              name = match.group(0)?.trim();
+            }
+          }
+
+          if (name != null && name.trim().isNotEmpty) {
+            cities.add(name);
+          }
+        }
+
+        final result = cities.take(5).toList();
+        debugPrint('✅ Found ${result.length} cities: $result');
+        return result;
+      } else {
+        debugPrint('⚠️ API returned non-200 status: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint("❌ Error searching cities: $e");
+    }
+    return [];
+  }
+
+  String normalizeCity(String city) {
+    // Remove diacritics/accents and convert to lowercase
+    const withDia =
+        'ÀÁÂÃÄÅàáâãäåÒÓÔÕÕÖØòóôõöøÈÉÊËèéêëðÇçÐÌÍÎÏìíîïÙÚÛÜùúûüÑñŠšŸÿýŽž';
+    const withoutDia =
+        'AAAAAAaaaaaaOOOOOOOooooooEEEEeeeeeCcDIIIIiiiiUUUUuuuuNnSsYyyZz';
+
+    String result = city;
+    for (int i = 0; i < withDia.length; i++) {
+      result = result.replaceAll(withDia[i], withoutDia[i]);
+    }
+
+    return result.toLowerCase().trim();
   }
 }

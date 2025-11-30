@@ -8,6 +8,7 @@ class User {
   final String name;
   final String email;
   final String? phone;
+  final String? countryCode;
   final String? sexe;
   final String? city;
   final String? role;
@@ -37,6 +38,7 @@ class User {
     required this.name,
     required this.email,
     this.phone,
+    this.countryCode,
     this.sexe,
     this.city,
     required this.role,

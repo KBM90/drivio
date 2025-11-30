@@ -160,6 +160,8 @@ class _AuthGateState extends State<AuthGate> {
             ],
             child: _AppNavigator(initialRoute: AppRoutes.passengerHome),
           );
+        } else if (_userRole == 'provider') {
+          return const _AppNavigator(initialRoute: AppRoutes.providerHome);
         } else {
           // Role not loaded yet or invalid
           return Scaffold(

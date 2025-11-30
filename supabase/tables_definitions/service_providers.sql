@@ -19,6 +19,7 @@ create table public.service_providers (
           'cleaner'::character varying,
           'electrician'::character varying,
           'insurance'::character varying,
+          'car_auto_parts'::character varying,
           'other'::character varying
         ]
       )

@@ -67,6 +67,9 @@ class AuthService {
   static Future<AuthResponse> signUpWithEmail({
     required String name,
     required String email,
+    required String city,
+    required String countryCode,
+    required String phone,
     required String password,
     required String role, // 'driver' or 'passenger'
     Map<String, dynamic>? additionalData,
@@ -75,7 +78,14 @@ class AuthService {
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'role': role, 'name': name, ...?additionalData},
+        data: {
+          'role': role,
+          'name': name,
+          'city': city,
+          'country_code': countryCode,
+          'phone': phone,
+          ...?additionalData,
+        },
       );
 
       final user = response.user;

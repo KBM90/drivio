@@ -5,6 +5,7 @@ create table public.users (
   phone character varying(255) null,
   sexe character varying(10) null,
   city character varying(255) null,
+  country_code character varying(10) null,
   role text not null,
   profile_image_path text null,
   banned boolean null default false,

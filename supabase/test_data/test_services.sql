@@ -2,8 +2,8 @@
 
 -- 1. Create a Service Provider (linked to an existing user, e.g., user_id 12 which is driver 3)
 -- Adjust user_id as needed. Here assuming user_id 13 exists.
-INSERT INTO service_providers (user_id, business_name, provider_type, phone, address, rating, is_verified)
-VALUES (13, 'Fast Fix Mechanics', 'mechanic', '+212600000003', '123 Industrial Zone, Casablanca', 4.8, true)
+INSERT INTO service_providers (user_id, business_name, provider_type, phone, address, city, rating, is_verified)
+VALUES (13, 'Fast Fix Mechanics', 'mechanic', '+212600000003', '123 Industrial Zone, Casablanca', 'Casablanca', 4.8, true)
 ON CONFLICT DO NOTHING;
 
 -- Get the provider ID
