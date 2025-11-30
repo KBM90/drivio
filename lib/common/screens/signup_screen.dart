@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:drivio_app/common/constants/routes.dart';
+import 'package:drivio_app/common/helpers/geolocator_helper.dart';
+import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,11 +21,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _countryCodeController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _businessNameController = TextEditingController();
+  Timer? _debounce;
+  List<String> _citySuggestions = [];
+  OSRMService _osrmService = OSRMService();
 
   String _selectedRole = 'passenger'; // Default role
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String? _selectedCity;
+  String? _userCountryCode;
+  String? _userPhone;
+  String? _selectedPhoneCountryCode;
+  String? _selectedProviderType;
+  LatLng? _currentUserLocation;
+
+  final List<Map<String, String>> _providerTypes = [
+    {'value': 'mechanic', 'label': 'Mechanic'},
+    {'value': 'cleaner', 'label': 'Cleaner'},
+    {'value': 'electrician', 'label': 'Electrician'},
+    {'value': 'insurance', 'label': 'Insurance'},
+    {'value': 'other', 'label': 'Other'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserCountryCode();
+  }
 
   @override
   void dispose() {
@@ -27,20 +60,261 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _businessNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _getUserCountryCode() async {
+    try {
+      final location = await GeolocatorHelper.getCurrentLocation();
+
+      if (location != null) {
+        final countryCode = await _osrmService.getCountryCode(
+          location.latitude,
+          location.longitude,
+        );
+
+        if (mounted) {
+          setState(() {
+            _userCountryCode = countryCode;
+            _currentUserLocation = location;
+          });
+        }
+      } else {
+        debugPrint('⚠️ Location is null - user may have denied permission');
+      }
+    } catch (e) {
+      debugPrint('❌ Error getting country code: $e');
+    }
+  }
+
+  void _onCitySelected(String city) {
+    setState(() {
+      _selectedCity = city;
+      _cityController.text = city;
+    });
+  }
+
+  Future<void> _searchCities(String query) async {
+    if (query.trim().length < 2) {
+      setState(() => _citySuggestions = []);
+      return;
+    }
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      // Retry fetching country code if null
+      if (_userCountryCode == null) {
+        debugPrint('⚠️ Country code is null, retrying fetch...');
+        await _getUserCountryCode();
+      }
+
+      try {
+        final suggestions = await _osrmService.searchCities(
+          query,
+          countryCode: _userCountryCode,
+          lat: _currentUserLocation?.latitude,
+          lon: _currentUserLocation?.longitude,
+        );
+
+        if (mounted) {
+          setState(() {
+            _citySuggestions = suggestions;
+          });
+        } else {
+          debugPrint('⚠️ Widget not mounted, skipping state update');
+        }
+      } catch (e) {
+        debugPrint('❌ Error searching cities: $e');
+      }
+    });
+  }
+
+  void _clearCityFilter() {
+    setState(() {
+      _selectedCity = null;
+      _cityController.clear();
+      _citySuggestions = [];
+    });
+  }
+
+  Widget _buildCityFilter() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _cityController,
+                  decoration: InputDecoration(
+                    hintText: 'Search city...',
+                    prefixIcon: const Icon(
+                      Icons.location_city,
+                      color: Colors.green,
+                    ),
+
+                    suffixIcon:
+                        _selectedCity != null
+                            ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: _clearCityFilter,
+                            )
+                            : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.green[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.green[600]!,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.green[50],
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  onChanged: _searchCities,
+                ),
+              ),
+            ],
+          ),
+          if (_citySuggestions.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _citySuggestions.length,
+                itemBuilder: (context, index) {
+                  final city = _citySuggestions[index];
+                  return ListTile(
+                    leading: const Icon(Icons.location_on, size: 20),
+                    title: Text(city),
+                    onTap: () {
+                      _onCitySelected(city);
+                      setState(() => _citySuggestions = []);
+                    },
+                    dense: true,
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneFilter() {
+    return IntlPhoneField(
+      key: ValueKey(_userCountryCode ?? 'US'),
+      controller: _phoneController,
+      decoration: InputDecoration(
+        labelText: 'Phone Number',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.green[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.green[600]!, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.green[50],
+      ),
+      keyboardType: TextInputType.phone,
+      initialCountryCode: _userCountryCode ?? 'US',
+      onChanged: (phone) {
+        setState(() {
+          _userPhone = phone.completeNumber;
+          _selectedPhoneCountryCode = phone.countryCode;
+        });
+      },
+    );
   }
 
   Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Validate required fields that aren't in the form
+    if (_userCountryCode == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to detect country. Please check location permissions.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_userPhone == null || _userPhone!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid phone number.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedCity == null || _selectedCity!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a city.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
+      final normalizedCity = OSRMService().normalizeCity(_selectedCity!);
+
+      // Prepare additional data for provider role
+      Map<String, dynamic>? additionalData;
+      if (_selectedRole == 'provider') {
+        additionalData = {
+          'business_name': _businessNameController.text.trim(),
+          'provider_type': _selectedProviderType,
+        };
+      }
+
       final response = await AuthService.signUpWithEmail(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
+        city: normalizedCity,
+        countryCode: _userCountryCode!,
+        phone: _userPhone!,
         password: _passwordController.text.trim(),
         role: _selectedRole,
+        additionalData: additionalData,
       );
 
       if (response.user != null && mounted) {
@@ -103,13 +377,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   controller: _nameController,
                   decoration: InputDecoration(
                     labelText: 'Full Name',
-                    prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.green[300]!),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.person_outline,
+                      color: Colors.green,
+                    ),
+
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.green[600]!,
+                        width: 2,
+                      ),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[50],
+                    fillColor: Colors.green[50],
                   ),
+                  keyboardType: TextInputType.name,
                   textCapitalization: TextCapitalization.words,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -118,9 +405,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     if (value.trim().length < 2) {
                       return 'Name must be at least 2 characters';
                     }
+                    // Check if name contains only letters, spaces, hyphens, and apostrophes
+                    if (!RegExp(r"^[a-zA-Z\s\-']+$").hasMatch(value.trim())) {
+                      return 'Name can only contain letters, spaces, hyphens, and apostrophes';
+                    }
                     return null;
                   },
                 ),
+                const SizedBox(height: 16),
+                _buildCityFilter(),
+                const SizedBox(height: 16),
+                _buildPhoneFilter(),
                 const SizedBox(height: 16),
 
                 // Email Field
@@ -128,12 +423,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.green[300]!),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.email_outlined,
+                      color: Colors.green,
+                    ),
+
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.green[600]!,
+                        width: 2,
+                      ),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[50],
+                    fillColor: Colors.green[50],
                   ),
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
@@ -156,7 +463,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -169,9 +475,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.green[300]!),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.lock_outline,
+                      color: Colors.green,
+                    ),
+
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.green[600]!,
+                        width: 2,
+                      ),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[50],
+                    fillColor: Colors.green[50],
                   ),
                   obscureText: _obscurePassword,
                   validator: (value) {
@@ -191,7 +510,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   controller: _confirmPasswordController,
                   decoration: InputDecoration(
                     labelText: 'Confirm Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword
@@ -206,8 +524,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         );
                       },
                     ),
-                    border: OutlineInputBorder(
+                    prefixIcon: const Icon(
+                      Icons.lock_outline,
+                      color: Colors.green,
+                    ),
+
+                    focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.green[600]!,
+                        width: 2,
+                      ),
                     ),
                     filled: true,
                     fillColor: Colors.grey[50],
@@ -224,6 +551,92 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
+
+                // Provider-specific fields (shown only when provider role is selected)
+                if (_selectedRole == 'provider') ...[
+                  // Business Name Field
+                  TextFormField(
+                    controller: _businessNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Business Name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.green[300]!),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.business,
+                        color: Colors.green,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.green[600]!,
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.green[50],
+                    ),
+                    keyboardType: TextInputType.text,
+                    textCapitalization: TextCapitalization.words,
+                    validator: (value) {
+                      if (_selectedRole == 'provider') {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your business name';
+                        }
+                        if (value.trim().length < 2) {
+                          return 'Business name must be at least 2 characters';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Provider Type Dropdown
+                  DropdownButtonFormField<String>(
+                    value: _selectedProviderType,
+                    decoration: InputDecoration(
+                      labelText: 'Provider Type',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.green[300]!),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.category,
+                        color: Colors.green,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.green[600]!,
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.green[50],
+                    ),
+                    items:
+                        _providerTypes.map((type) {
+                          return DropdownMenuItem<String>(
+                            value: type['value'],
+                            child: Text(type['label']!),
+                          );
+                        }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedProviderType = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (_selectedRole == 'provider' && value == null) {
+                        return 'Please select a provider type';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Role Selection
                 const Text(
@@ -253,6 +666,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         isSelected: _selectedRole == 'driver',
                         onTap: () {
                           setState(() => _selectedRole = 'driver');
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _RoleCard(
+                        title: 'Provider',
+                        icon: Icons.store,
+                        isSelected: _selectedRole == 'provider',
+                        onTap: () {
+                          setState(() => _selectedRole = 'provider');
                         },
                       ),
                     ),

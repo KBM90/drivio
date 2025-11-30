@@ -11,6 +11,11 @@ class ServiceProvider {
   final bool isVerified;
   final DateTime createdAt;
 
+  // Fields from users table
+  final String? phone;
+  final String? city;
+  final String? name;
+
   ServiceProvider({
     required this.id,
     required this.userId,
@@ -21,6 +26,9 @@ class ServiceProvider {
     required this.rating,
     required this.isVerified,
     required this.createdAt,
+    this.phone,
+    this.city,
+    this.name,
   });
 
   factory ServiceProvider.fromJson(Map<String, dynamic> json) {
@@ -30,6 +38,16 @@ class ServiceProvider {
         final coords = json['location']['coordinates'] as List;
         loc = Location(latitude: coords[1], longitude: coords[0]);
       }
+    }
+
+    String? pPhone;
+    String? pCity;
+    String? pName;
+
+    if (json['users'] != null) {
+      pPhone = json['users']['phone'];
+      pCity = json['users']['city'];
+      pName = json['users']['name'];
     }
 
     return ServiceProvider(
@@ -42,6 +60,9 @@ class ServiceProvider {
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       isVerified: json['is_verified'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
+      phone: pPhone,
+      city: pCity,
+      name: pName,
     );
   }
 }

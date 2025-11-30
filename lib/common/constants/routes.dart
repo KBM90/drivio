@@ -5,6 +5,7 @@ import 'package:drivio_app/passenger/screens/passenger_home_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_account_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_activity_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_services_screen.dart';
+import 'package:drivio_app/provider/screens/provider_home_screen.dart';
 import 'package:flutter/material.dart';
 
 class AppRoutes {
@@ -12,6 +13,7 @@ class AppRoutes {
   static const String signup = '/signup';
   static const String driverHome = '/driverHome';
   static const String passengerHome = '/passengerHome';
+  static const String providerHome = '/providerHome';
   static const String passengerServices = '/passengerServices';
   static const String passengerActivity = '/passengerActivity';
   static const String passengerAccount = '/passengerAccount';
@@ -21,6 +23,7 @@ class AppRoutes {
     signup: (context) => SignUpScreen(),
     driverHome: (context) => DriverHomeScreen(),
     passengerHome: (context) => PassengerHomeScreen(),
+    providerHome: (context) => const ProviderHomeScreen(),
     passengerServices: (context) => PassengerServicesScreen(),
     passengerActivity: (context) => PassengerActivityScreen(),
     passengerAccount: (context) => PassengerAccountScreen(),
