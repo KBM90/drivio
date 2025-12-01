@@ -2,13 +2,12 @@ import 'package:drivio_app/common/widgets/safty_floating_button.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
-import 'package:drivio_app/driver/providers/wallet_provider.dart';
 import 'package:drivio_app/driver/ui/widgets/report_map_issue.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'driver_map_view.dart';
-import '../widgets/earnings_widget.dart';
+import '../widgets/wallet_widget.dart';
 import '../widgets/menu_button.dart';
 import '../../../common/widgets/search_button.dart';
 import '../widgets/status_bar.dart';
@@ -46,11 +45,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<DriverProvider>(context, listen: false).getDriver(context);
     });
-    _loadWallet();
-  }
-
-  Future<void> _loadWallet() async {
-    await Provider.of<WalletProvider>(context, listen: false).fetchWallet();
   }
 
   @override
@@ -63,7 +57,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           // Show a loader
           MapView(), // Displays the map
           // Earnings Widget (Centered at the Top)
-          Positioned(
+          /* Positioned(
             top:
                 MediaQuery.of(context).size.height *
                 0.05, // 5% of screen height
@@ -75,7 +69,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 child: EarningsWidget(),
               ),
             ),
-          ),
+          ),*/
 
           // MenuButton (Top-Left, Responsive Padding)
           Positioned(
