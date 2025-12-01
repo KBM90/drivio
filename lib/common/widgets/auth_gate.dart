@@ -8,7 +8,6 @@ import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/driver_passenger_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
-import 'package:drivio_app/driver/providers/wallet_provider.dart';
 import 'package:drivio_app/passenger/providers/passenger_provider.dart';
 import 'package:drivio_app/passenger/providers/passenger_ride_request_provider.dart';
 import 'package:flutter/material.dart';
@@ -137,7 +136,6 @@ class _AuthGateState extends State<AuthGate> {
             providers: [
               ChangeNotifierProvider(create: (_) => DriverLocationProvider()),
               ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
-              ChangeNotifierProvider(create: (_) => WalletProvider()),
               ChangeNotifierProvider(create: (_) => DriverProvider()),
               ChangeNotifierProvider(create: (_) => DriverPassengerProvider()),
               ChangeNotifierProvider(create: (_) => MapReportsProvider()),

@@ -1,0 +1,257 @@
+# Drivio Database Structure Analysis
+
+## Overview
+
+Your database follows a **multi-tenant ride-sharing platform** architecture supporting drivers, passengers, and service providers. The financial/earnings system is well-designed with separate concerns for **real-time earnings tracking** vs **withdrawable balance**.
+
+---
+
+## Core User Tables
+
+### `users` (Central User Table)
+- **Purpose**: Master table for all platform users
+- **Key Fields**:
+  - `id` - Internal user ID (bigserial)
+  - `user_id` - Links to Supabase Auth (`auth.users`)
+  - `role` - User type: `passenger`, `driver`, `courtier`, `provider`, `admin`
+  - `email`, `phone`, `name`, `city`, `country_code`
+  - `banned` - Account status flag
+
+### `drivers` (Driver-Specific Data)
+- **Purpose**: Extended driver information
+- **Key Fields**:
+  - `user_id` → `users.id`
+  - `location`, `dropoff_location` (PostGIS geometry)
+  - `status` - `active`, `inactive`, `on_trip`
+  - `acceptnewrequest` - Whether accepting new rides
+  - `range` - Service radius (km)
+
+### `passengers` (Passenger-Specific Data)
+- **Purpose**: Extended passenger information
+- **Key Fields**:
+  - `user_id` → `users.id`
+  - `location` (PostGIS geometry)
+  - `preferences` (JSONB)
+
+---
+
+## Financial & Earnings System
+
+### 1. **Ride Flow & Payments**
+
+```mermaid
+graph TD
+    A[Passenger Creates Ride Request] --> B[ride_requests]
+    B --> C[Driver Accepts]
+    C --> D[Trip Completed]
+    D --> E[ride_payments Created]
+    E --> F[driver_earnings calculated]
+    F --> G[Updates driver_earnings_summary]
+    F --> H[Eventually added to wallets]
+```
+
+#### `ride_requests`
+- **Purpose**: Stores all ride requests
+- **Key Fields**:
+  - `passenger_id` → `passengers.id`
+  - `driver_id` → `drivers.id` (nullable until accepted)
+  - `payment_method_id` → `payment_methods.id`
+  - `status` - `pending`, `accepted`, `in_progress`, `completed`, `cancelled_by_driver`, `arrived`
+  - `price` - Total ride price
+  - `pickup_location`, `dropoff_location` (PostGIS)
+  - `distance`, `duration`
+
+#### `ride_payments`
+- **Purpose**: Records payment transactions for completed rides
+- **Key Fields**:
+  - `ride_request_id` → `ride_requests.id`
+  - `user_payment_method_id` → `user_payment_methods.id`
+  - `amount` - Total payment amount
+  - `commission_percentage` - Platform commission (default 20%)
+  - `driver_earnings` - Amount driver receives (amount - commission)
+  - `payment_status` - `pending`, `completed`, `failed`
+
+#### `payment_methods`
+- **Purpose**: Available payment types (Cash, Bank Transfer, Card, Wallet)
+- **Key Fields**:
+  - `name` - Payment method name (unique)
+  - `requires_details` - Whether additional info needed
+
+#### `user_payment_methods`
+- **Purpose**: User's saved payment methods
+- **Key Fields**:
+  - `user_id` → `users.id`
+  - `payment_method_id` → `payment_methods.id`
+  - `details` (JSONB) - Card number, account details, etc.
+  - `is_default` - Default payment method flag
+
+---
+
+### 2. **Earnings Tracking System**
+
+#### `driver_online_sessions`
+- **Purpose**: Tracks when drivers are online for time-based analytics
+- **Key Fields**:
+  - `driver_id` → `drivers.id`
+  - `session_start`, `session_end`
+  - `total_duration_minutes` - Auto-calculated on session end
+- **Automation**:
+  - Trigger: When driver status → `active`, starts new session
+  - Trigger: When driver status → `inactive` or `on_trip`, ends session
+  - Function: `start_driver_online_session(driver_id)` - Manually start session
+
+#### `driver_earnings_summary`
+- **Purpose**: **Aggregated earnings analytics** for specific time periods
+- **Key Fields**:
+  - `driver_id` → `drivers.id`
+  - `period_start`, `period_end` - Date range
+  - `total_earnings` - Sum of all earnings
+  - `cash_earnings`, `bank_transfer_earnings`, `other_earnings` - Breakdown by payment method
+  - `total_trips`, `completed_trips` - Trip statistics
+  - `total_online_minutes` - Time spent online
+  - `points` - Gamification points
+  - `next_payout_date`, `next_payout_amount` - Scheduled payout info
+- **Functions**:
+  - `refresh_driver_earnings_summary(driver_id, start_date, end_date)` - Recalculates summary
+  - `get_driver_current_week_earnings(driver_id)` - Returns current week data
+- **Data Source**: Aggregates from `ride_payments` + `driver_online_sessions`
+
+---
+
+### 3. **Wallet & Payout System**
+
+#### `wallets`
+- **Purpose**: **Current withdrawable balance** for all users
+- **Key Fields**:
+  - `user_id` → `users.id` (unique)
+  - `balance` - Current available funds (≥ 0)
+- **Scope**: Used by drivers, passengers, providers
+- **Use Case**: "How much can I withdraw right now?"
+
+#### `driver_payouts`
+- **Purpose**: **Historical payout transactions** for drivers
+- **Key Fields**:
+  - `driver_id` → `users.id` (NOT `drivers.id` - references users table)
+  - `payout_amount` - Amount paid out
+  - `remaining_balance` - Balance after payout
+  - `payment_method` - `cash`, `card`, `wallet`
+  - `payout_status` - `pending`, `processed`, `failed`
+  - `transaction_id` - External transaction reference
+  - `payout_date` - When payout was processed
+  - `notes` - Additional information
+
+---
+
+## Key Relationships & Data Flow
+
+### **Earnings → Wallet → Payout Flow**
+
+```mermaid
+graph LR
+    A[Trip Completed] --> B[ride_payments.driver_earnings]
+    B --> C[driver_earnings_summary aggregates]
+    B -.should update.-> D[wallets.balance]
+    D --> E[Driver requests payout]
+    E --> F[driver_payouts created]
+    F -.should deduct.-> D
+```
+
+### **Critical Insight: Potential Gap**
+
+> [!WARNING]
+> **Missing Synchronization**
+> 
+> Currently, there's no automatic mechanism to:
+> 1. Add `ride_payments.driver_earnings` to `wallets.balance` when payment is completed
+> 2. Deduct from `wallets.balance` when `driver_payouts` is processed
+> 
+> This needs to be handled either via:
+> - Database triggers on `ride_payments` and `driver_payouts`
+> - Application logic in your services
+> - Scheduled jobs to reconcile balances
+
+---
+
+## Foreign Key Relationships
+
+### **Financial Tables**
+- `ride_payments.ride_request_id` → `ride_requests.id` (CASCADE)
+- `ride_payments.user_payment_method_id` → `user_payment_methods.id` (CASCADE)
+- `driver_payouts.driver_id` → `users.id` (CASCADE)
+- `driver_earnings_summary.driver_id` → `drivers.id` (CASCADE)
+- `driver_online_sessions.driver_id` → `drivers.id` (CASCADE)
+
+### **User Tables**
+- `drivers.user_id` → `users.id` (CASCADE)
+- `passengers.user_id` → `users.id` (CASCADE)
+- `wallets.user_id` → `users.id` (CASCADE)
+- `users.user_id` → `auth.users.id` (CASCADE)
+
+---
+
+## Answer to Your Question
+
+### **Do you need both `wallets` and `driver_earnings_summary`?**
+
+**YES - They serve different purposes:**
+
+| Table | Purpose | Updates | Use Case |
+|-------|---------|---------|----------|
+| `wallets` | **Current withdrawable balance** | When earnings added or payouts processed | "How much can I cash out now?" |
+| `driver_earnings_summary` | **Historical earnings analytics** | Aggregated from ride_payments periodically | "How much did I earn this week?" |
+
+### **Example Scenario:**
+
+1. **Week 1**: Driver earns $500
+   - `driver_earnings_summary` shows: `total_earnings = $500`
+   - `wallets.balance` = $500
+
+2. **Driver cashes out $300**
+   - `driver_payouts` record created: `payout_amount = $300`
+   - `wallets.balance` = $200 (updated)
+   - `driver_earnings_summary` = $500 (unchanged - historical record)
+
+3. **Week 2**: Driver earns $400 more
+   - `driver_earnings_summary` shows: `total_earnings = $400` (new week)
+   - `wallets.balance` = $600 ($200 + $400)
+
+---
+
+## Recommendations
+
+### 1. **Implement Wallet Synchronization**
+
+Create triggers or functions to:
+- **Add to wallet** when `ride_payments.payment_status` = `completed`
+- **Deduct from wallet** when `driver_payouts.payout_status` = `processed`
+
+### 2. **Clarify `driver_payouts.driver_id` Reference**
+
+Currently references `users.id` but should probably reference `drivers.id` for consistency. Check if this is intentional.
+
+### 3. **Consider Wallet Transactions Table**
+
+Add a `wallet_transactions` table to track all balance changes:
+- Type: `earning`, `payout`, `refund`, `bonus`
+- Amount (positive/negative)
+- Reference to source (ride_payment_id, driver_payout_id, etc.)
+- This provides a complete audit trail
+
+### 4. **Earnings Summary Refresh Strategy**
+
+Currently uses manual refresh via `refresh_driver_earnings_summary()`. Consider:
+- Trigger-based updates when rides complete
+- Scheduled jobs for periodic recalculation
+- Real-time updates for current week
+
+---
+
+## Summary
+
+Your database is well-structured with clear separation of concerns:
+- ✅ **Earnings tracking** (driver_earnings_summary) - Analytics & reporting
+- ✅ **Wallet balance** (wallets) - Current withdrawable funds
+- ✅ **Payout history** (driver_payouts) - Transaction records
+- ⚠️ **Missing**: Automatic synchronization between these tables
+
+Both tables are needed and complementary. The main improvement would be implementing proper wallet balance updates when earnings are added or payouts are processed.

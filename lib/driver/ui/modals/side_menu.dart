@@ -8,7 +8,7 @@ import 'package:drivio_app/common/services/user_services.dart';
 import 'package:drivio_app/driver/ui/screens/account_page.dart';
 import 'package:drivio_app/driver/ui/screens/driver_profile_page.dart';
 import 'package:drivio_app/driver/ui/screens/earning_page.dart';
-import 'package:drivio_app/driver/ui/screens/wallet_page.dart';
+import 'package:drivio_app/driver/ui/screens/driver_wallet_screen.dart';
 import 'package:flutter/material.dart';
 
 class SideMenu extends StatefulWidget {
@@ -244,7 +244,7 @@ class _SideMenuState extends State<SideMenu> {
         if (title == "Wallet") {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => WalletScreen()),
+            MaterialPageRoute(builder: (context) => const DriverWalletScreen()),
           );
         }
         if (title == "Account") {

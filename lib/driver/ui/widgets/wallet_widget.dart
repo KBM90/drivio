@@ -1,5 +1,4 @@
-import 'package:drivio_app/driver/models/wallet.dart';
-import 'package:drivio_app/driver/providers/wallet_provider.dart';
+/*import 'package:drivio_app/driver/models/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -17,7 +16,6 @@ class _EarningsWidgetState extends State<EarningsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final walletProvider = Provider.of<WalletProvider>(context);
     final Wallet? wallet = walletProvider.wallet; // Get wallet data
     return Column(
       children: [
@@ -131,3 +129,4 @@ class _EarningsWidgetState extends State<EarningsWidget> {
     );
   }
 }
+*/
