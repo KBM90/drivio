@@ -1,4 +1,5 @@
 import 'package:drivio_app/common/services/referral_service.dart';
+import 'package:drivio_app/common/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -46,9 +47,11 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
     if (_referralCode != null) {
       Clipboard.setData(ClipboardData(text: _referralCode!));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Referral code copied to clipboard!'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.translate('referral_code_copied'),
+          ),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -56,8 +59,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
 
   void _shareCode() {
     if (_referralCode != null) {
+      final loc = AppLocalizations.of(context)!;
       final message =
-          'Join Drivio using my referral code: $_referralCode and earn rewards! Download the app now.';
+          '${loc.translate('join_drivio_message')} $_referralCode ${loc.translate('and_earn_rewards')}';
       Share.share(message);
     }
   }
@@ -65,7 +69,10 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Refer Friends'), elevation: 0),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.referFriends),
+        elevation: 0,
+      ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -112,9 +119,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Your Earnings',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              AppLocalizations.of(context)!.translate('your_earnings'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Row(
@@ -122,12 +129,12 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
               children: [
                 _buildStatItem(
                   '\$${totalEarnings.toStringAsFixed(2)}',
-                  'Total Earned',
+                  AppLocalizations.of(context)!.translate('total_earned'),
                   Colors.green,
                 ),
                 _buildStatItem(
                   '\$${pendingEarnings.toStringAsFixed(2)}',
-                  'Pending',
+                  AppLocalizations.of(context)!.translate('pending'),
                   Colors.orange,
                 ),
               ],
@@ -136,8 +143,16 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem('$totalPoints', 'Points', Colors.blue),
-                _buildStatItem('$totalReferrals', 'Referrals', Colors.purple),
+                _buildStatItem(
+                  '$totalPoints',
+                  AppLocalizations.of(context)!.points,
+                  Colors.blue,
+                ),
+                _buildStatItem(
+                  '$totalReferrals',
+                  AppLocalizations.of(context)!.translate('referrals'),
+                  Colors.purple,
+                ),
               ],
             ),
           ],
@@ -173,9 +188,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Your Referral Code',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              AppLocalizations.of(context)!.translate('your_referral_code'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Container(
@@ -189,7 +204,8 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    _referralCode ?? 'Loading...',
+                    _referralCode ??
+                        AppLocalizations.of(context)!.translate('loading'),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -199,7 +215,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
                   IconButton(
                     icon: const Icon(Icons.copy),
                     onPressed: _copyCode,
-                    tooltip: 'Copy code',
+                    tooltip: AppLocalizations.of(
+                      context,
+                    )!.translate('copy_code'),
                   ),
                 ],
               ),
@@ -211,7 +229,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _shareCode,
                     icon: const Icon(Icons.share),
-                    label: const Text('Share Code'),
+                    label: Text(
+                      AppLocalizations.of(context)!.translate('share_code'),
+                    ),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -232,29 +252,29 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'How It Works',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          AppLocalizations.of(context)!.translate('how_it_works'),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         _buildStep(
           '1',
-          'Share your code',
-          'Send your referral code to friends via text, email, or social media.',
+          AppLocalizations.of(context)!.translate('share_your_code'),
+          AppLocalizations.of(context)!.translate('share_your_code_desc'),
           Icons.share,
         ),
         const SizedBox(height: 12),
         _buildStep(
           '2',
-          'Friend signs up',
-          'Your friend creates an account using your referral code.',
+          AppLocalizations.of(context)!.translate('friend_signs_up'),
+          AppLocalizations.of(context)!.translate('friend_signs_up_desc'),
           Icons.person_add,
         ),
         const SizedBox(height: 12),
         _buildStep(
           '3',
-          'Earn rewards',
-          'Get points when they sign up, and cash rewards as they complete rides!',
+          AppLocalizations.of(context)!.translate('earn_rewards'),
+          AppLocalizations.of(context)!.translate('earn_rewards_desc'),
           Icons.card_giftcard,
         ),
         const SizedBox(height: 16),
@@ -268,16 +288,34 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Reward Milestones',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              Text(
+                AppLocalizations.of(context)!.translate('reward_milestones'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 8),
-              _buildMilestone('Sign up', '50 points'),
-              _buildMilestone('1st ride', '\$5 + 100 points'),
-              _buildMilestone('5 rides', '\$10 + 200 points'),
-              _buildMilestone('10 rides', '\$15 + 300 points'),
-              _buildMilestone('20 rides', '\$25 + 500 points'),
+              _buildMilestone(
+                AppLocalizations.of(context)!.translate('sign_up'),
+                '50 ${AppLocalizations.of(context)!.points}',
+              ),
+              _buildMilestone(
+                AppLocalizations.of(context)!.translate('first_ride'),
+                '\$5 + 100 ${AppLocalizations.of(context)!.points}',
+              ),
+              _buildMilestone(
+                '5 ${AppLocalizations.of(context)!.translate('rides')}',
+                '\$10 + 200 ${AppLocalizations.of(context)!.points}',
+              ),
+              _buildMilestone(
+                '10 ${AppLocalizations.of(context)!.translate('rides')}',
+                '\$15 + 300 ${AppLocalizations.of(context)!.points}',
+              ),
+              _buildMilestone(
+                '20 ${AppLocalizations.of(context)!.translate('rides')}',
+                '\$25 + 500 ${AppLocalizations.of(context)!.points}',
+              ),
             ],
           ),
         ),
@@ -348,9 +386,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Referral History',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Text(
+            AppLocalizations.of(context)!.translate('referral_history'),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Center(
@@ -363,12 +401,12 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'No referrals yet',
+                  AppLocalizations.of(context)!.translate('no_referrals_yet'),
                   style: TextStyle(color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Start sharing your code!',
+                  AppLocalizations.of(context)!.translate('start_sharing'),
                   style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                 ),
               ],
@@ -381,9 +419,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Referral History',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          AppLocalizations.of(context)!.translate('referral_history'),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         ListView.builder(
@@ -396,7 +434,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
             final ridesCompleted = (referral['rides_completed'] as int?) ?? 0;
             final referredUser =
                 referral['referred_user'] as Map<String, dynamic>?;
-            final name = referredUser?['name'] ?? 'Pending signup';
+            final name =
+                referredUser?['name'] ??
+                AppLocalizations.of(context)!.translate('pending_signup');
 
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
@@ -409,7 +449,9 @@ class _ReferFriendsScreenState extends State<ReferFriendsScreen> {
                   ),
                 ),
                 title: Text(name),
-                subtitle: Text('$ridesCompleted rides completed'),
+                subtitle: Text(
+                  '$ridesCompleted ${AppLocalizations.of(context)!.translate('rides_completed')}',
+                ),
                 trailing: _getStatusChip(status),
               ),
             );

@@ -44,6 +44,10 @@ class RideRequest {
   final DateTime? createdAt;
   @JsonKey(name: 'updated_at')
   final DateTime? updatedAt;
+  @JsonKey(name: 'qr_code')
+  final String? qrCode;
+  @JsonKey(name: 'qr_code_scanned')
+  final bool? qrCodeScanned;
 
   RideRequest({
     required this.id,
@@ -65,6 +69,8 @@ class RideRequest {
     this.acceptedAt,
     this.createdAt,
     this.updatedAt,
+    this.qrCode,
+    this.qrCodeScanned,
   });
 
   RideRequest.create({
@@ -85,7 +91,9 @@ class RideRequest {
        requestedAt = null,
        acceptedAt = null,
        createdAt = null,
-       updatedAt = null;
+       updatedAt = null,
+       qrCode = null,
+       qrCodeScanned = null;
 
   factory RideRequest.fromJson(Map<String, dynamic> json) {
     return RideRequest(
@@ -127,6 +135,8 @@ class RideRequest {
               : json['dropoff_location'] != null
               ? Location.fromJson(json['dropoff_location'])
               : Location(latitude: null, longitude: null),
+      qrCode: json['qr_code'] as String?,
+      qrCodeScanned: json['qr_code_scanned'] as bool?,
     );
   }
 
@@ -225,6 +235,8 @@ class RideRequest {
     DateTime? acceptedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? qrCode,
+    bool? qrCodeScanned,
   }) {
     return RideRequest(
       id: id ?? this.id,
@@ -245,6 +257,8 @@ class RideRequest {
       acceptedAt: acceptedAt ?? this.acceptedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      qrCode: qrCode ?? this.qrCode,
+      qrCodeScanned: qrCodeScanned ?? this.qrCodeScanned,
     );
   }
 }

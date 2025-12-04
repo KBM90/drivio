@@ -1,14 +1,17 @@
 import 'package:drivio_app/common/models/user.dart';
+import 'package:drivio_app/common/screens/app_settings_screen.dart';
 import 'package:drivio_app/common/screens/inbox_page.dart';
 import 'package:drivio_app/common/screens/opportunities_page.dart';
 import 'package:drivio_app/common/screens/refer_friends_page.dart';
-import 'package:drivio_app/common/screens/services_page.dart';
+import 'package:drivio_app/driver/ui/screens/services_page.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:drivio_app/common/services/user_services.dart';
 import 'package:drivio_app/driver/ui/screens/account_page.dart';
 import 'package:drivio_app/driver/ui/screens/driver_profile_page.dart';
 import 'package:drivio_app/driver/ui/screens/earning_page.dart';
 import 'package:drivio_app/driver/ui/screens/driver_wallet_screen.dart';
+import 'package:drivio_app/driver/ui/screens/car_expense_calculator_screen.dart';
+import 'package:drivio_app/common/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class SideMenu extends StatefulWidget {
@@ -110,27 +113,134 @@ class _SideMenuState extends State<SideMenu> {
                   const Divider(),
 
                   // Menu Items
-                  _buildMenuItem("Inbox", Icons.mail, context, badgeCount: 9),
-                  _buildMenuItem("Refer Friends", Icons.group, context),
                   _buildMenuItem(
-                    "Opportunities",
+                    AppLocalizations.of(context)!.inbox,
+                    Icons.mail,
+                    badgeCount: 9,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const InboxPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    AppLocalizations.of(context)!.referFriends,
+                    Icons.group,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ReferFriendsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    AppLocalizations.of(context)!.opportunities,
                     Icons.work,
-                    context,
                     badgeCount: 8,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const OpportunitiesScreen(),
+                        ),
+                      );
+                    },
                   ),
-                  _buildMenuItem("Earnings", Icons.attach_money, context),
-                  _buildMenuItem("Services", Icons.handyman, context),
                   _buildMenuItem(
-                    "Wallet",
-                    Icons.account_balance_wallet,
-                    context,
+                    AppLocalizations.of(context)!.earnings,
+                    Icons.attach_money,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EarningsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                  _buildMenuItem("Account", Icons.person, context),
+                  _buildMenuItem(
+                    AppLocalizations.of(context)!.services,
+                    Icons.handyman,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ServicesPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    AppLocalizations.of(context)!.wallet,
+                    Icons.account_balance_wallet,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DriverWalletScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    'Car Expenses',
+                    Icons.car_repair,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => const CarExpenseCalculatorScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    AppLocalizations.of(context)!.account,
+                    Icons.person,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AccountScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    AppLocalizations.of(context)!.settings,
+                    Icons.settings,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AppSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
 
                   const Divider(),
 
-                  _buildMenuItem("Help", Icons.help_outline, context),
-                  _buildMenuItem("Learning Center", Icons.school, context),
+                  _buildMenuItem(
+                    AppLocalizations.of(context)!.help,
+                    Icons.help_outline,
+                    onTap: () {
+                      // TODO: Navigate to Help page
+                    },
+                  ),
+                  _buildMenuItem(
+                    AppLocalizations.of(context)!.learningCenter,
+                    Icons.school,
+                    onTap: () {
+                      // TODO: Navigate to Learning Center
+                    },
+                  ),
 
                   const SizedBox(height: 20), // Space before the button
                 ],
@@ -161,9 +271,9 @@ class _SideMenuState extends State<SideMenu> {
                       vertical: 12,
                     ),
                   ),
-                  child: const Text(
-                    "Log out",
-                    style: TextStyle(color: Colors.white),
+                  child: Text(
+                    AppLocalizations.of(context)!.logOut,
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
               ),
@@ -176,9 +286,9 @@ class _SideMenuState extends State<SideMenu> {
 
   Widget _buildMenuItem(
     String title,
-    IconData icon,
-    BuildContext context, {
+    IconData icon, {
     int? badgeCount,
+    VoidCallback? onTap,
   }) {
     return ListTile(
       leading: Icon(icon, color: Colors.black),
@@ -207,53 +317,7 @@ class _SideMenuState extends State<SideMenu> {
             ),
         ],
       ),
-      onTap: () {
-        // Navigate to the InboxPage when tapped
-        if (title == "Inbox") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const InboxPage()),
-          );
-        }
-        if (title == "Refer Friends") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ReferFriendsScreen()),
-          );
-        }
-        if (title == "Opportunities") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const OpportunitiesScreen(),
-            ),
-          );
-        }
-        if (title == "Earnings") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const EarningsScreen()),
-          );
-        }
-        if (title == "Services") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ServicesPage()),
-          );
-        }
-        if (title == "Wallet") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const DriverWalletScreen()),
-          );
-        }
-        if (title == "Account") {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AccountScreen()),
-          );
-        }
-      },
+      onTap: onTap,
     );
   }
 }

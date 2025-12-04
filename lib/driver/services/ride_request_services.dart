@@ -111,7 +111,7 @@ class RideRequestService {
       );
 
       // Save current ride ID to SharedPreferences
-      await SharedPreferencesHelper().setInt("currentRideId", rideRequestId);
+      await SharedPreferencesHelper.setInt("currentRideId", rideRequestId);
 
       debugPrint('✅ Ride request $rideRequestId accepted by driver $driverId');
       return response['message'] as String?;

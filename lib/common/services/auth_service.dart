@@ -64,6 +64,30 @@ class AuthService {
     }
   }
 
+  /// Check if the current user is banned
+  static Future<bool> isUserBanned() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return false;
+
+      final data =
+          await _supabase
+              .from('users')
+              .select('banned')
+              .eq('user_id', userId)
+              .maybeSingle();
+
+      if (data == null) return false;
+
+      final isBanned = data['banned'] as bool? ?? false;
+
+      return isBanned;
+    } catch (e) {
+      debugPrint('❌ Error checking banned status: $e');
+      return false; // Default to not banned on error
+    }
+  }
+
   static Future<AuthResponse> signUpWithEmail({
     required String name,
     required String email,

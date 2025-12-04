@@ -12,6 +12,8 @@ class User {
   final String? sexe;
   final String? city;
   final String? role;
+  final String? language;
+  final String? country;
 
   @JsonKey(name: 'profile_image_path')
   final String? profileImagePath;
@@ -21,8 +23,8 @@ class User {
   @JsonKey(name: 'email_verified_at')
   final DateTime? emailVerifiedAt;
 
-  @JsonKey(name: 'remember_token')
-  final String? rememberToken;
+  @JsonKey(name: 'is_verified')
+  final bool isVerified;
 
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
@@ -42,13 +44,15 @@ class User {
     this.sexe,
     this.city,
     required this.role,
+    this.language,
+    this.country,
     this.profileImagePath,
     this.banned = false,
     this.emailVerifiedAt,
-    this.rememberToken,
+    this.isVerified = false,
     this.createdAt,
     this.updatedAt,
-    this.userId,
+    this.userId, //refers to auth.users
   });
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

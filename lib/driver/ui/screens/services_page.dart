@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../models/provided_service.dart';
-import '../../provider/services/provided_services_service.dart';
-import '../helpers/osrm_services.dart';
-import '../helpers/geolocator_helper.dart';
+import '../../../common/models/provided_service.dart';
+import '../../../provider/services/provided_services_service.dart';
+import '../../../common/helpers/osrm_services.dart';
+import '../../../common/helpers/geolocator_helper.dart';
 import 'package:latlong2/latlong.dart';
 
 class ServicesPage extends StatefulWidget {
@@ -251,6 +251,10 @@ class _ServicesPageState extends State<ServicesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('Services'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,

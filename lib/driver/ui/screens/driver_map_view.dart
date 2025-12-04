@@ -35,7 +35,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   List<LatLng> _routePolyline = [];
   List<LatLng> _routePolylineDriverToPickup = [];
   final OSRMService _osrmService = OSRMService();
-  bool _isLoading = true;
   bool _isMapReady = false; // 🔹 Track if the map is ready
 
   late DriverLocationProvider locationProvider;
@@ -81,6 +80,18 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
     // Check driver status
     debugPrint("🔍 _onDriverChanged - Driver Status is: ${driver.status}");
+
+    // Clear routes when driver goes inactive
+    if (driver.status == DriverStatus.inactive) {
+      if (_routePolyline.isNotEmpty || _destination != null) {
+        setState(() {
+          _routePolyline = [];
+          _routePolylineDriverToPickup = [];
+          _destination = null;
+          _pickup = null;
+        });
+      }
+    }
 
     // Fetch current ride request if driver is on_trip (for app restart scenario)
     if (driver.status == DriverStatus.onTrip && !_hasLoadedRideRequest) {
@@ -215,7 +226,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       final driverLocation = locationProvider.currentLocation;
 
       if (driverLocation == null) {
-        setState(() => _isLoading = false);
         return;
       }
 
@@ -242,8 +252,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       }
     } catch (e) {
       print('Error initializing map: $e');
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -346,19 +354,28 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     final reportsProvider = Provider.of<MapReportsProvider>(context);
     final reports = reportsProvider.reports;
 
-    if (driverProvider.currentDriver?.status == DriverStatus.inactive &&
-        !_isLoading) {
-      setState(() {
-        _routePolyline = [];
-        _destination = null;
-      });
-    }
+    // Route clearing is now handled in _onDriverChanged listener
+    // Removed setState from build method to prevent infinite rebuild loop
 
     return Stack(
       children: [
         driverProvider.currentDriver == null ||
                 locationProvider.currentLocation == null
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(
+                    driverProvider.currentDriver == null
+                        ? 'Loading driver data...'
+                        : 'Getting your location...',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            )
             : FlutterMap(
               mapController: _mapController,
               options: MapOptions(
@@ -462,6 +479,13 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                               size: 30,
                               color: Color.fromARGB(255, 8, 8, 8),
                             ),
+                            /**
+                             *  Image.asset(
+      'assets/cars/car_top.png',  // <-- your image
+      width: 40,
+      height: 40,
+    ),
+                             */
                           ),
                         ),
                       ],

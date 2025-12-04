@@ -94,25 +94,25 @@ class SharedPreferencesHelper {
   }
 
   /// Set an int value
-  Future<bool> setInt(String key, int value) async {
+  static Future<bool> setInt(String key, int value) async {
     final prefs = await SharedPreferences.getInstance();
     return await prefs.setInt(key, value);
   }
 
   /// Set a bool value
-  Future<bool> setBool(String key, bool value) async {
+  static Future<bool> setBool(String key, bool value) async {
     final prefs = await SharedPreferences.getInstance();
     return await prefs.setBool(key, value);
   }
 
   /// Set a double value
-  Future<bool> setDouble(String key, double value) async {
+  static Future<bool> setDouble(String key, double value) async {
     final prefs = await SharedPreferences.getInstance();
     return await prefs.setDouble(key, value);
   }
 
   /// Set a List<String> value
-  Future<bool> setStringList(String key, List<String> value) async {
+  static Future<bool> setStringList(String key, List<String> value) async {
     final prefs = await SharedPreferences.getInstance();
     return await prefs.setStringList(key, value);
   }

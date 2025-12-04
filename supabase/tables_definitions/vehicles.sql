@@ -7,10 +7,11 @@ create table public.vehicles (
   status boolean null default true,
   created_at timestamp with time zone null default CURRENT_TIMESTAMP,
   updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  color character varying(50) null,
   constraint vehicles_pkey primary key (id),
   constraint vehicles_license_plate_key unique (license_plate),
   constraint fk_vehicles_car_brand_id foreign KEY (car_brand_id) references car_brands (id) on delete CASCADE,
-  constraint fk_vehicles_driver_id foreign KEY (driver_id) references users (id) on delete CASCADE,
+  constraint fk_vehicles_driver_id foreign KEY (driver_id) references drivers (id) on delete CASCADE,
   constraint fk_vehicles_transport_type_id foreign KEY (transport_type_id) references transport_types (id) on delete CASCADE
 ) TABLESPACE pg_default;
 

@@ -17,14 +17,19 @@ class DriverProvider extends ChangeNotifier {
   String? get statusMessage => _statusMessage;
 
   Future<void> getDriver(BuildContext context) async {
+    debugPrint("🔍 DriverProvider.getDriver() called");
     try {
       _currentDriver = await DriverService.getDriver();
+      debugPrint(
+        "✅ Driver fetched successfully: ID=${_currentDriver?.id}, Status=${_currentDriver?.status}",
+      );
 
       // Validate driver status - if on_trip but no active ride, reset to active
       await _validateDriverStatus();
 
       notifyListeners();
     } catch (e) {
+      debugPrint("❌ Error fetching driver in DriverProvider: $e");
       handleAppError(context, e);
     }
   }
