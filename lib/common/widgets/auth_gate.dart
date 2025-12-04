@@ -1,6 +1,7 @@
 import 'package:drivio_app/common/constants/routes.dart';
 import 'package:drivio_app/common/providers/device_location_provider.dart';
 import 'package:drivio_app/common/providers/map_reports_provider.dart';
+import 'package:drivio_app/common/screens/banned_user_screen.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:drivio_app/common/services/notification_service.dart';
 import 'package:drivio_app/common/providers/notification_provider.dart';
@@ -24,6 +25,7 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   String? _userRole;
   bool _isLoading = true;
+  bool _isBanned = false;
 
   @override
   void initState() {
@@ -58,10 +60,23 @@ class _AuthGateState extends State<AuthGate> {
         // Initialize notifications
         await NotificationService.initialize();
 
+        // Check if user is banned
+        final isBanned = await AuthService.isUserBanned();
+        if (isBanned) {
+          if (mounted) {
+            setState(() {
+              _isBanned = true;
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+
         final role = await AuthService.getUserRole();
         if (mounted) {
           setState(() {
             _userRole = role;
+            _isBanned = false;
             _isLoading = false;
           });
         }
@@ -128,6 +143,11 @@ class _AuthGateState extends State<AuthGate> {
         // User is not logged in
         if (session == null) {
           return AppRoutes.routes[AppRoutes.login]!(context);
+        }
+
+        // User is banned - show banned screen
+        if (_isBanned) {
+          return const BannedUserScreen();
         }
 
         // User is logged in - wrap with providers based on role

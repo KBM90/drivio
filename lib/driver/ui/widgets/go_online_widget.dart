@@ -2,6 +2,7 @@ import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
+import 'package:drivio_app/common/services/sound_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -36,6 +37,9 @@ class GoOnlineButton extends StatelessWidget {
             );
             final scaffoldMessenger = ScaffoldMessenger.of(context);
             try {
+              // Play sound when button is pressed
+              await SoundService.playError();
+
               // 1. First check if we still have a valid context
 
               // 2. Update status

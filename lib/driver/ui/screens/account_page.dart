@@ -1,8 +1,57 @@
 import 'package:drivio_app/common/services/auth_service.dart';
+import 'package:drivio_app/driver/models/vehicle.dart';
+import 'package:drivio_app/driver/services/vehicle_service.dart';
+import 'package:drivio_app/driver/ui/screens/car_info_screen.dart';
+import 'package:drivio_app/driver/ui/screens/driver_information_screen.dart';
+import 'package:drivio_app/driver/ui/screens/payment_settings_screen.dart';
 import 'package:flutter/material.dart';
 
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
+
+  @override
+  State<AccountScreen> createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  Vehicle? _vehicle;
+  bool _isLoadingVehicle = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVehicle();
+  }
+
+  Future<void> _loadVehicle() async {
+    try {
+      setState(() => _isLoadingVehicle = true);
+      final vehicle = await VehicleService.getDriverVehicle();
+      if (mounted) {
+        setState(() {
+          _vehicle = vehicle;
+          _isLoadingVehicle = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading vehicle: $e');
+      if (mounted) {
+        setState(() => _isLoadingVehicle = false);
+      }
+    }
+  }
+
+  Future<void> _navigateToCarInfo() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => CarInfoScreen(vehicle: _vehicle)),
+    );
+
+    // Reload vehicle data if changes were made
+    if (result == true) {
+      _loadVehicle();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,21 +61,73 @@ class AccountScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         children: [
           _buildSectionHeader('Vehicles'),
-          _buildListItem('Kia K5'),
+          _buildVehicleItem(),
           const SizedBox(height: 24),
           _buildSectionHeader('Work Hub'),
-          _buildListItem('Documents'),
-          _buildListItem('Payment'),
+          _buildListItem(
+            'Driver Information',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DriverInformationScreen(),
+                ),
+              );
+            },
+          ),
+          _buildListItem(
+            'Payment',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PaymentSettingsScreen(),
+                ),
+              );
+            },
+          ),
           _buildListItem('Plus Card'),
           _buildListItem('Tax Info'),
           _buildListItem('Manage Uber account'),
           _buildListItem('Edit Address'),
           _buildListItem('Insurance'),
           _buildListItem('Privacy'),
-          _buildListItem('App Settings'),
           const SizedBox(height: 24),
           _buildDeleteAccountButton(context),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVehicleItem() {
+    if (_isLoadingVehicle) {
+      return const Card(
+        elevation: 2,
+        margin: EdgeInsets.symmetric(vertical: 4.0),
+        child: ListTile(
+          title: Text('Loading...'),
+          trailing: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    final displayText = _vehicle?.displayName ?? 'Add Vehicle';
+    final subtitle =
+        _vehicle?.color != null ? 'Color: ${_vehicle!.color}' : null;
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      child: ListTile(
+        leading: const Icon(Icons.directions_car),
+        title: Text(displayText),
+        subtitle: subtitle != null ? Text(subtitle) : null,
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _navigateToCarInfo,
       ),
     );
   }
@@ -41,15 +142,18 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildListItem(String title) {
+  Widget _buildListItem(String title, {VoidCallback? onTap}) {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       child: ListTile(
         title: Text(title),
-        onTap: () {
-          // Handle item tap
-        },
+        trailing: const Icon(Icons.chevron_right),
+        onTap:
+            onTap ??
+            () {
+              // Handle item tap
+            },
       ),
     );
   }

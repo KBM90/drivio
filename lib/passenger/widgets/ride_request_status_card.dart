@@ -23,97 +23,76 @@ class RideRequestStatusWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Map<String, dynamic>?>(
-      stream: rideRequest.watchStatus(),
-      builder: (context, snapshot) {
-        // Handle loading state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    // ✅ No StreamBuilder needed - provider already handles real-time updates
+    // The rideRequest is updated by PassengerRideRequestProvider
+    final currentStatus = rideRequest.status;
+    final qrCode = rideRequest.qrCode;
+    final qrCodeScanned = rideRequest.qrCodeScanned ?? false;
 
-        // Handle errors
-        if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        }
-
-        // Handle missing or empty document
-        if (!snapshot.hasData || snapshot.data == null) {
-          return const Center(child: Text("No status data available"));
-        }
-
-        // ✅ Safely get Firestore data
-        final data = snapshot.data!;
-        final currentStatus = data['status'] ?? 'pending';
-        final qrCode = data['qrCode'] as String?;
-        final qrCodeScanned = data['qrCodeScanned'] as bool? ?? false;
-        return Container(
-          margin: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Status Header
-              _buildStatusHeader(currentStatus),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Status Header
+          _buildStatusHeader(currentStatus!),
 
-              // Content
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    // ✅ QR Code Section (when driver arrived)
-                    if (currentStatus == 'arrived' &&
-                        qrCode != null &&
-                        !qrCodeScanned)
-                      _buildQrCodeSection(qrCode),
-                    // Driver Info or Searching
-                    if (currentStatus == 'pending' ||
-                        currentStatus == 'cancelled_by_driver')
-                      _buildSearchingDriver(),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // ✅ QR Code Section (when driver arrived)
+                if (currentStatus == 'arrived' &&
+                    qrCode != null &&
+                    !qrCodeScanned)
+                  _buildQrCodeSection(qrCode),
+                // Driver Info or Searching
+                if (currentStatus == 'pending' ||
+                    currentStatus == 'cancelled_by_driver')
+                  _buildSearchingDriver(),
 
-                    if (currentStatus == 'accepted')
-                      _buildDriverInfo(
-                        context,
-                        data['driverName'],
-                        int.parse(
-                          data['driverId'],
-                        ), //which refers to driver->user->id
-                      ),
+                if (currentStatus == 'accepted')
+                  _buildDriverInfo(
+                    context,
+                    rideRequest.driver?.user?.name ?? 'Driver',
+                    rideRequest.driver?.userId ?? 0,
+                  ),
 
-                    const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                    // Progress Bar (only for accepted status)
-                    if (currentStatus == 'accepted')
-                      _buildProgressBar(context, int.parse(data['driverId'])),
+                // Progress Bar (only for accepted status)
+                if (currentStatus == 'accepted')
+                  _buildProgressBar(context, rideRequest.driver?.userId ?? 0),
 
-                    const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                    // Trip Details
-                    _buildTripDetails(),
+                // Trip Details
+                _buildTripDetails(),
 
-                    const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                    // Action Buttons
-                    if (currentStatus == 'accepted' ||
-                        currentStatus == 'cancelled_by_driver' ||
-                        currentStatus == 'pending')
-                      _buildActionButtons(context, currentStatus, rideRequest),
-                  ],
-                ),
-              ),
-            ],
+                // Action Buttons
+                if (currentStatus == 'accepted' ||
+                    currentStatus == 'cancelled_by_driver' ||
+                    currentStatus == 'pending')
+                  _buildActionButtons(context, currentStatus, rideRequest),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 

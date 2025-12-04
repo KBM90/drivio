@@ -49,6 +49,8 @@ RideRequest _$RideRequestFromJson(Map<String, dynamic> json) => RideRequest(
       json['updated_at'] == null
           ? null
           : DateTime.parse(json['updated_at'] as String),
+  qrCode: json['qr_code'] as String?,
+  qrCodeScanned: json['qr_code_scanned'] as bool?,
 );
 
 Map<String, dynamic> _$RideRequestToJson(RideRequest instance) =>
@@ -71,4 +73,6 @@ Map<String, dynamic> _$RideRequestToJson(RideRequest instance) =>
       'accepted_at': instance.acceptedAt?.toIso8601String(),
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
+      'qr_code': instance.qrCode,
+      'qr_code_scanned': instance.qrCodeScanned,
     };
