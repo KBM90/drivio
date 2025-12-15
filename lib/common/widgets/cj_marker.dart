@@ -5,7 +5,7 @@ import 'dart:math' as math;
 class CJMarker extends StatefulWidget {
   final double rotation;
 
-  const CJMarker({Key? key, this.rotation = 0}) : super(key: key);
+  const CJMarker({super.key, this.rotation = 0});
 
   @override
   State<CJMarker> createState() => _CJMarkerState();

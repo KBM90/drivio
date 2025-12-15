@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:drivio_app/common/helpers/osrm_services.dart';
-import 'package:drivio_app/common/screens/chat_screen.dart';
 import 'package:drivio_app/common/widgets/distance_progress_widget.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
@@ -9,7 +8,6 @@ import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/services/notifications_services.dart';
 import 'package:drivio_app/driver/ui/modals/trip_guide_modal.dart';
-import 'package:drivio_app/driver/ui/screens/passenger_profile.dart';
 import 'package:drivio_app/driver/ui/widgets/preferences_button.dart';
 import 'package:drivio_app/driver/ui/widgets/recommanded_for_you_button.dart';
 import 'package:flutter/material.dart';

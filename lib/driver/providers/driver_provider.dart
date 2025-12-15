@@ -78,13 +78,18 @@ class DriverProvider extends ChangeNotifier {
                 "⚠️ Ride $currentRideId does not belong to this driver",
               );
               shouldReset = true;
-            } else if (ride['status'] == 'cancelled_by_driver' ||
-                ride['status'] == 'cancelled_by_passenger' ||
-                ride['status'] == 'completed') {
-              debugPrint("⚠️ Ride $currentRideId is ${ride['status']}");
+            } else if (ride['status'] != 'accepted' &&
+                ride['status'] != 'arrived' &&
+                ride['status'] != 'in_progress') {
+              // Only keep driver as on_trip if ride is in active states
+              debugPrint(
+                "⚠️ Ride $currentRideId has invalid status for on_trip: ${ride['status']}",
+              );
               shouldReset = true;
             } else {
-              debugPrint("✅ Ride $currentRideId is valid: ${ride['status']}");
+              debugPrint(
+                "✅ Ride $currentRideId is valid with status: ${ride['status']}",
+              );
             }
           } catch (e) {
             debugPrint("⚠️ Error checking ride in database: $e");

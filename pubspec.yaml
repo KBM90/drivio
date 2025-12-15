@@ -68,7 +68,9 @@ dependencies:
   image_picker: ^1.2.1
   webview_flutter: ^4.10.0
   audioplayers: ^6.1.0
+  #flutter_soloud: ^3.4.6 maybe better than audioplayers
   fl_chart: ^0.69.0
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:

@@ -6,6 +6,7 @@ import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/common/models/location.dart';
 import 'package:drivio_app/common/providers/map_reports_provider.dart';
 import 'package:drivio_app/common/widgets/cached_tile_layer.dart';
+import 'package:drivio_app/driver/providers/destination_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/driver_passenger_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
@@ -40,9 +41,11 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   late DriverLocationProvider locationProvider;
   late RideRequestsProvider rideRequestsProvider;
   late DriverProvider driverProvider;
+  late DestinationProvider destinationProvider;
   Timer? _debounce;
   LatLng? _destination;
   LatLng? _pickup;
+  List<LatLng> _searchDestinationRoute = []; // Route to search destination
 
   bool _hasLoadedRideRequest = false;
   bool _hasInitialFetchDone = false;
@@ -62,9 +65,16 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     );
 
     driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    destinationProvider = Provider.of<DestinationProvider>(
+      context,
+      listen: false,
+    );
 
     // Listen to driver updates to handle async loading
     driverProvider.addListener(_onDriverChanged);
+
+    // Listen to destination changes
+    destinationProvider.addListener(_onDestinationChanged);
 
     // Check immediately in case driver is already loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -81,7 +91,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     // Check driver status
     debugPrint("🔍 _onDriverChanged - Driver Status is: ${driver.status}");
 
-    // Clear routes when driver goes inactive
+    // Clear routes when driver goes inactive OR when active without a ride request
     if (driver.status == DriverStatus.inactive) {
       if (_routePolyline.isNotEmpty || _destination != null) {
         setState(() {
@@ -90,6 +100,21 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
           _destination = null;
           _pickup = null;
         });
+      }
+    } else if (driver.status == DriverStatus.active) {
+      // Clear ride request routes if there's no current ride request
+      if (rideRequestsProvider.currentRideRequest == null) {
+        if (_routePolyline.isNotEmpty || _destination != null) {
+          debugPrint(
+            "🗑️ Clearing routes - driver is active but no ride request",
+          );
+          setState(() {
+            _routePolyline = [];
+            _routePolylineDriverToPickup = [];
+            _destination = null;
+            _pickup = null;
+          });
+        }
       }
     }
 
@@ -140,6 +165,85 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       debugPrint("❌ Error loading current ride request: $e");
       await ChangeStatus().goOffline();
       await SharedPreferencesHelper.remove("currentRideId");
+    }
+  }
+
+  Future<void> _onDestinationChanged() async {
+    debugPrint('🔔 _onDestinationChanged called');
+    debugPrint('   mounted: $mounted, _isMapReady: $_isMapReady');
+
+    if (!mounted) {
+      debugPrint('   ⚠️ Widget not mounted, skipping');
+      return;
+    }
+
+    if (!_isMapReady) {
+      debugPrint('   ⚠️ Map not ready, will retry when ready');
+      // Schedule retry when map becomes ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _isMapReady) {
+          _onDestinationChanged();
+        }
+      });
+      return;
+    }
+
+    final destination = destinationProvider.selectedDestination;
+    final driverLocation = locationProvider.currentLocation;
+
+    debugPrint('   destination: $destination');
+    debugPrint('   driverLocation: $driverLocation');
+
+    if (destination == null || driverLocation == null) {
+      // Clear route if destination is cleared
+      if (mounted) {
+        setState(() {
+          _searchDestinationRoute = [];
+        });
+      }
+      return;
+    }
+
+    debugPrint(
+      '🗺️ Fetching route to search destination: ${destinationProvider.destinationName}',
+    );
+
+    try {
+      // Fetch route from driver to destination
+      final route = await _osrmService.getRouteBetweenPickupAndDropoff(
+        driverLocation,
+        destination,
+        context,
+      );
+
+      if (mounted) {
+        setState(() {
+          _searchDestinationRoute = route;
+        });
+
+        // Update provider with route
+        destinationProvider.setRoute(route);
+
+        // Fit camera to show route with a small delay to ensure rendering
+        if (route.isNotEmpty) {
+          await Future.delayed(const Duration(milliseconds: 300));
+          if (mounted && _isMapReady) {
+            final allPoints = [driverLocation, ...route];
+            final bounds = LatLngBounds.fromPoints(allPoints);
+            _mapController.fitCamera(
+              CameraFit.bounds(
+                bounds: bounds,
+                padding: const EdgeInsets.all(
+                  80,
+                ), // Increased padding for better visibility
+              ),
+            );
+            debugPrint('📷 Camera fitted to show entire route');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching route to destination: $e');
     }
   }
 
@@ -196,6 +300,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     _debounce?.cancel();
     locationProvider.removeListener(_onLocationUpdate);
     driverProvider.removeListener(_onDriverChanged);
+    destinationProvider.removeListener(_onDestinationChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -721,6 +826,31 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                           9,
                         ), // Pickup to Destination in Black
                         strokeWidth: 4,
+                      ),
+                    ],
+                  ),
+                // Search Destination Route (Green)
+                if (_searchDestinationRoute.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _searchDestinationRoute,
+                        color: Colors.green, // Search destination in Green
+                        strokeWidth: 4,
+                      ),
+                    ],
+                  ),
+                // Search Destination Marker
+                if (destinationProvider.selectedDestination != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: destinationProvider.selectedDestination!,
+                        child: const Icon(
+                          Icons.place,
+                          size: 45,
+                          color: Colors.green,
+                        ),
                       ),
                     ],
                   ),

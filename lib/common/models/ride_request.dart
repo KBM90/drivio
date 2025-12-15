@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drivio_app/common/models/payment_method.dart';
 import 'package:drivio_app/common/models/transporttype.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/passenger/models/passenger.dart';
@@ -24,6 +25,8 @@ class RideRequest {
   final int? paymentMethodId;
   @JsonKey(name: 'transport_type')
   final TransportType? transportType; // Add this field
+  @JsonKey(name: 'payment_method')
+  final PaymentMethod? paymentMethod; // Add this field
 
   final String? status;
   final double? price;
@@ -57,6 +60,7 @@ class RideRequest {
     required this.transportTypeId,
     required this.paymentMethodId,
     this.transportType, // Add to constructor
+    this.paymentMethod, // Add to constructor
     required this.status,
     this.price,
     required this.pickupLocation,
@@ -80,6 +84,7 @@ class RideRequest {
     required this.transportTypeId,
     required this.paymentMethodId,
     this.transportType,
+    this.paymentMethod,
     required this.status,
     this.price,
     required this.pickupLocation,
@@ -107,6 +112,10 @@ class RideRequest {
               ? TransportType.fromJson(json['transport_type'])
               : null,
       paymentMethodId: json['payment_method_id'],
+      paymentMethod:
+          json['payment_method'] != null
+              ? PaymentMethod.fromJson(json['payment_method'])
+              : null,
 
       status: json['status'] ?? '',
       price: (json['price'] as num?)?.toDouble(),
@@ -114,8 +123,14 @@ class RideRequest {
           json['preferences'] is Map<String, dynamic>
               ? json['preferences']
               : {},
-      distanceKm: (json['distance_km'] as num?)?.toDouble(),
-      estimatedTimeMin: (json['estimated_time_min'] as num?)?.toInt(),
+      // Handle both database column names (distance) and model field names (distance_km)
+      distanceKm:
+          (json['distance_km'] as num?)?.toDouble() ??
+          (json['distance'] as num?)?.toDouble(),
+      // Handle both database column names (duration) and model field names (estimated_time_min)
+      estimatedTimeMin:
+          (json['estimated_time_min'] as num?)?.toInt() ??
+          (json['duration'] as num?)?.toInt(),
 
       requestedAt:
           json['requested_at'] != null
@@ -124,6 +139,14 @@ class RideRequest {
       acceptedAt:
           json['accepted_at'] != null
               ? DateTime.parse(json['accepted_at'])
+              : null,
+      createdAt:
+          json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : null,
+      updatedAt:
+          json['updated_at'] != null
+              ? DateTime.parse(json['updated_at'])
               : null,
       pickupLocation:
           json['pickup_location'] != null
@@ -224,6 +247,7 @@ class RideRequest {
     int? transportTypeId,
     int? paymentMethodId,
     TransportType? transportType,
+    PaymentMethod? paymentMethod,
     String? status,
     double? price,
     Location? pickupLocation,
@@ -246,6 +270,7 @@ class RideRequest {
       transportTypeId: transportTypeId ?? this.transportTypeId,
       paymentMethodId: paymentMethodId ?? this.paymentMethodId,
       transportType: transportType ?? this.transportType,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       status: status ?? this.status,
       price: price ?? this.price,
       pickupLocation: pickupLocation ?? this.pickupLocation,

@@ -5,6 +5,7 @@ import '../../models/car_expense.dart';
 import '../../services/car_expense_service.dart';
 import '../../../common/services/auth_service.dart';
 import '../../../common/services/earnings_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CarExpenseCalculatorScreen extends StatefulWidget {
   const CarExpenseCalculatorScreen({super.key});
@@ -26,9 +27,10 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
   DateTime _selectedMonth = DateTime.now();
 
   // Fuel calculator fields
-  final TextEditingController _fuelLitersController = TextEditingController();
-  final TextEditingController _fuelCostController = TextEditingController();
-  final TextEditingController _distanceController = TextEditingController();
+  final TextEditingController _fuelPriceController = TextEditingController();
+  double _totalDistanceTraveled = 0.0;
+  double? _vehicleAverageConsumption; // L/100km from vehicle's car brand
+  String _vehicleDisplayName = 'Loading...';
 
   @override
   void initState() {
@@ -40,9 +42,7 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _fuelLitersController.dispose();
-    _fuelCostController.dispose();
-    _distanceController.dispose();
+    _fuelPriceController.dispose();
     super.dispose();
   }
 
@@ -83,6 +83,8 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
         _expenses = expenses;
         _isLoading = false;
       });
+      await _loadTotalDistance();
+      await _loadVehicleData();
     } catch (e) {
       print('❌ Error loading expenses: $e');
       setState(() => _isLoading = false);
@@ -99,6 +101,61 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
       _isLoading = true;
     });
     _loadExpenses();
+  }
+
+  Future<void> _loadTotalDistance() async {
+    if (_driverId == null) return;
+
+    try {
+      final response = await Supabase.instance.client
+          .from('ride_details')
+          .select('distance')
+          .eq('driver_id', _driverId!);
+
+      final totalDistance = (response as List).fold<double>(
+        0.0,
+        (sum, record) =>
+            sum + ((record['distance'] as num?)?.toDouble() ?? 0.0),
+      );
+
+      setState(() {
+        _totalDistanceTraveled = totalDistance;
+      });
+    } catch (e) {
+      print('❌ Error loading total distance: $e');
+    }
+  }
+
+  Future<void> _loadVehicleData() async {
+    if (_driverId == null) return;
+
+    try {
+      final response =
+          await Supabase.instance.client
+              .from('vehicles')
+              .select('*, car_brands(*)')
+              .eq('driver_id', _driverId!)
+              .eq('status', true)
+              .maybeSingle();
+
+      if (response != null && response['car_brands'] != null) {
+        final carBrand = response['car_brands'];
+        setState(() {
+          _vehicleAverageConsumption =
+              (carBrand['average_consumption'] as num?)?.toDouble();
+          _vehicleDisplayName = '${carBrand['company']} ${carBrand['model']}';
+        });
+      } else {
+        setState(() {
+          _vehicleDisplayName = 'No vehicle registered';
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading vehicle data: $e');
+      setState(() {
+        _vehicleDisplayName = 'Error loading vehicle';
+      });
+    }
   }
 
   @override
@@ -120,6 +177,13 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Car Expense Calculator'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: 'Reset All Expenses',
+            onPressed: _showResetConfirmationDialog,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -169,33 +233,102 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 20),
-                  TextField(
-                    controller: _fuelLitersController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Fuel Amount (Liters)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.local_gas_station),
+                  // Display vehicle information
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.directions_car, color: Colors.blue),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Your Vehicle',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _vehicleDisplayName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_vehicleAverageConsumption != null)
+                                Text(
+                                  'Avg: ${_vehicleAverageConsumption!.toStringAsFixed(2)} L/100km',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // Fuel price input
                   TextField(
-                    controller: _fuelCostController,
+                    controller: _fuelPriceController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: 'Fuel Cost (\$)',
+                      labelText: 'Fuel Price per Liter (\$)',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.attach_money),
+                      helperText: 'Enter current fuel price',
                     ),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _distanceController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Distance Traveled (km)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.route),
+                  // Display total distance from completed rides (read-only)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.route, color: Colors.grey),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Total Distance Traveled',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${_totalDistanceTraveled.toStringAsFixed(2)} km',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.info_outline,
+                          color: Colors.blue,
+                          size: 20,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -307,25 +440,43 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
   }
 
   void _calculateFuelMetrics() {
-    final liters = double.tryParse(_fuelLitersController.text);
-    final cost = double.tryParse(_fuelCostController.text);
-    final distance = double.tryParse(_distanceController.text);
+    final fuelPrice = double.tryParse(_fuelPriceController.text);
+    final distance = _totalDistanceTraveled;
+    final avgConsumption = _vehicleAverageConsumption;
 
-    if (liters == null || cost == null || distance == null) {
+    if (fuelPrice == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter valid numbers')),
+        const SnackBar(content: Text('Please enter fuel price per liter')),
       );
       return;
     }
 
     if (distance == 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Distance cannot be zero')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No distance data available. Complete some rides first.',
+          ),
+        ),
+      );
       return;
     }
 
-    final consumption = (liters / distance) * 100;
+    if (avgConsumption == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Vehicle average consumption not available. Please update your vehicle information.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Calculate fuel consumption automatically
+    final liters = (distance * avgConsumption) / 100;
+    final cost = liters * fuelPrice;
+    final consumption = avgConsumption; // Already in L/100km
     final costPerKm = cost / distance;
 
     showDialog(
@@ -383,9 +534,7 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
       await _expenseService.addExpense(expense);
       await _loadExpenses();
 
-      _fuelLitersController.clear();
-      _fuelCostController.clear();
-      _distanceController.clear();
+      _fuelPriceController.clear();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -912,7 +1061,7 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         DropdownButtonFormField<String>(
-                          value: selectedType,
+                          initialValue: selectedType,
                           decoration: const InputDecoration(
                             labelText: 'Expense Type',
                             border: OutlineInputBorder(),
@@ -1053,5 +1202,143 @@ class _CarExpenseCalculatorScreenState extends State<CarExpenseCalculatorScreen>
                 ),
           ),
     );
+  }
+
+  // ==================== RESET FUNCTIONALITY ====================
+  void _showResetConfirmationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => _ResetConfirmationDialog(onConfirm: _resetAllExpenses),
+    );
+  }
+
+  Future<void> _resetAllExpenses() async {
+    if (_driverId == null) return;
+
+    try {
+      await _expenseService.resetAllExpenses(_driverId!);
+      await _loadExpenses();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All expenses have been reset'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error resetting expenses: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+}
+
+// ==================== RESET CONFIRMATION DIALOG ====================
+class _ResetConfirmationDialog extends StatefulWidget {
+  final VoidCallback onConfirm;
+
+  const _ResetConfirmationDialog({required this.onConfirm});
+
+  @override
+  State<_ResetConfirmationDialog> createState() =>
+      _ResetConfirmationDialogState();
+}
+
+class _ResetConfirmationDialogState extends State<_ResetConfirmationDialog> {
+  int _countdown = 5;
+  bool _isDeleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted && _countdown > 0) {
+        setState(() => _countdown--);
+        _startCountdown();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.warning, color: Colors.red, size: 28),
+          SizedBox(width: 8),
+          Text('Reset All Expenses?'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'This will permanently delete ALL car expense records.',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'This action cannot be undone!',
+            style: TextStyle(color: Colors.red),
+          ),
+          if (_countdown > 0) const SizedBox(height: 16),
+          if (_countdown > 0)
+            Center(
+              child: Text(
+                'Please wait $_countdown second${_countdown != 1 ? 's' : ''}...',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isDeleting ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _countdown == 0 && !_isDeleting ? _handleDelete : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            disabledBackgroundColor: Colors.grey,
+          ),
+          child:
+              _isDeleting
+                  ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                  : const Text('Delete All'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleDelete() async {
+    setState(() => _isDeleting = true);
+    Navigator.pop(context);
+    widget.onConfirm();
   }
 }

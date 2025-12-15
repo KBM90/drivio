@@ -34,18 +34,20 @@ class MessagingService {
         senderRole: senderRole,
       );
 
-      // Add message to messages table
-      await _supabase.from('messages').insert(messageData.toMap());
-
-      // Update or create chat metadata
+      // IMPORTANT: Create or update chat FIRST before inserting message
+      // This ensures the chat exists for the foreign key constraint
       await _supabase.from('chats').upsert({
         'id': chatId,
         'participants': [senderId, receiverId],
         'last_message': message,
         'last_message_time': DateTime.now().toUtc().toIso8601String(),
         'last_sender_id': senderId,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
+
+      // Now insert the message (chat exists, so foreign key is satisfied)
+      await _supabase.from('messages').insert(messageData.toMap());
 
       debugPrint('✅ Message sent successfully');
       return true;

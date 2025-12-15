@@ -11,6 +11,7 @@ import 'package:drivio_app/driver/ui/screens/qr_scanner_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TripInfoPanel extends StatefulWidget {
   final RideRequest rideRequest;
@@ -25,10 +26,12 @@ class _TripInfoPanelState extends State<TripInfoPanel> {
   final OSRMService _osrmService = OSRMService();
   String _pickupAddress = "Loading...";
   String _dropoffAddress = "Loading...";
+  String _currentStatus = '';
 
   @override
   void initState() {
     super.initState();
+    _currentStatus = widget.rideRequest.status ?? '';
     _fetchAddresses();
   }
 
@@ -84,15 +87,17 @@ class _TripInfoPanelState extends State<TripInfoPanel> {
 
   void _startArrivedCooldown() {
     setState(() {
-      _arrivedCooldown = 4; // 60 seconds cooldown
+      _arrivedCooldown = 4; // 4 seconds cooldown
     });
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_arrivedCooldown > 0) {
-        setState(() {
-          _arrivedCooldown--;
-        });
+        if (mounted) {
+          setState(() {
+            _arrivedCooldown--;
+          });
+        }
       } else {
         timer.cancel();
       }
@@ -104,6 +109,29 @@ class _TripInfoPanelState extends State<TripInfoPanel> {
     final driverProvider = Provider.of<DriverProvider>(context);
     final passenger = widget.rideRequest.passenger;
 
+    // Listen to real-time updates for this ride request
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: Supabase.instance.client
+          .from('ride_requests')
+          .stream(primaryKey: ['id'])
+          .eq('id', widget.rideRequest.id),
+      builder: (context, snapshot) {
+        // Update current status from stream
+        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+          final rideData = snapshot.data!.first;
+          _currentStatus = rideData['status'] as String;
+        }
+
+        return _buildPanel(context, driverProvider, passenger);
+      },
+    );
+  }
+
+  Widget _buildPanel(
+    BuildContext context,
+    DriverProvider driverProvider,
+    dynamic passenger,
+  ) {
     return DraggableScrollableSheet(
       initialChildSize: 0.35, // Start at 35% of screen height
       minChildSize: 0.2, // Minimum 20% when collapsed
@@ -270,7 +298,7 @@ class _TripInfoPanelState extends State<TripInfoPanel> {
               const SizedBox(height: 25),
 
               // Actions
-              if (widget.rideRequest.status == 'accepted')
+              if (_currentStatus == 'accepted' || _currentStatus == 'arrived')
                 Row(
                   children: [
                     Expanded(
@@ -290,7 +318,7 @@ class _TripInfoPanelState extends State<TripInfoPanel> {
                                     if (!context.mounted) return;
                                     showSnackBar(
                                       context,
-                                      "You have arrived at the pickup location",
+                                      "Passenger notified that you have arrived",
                                       backgroundColor: Colors.green,
                                     );
                                   } catch (e) {
@@ -311,7 +339,9 @@ class _TripInfoPanelState extends State<TripInfoPanel> {
                         ),
                         child: Text(
                           _arrivedCooldown > 0
-                              ? "I've Arrived ($_arrivedCooldown s)"
+                              ? "Notify Passenger ($_arrivedCooldown s)"
+                              : _currentStatus == 'arrived'
+                              ? "Notify Passenger Again"
                               : "I've Arrived",
                         ),
                       ),
@@ -319,53 +349,56 @@ class _TripInfoPanelState extends State<TripInfoPanel> {
                   ],
                 ),
 
-              if (widget.rideRequest.status == 'arrived')
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          // Open QR Scanner
-                          final scannedCode = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const QRScannerScreen(),
-                            ),
-                          );
+              if (_currentStatus == 'arrived')
+                Padding(
+                  padding: const EdgeInsets.only(top: 15),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            // Open QR Scanner
+                            final scannedCode = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const QRScannerScreen(),
+                              ),
+                            );
 
-                          if (scannedCode != null && context.mounted) {
-                            try {
-                              await RideRequestService.startTrip(
-                                widget.rideRequest.id,
-                                scannedCode,
-                              );
-                              if (!context.mounted) return;
-                              showSnackBar(
-                                context,
-                                "Trip started successfully!",
-                                backgroundColor: Colors.green,
-                              );
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              showSnackBar(context, e.toString());
+                            if (scannedCode != null && context.mounted) {
+                              try {
+                                await RideRequestService.startTrip(
+                                  widget.rideRequest.id,
+                                  scannedCode,
+                                );
+                                if (!context.mounted) return;
+                                showSnackBar(
+                                  context,
+                                  "Trip started successfully!",
+                                  backgroundColor: Colors.green,
+                                );
+                              } catch (e) {
+                                if (!context.mounted) return;
+                                showSnackBar(context, e.toString());
+                              }
                             }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
+                          child: const Text("Start Trip (Scan QR)"),
                         ),
-                        child: const Text("Start Trip (Scan QR)"),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
 
-              if (widget.rideRequest.status == 'in_progress')
+              if (_currentStatus == 'in_progress')
                 Row(
                   children: [
                     Expanded(
@@ -387,9 +420,9 @@ class _TripInfoPanelState extends State<TripInfoPanel> {
                   ],
                 ),
 
-              if (widget.rideRequest.status == 'accepted' ||
-                  widget.rideRequest.status == 'arrived' ||
-                  widget.rideRequest.status == 'in_progress')
+              if (_currentStatus == 'accepted' ||
+                  _currentStatus == 'arrived' ||
+                  _currentStatus == 'in_progress')
                 Padding(
                   padding: const EdgeInsets.only(top: 15),
                   child: Row(

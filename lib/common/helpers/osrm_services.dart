@@ -78,22 +78,30 @@ class OSRMService {
   }
 
   Future<String> getPlaceName(double? lat, double? lng) async {
-    final String url =
-        "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng";
+    try {
+      final String url =
+          "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng";
 
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        "User-Agent": "Drivio", // Required by Nominatim API
-      },
-    );
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: {
+              "User-Agent": "Drivio", // Required by Nominatim API
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-
-      return getValidPlaceName(data);
-    } else {
-      return "Error fetching location";
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return getValidPlaceName(data);
+      } else {
+        debugPrint("⚠️ Nominatim API returned status: ${response.statusCode}");
+        return "Location unavailable";
+      }
+    } catch (e) {
+      debugPrint("❌ Error fetching place name: $e");
+      // Return a fallback message instead of throwing
+      return "Location unavailable";
     }
   }
 
@@ -390,14 +398,20 @@ class OSRMService {
               properties['street'] ??
               "Unknown";
 
+          // Extract type/category information
+          String? type = properties['type'] ?? properties['osm_value'];
+          String? osmKey = properties['osm_key'];
+
           // Construct a display name
           List<String> displayParts = [];
           if (properties['name'] != null) displayParts.add(properties['name']);
-          if (properties['street'] != null)
+          if (properties['street'] != null) {
             displayParts.add(properties['street']);
+          }
           if (properties['city'] != null) displayParts.add(properties['city']);
-          if (properties['country'] != null)
+          if (properties['country'] != null) {
             displayParts.add(properties['country']);
+          }
 
           String displayName = displayParts.toSet().join(
             ', ',
@@ -406,8 +420,10 @@ class OSRMService {
           return {
             'name': name,
             'display_name': displayName,
-            'lat': coordinates[1].toString(),
-            'lon': coordinates[0].toString(),
+            'lat': coordinates[1].toDouble(),
+            'lon': coordinates[0].toDouble(),
+            'type': type,
+            'osm_key': osmKey,
           };
         }).toList();
       }

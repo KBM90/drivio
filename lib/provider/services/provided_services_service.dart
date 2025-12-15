@@ -71,8 +71,6 @@ class ProvidedServicesService {
           .eq('provider_id', providerId)
           .order('created_at', ascending: false);
 
-      if (response == null) return [];
-
       // Debug: Print raw response to see what data we're getting
       debugPrint('🔍 Raw response from getProviderServices:');
       for (var item in (response as List)) {
@@ -102,8 +100,6 @@ class ProvidedServicesService {
       }
 
       final response = await query.order('rating', ascending: false);
-
-      if (response == null) return [];
 
       return (response as List)
           .map((e) => ServiceProvider.fromJson(e))

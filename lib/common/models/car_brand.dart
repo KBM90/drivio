@@ -4,6 +4,7 @@ class CarBrand {
   final String model;
   final String? thumbnailImage;
   final String? category;
+  final double? averageConsumption; // L/100km
 
   CarBrand({
     required this.id,
@@ -11,6 +12,7 @@ class CarBrand {
     required this.model,
     this.thumbnailImage,
     this.category,
+    this.averageConsumption,
   });
 
   factory CarBrand.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class CarBrand {
       model: json['model'] as String,
       thumbnailImage: json['thumbnail_image'] as String?,
       category: json['category'] as String?,
+      averageConsumption: (json['average_consumption'] as num?)?.toDouble(),
     );
   }
 
@@ -30,6 +33,7 @@ class CarBrand {
       'model': model,
       'thumbnail_image': thumbnailImage,
       'category': category,
+      'average_consumption': averageConsumption,
     };
   }
 }

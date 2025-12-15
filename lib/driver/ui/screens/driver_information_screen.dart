@@ -18,7 +18,6 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _rangeController = TextEditingController();
 
   bool _isLoading = true;
   bool _isSaving = false;
@@ -30,41 +29,6 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
   // Gender
   String? _selectedGender;
   final List<String> _genders = ['male', 'female'];
-
-  // Preferences
-  bool _smoking = false;
-  List<String> _selectedLanguages = [];
-  List<String> _selectedMusicStyles = [];
-
-  final List<String> _availableLanguages = [
-    'Arabic',
-    'English',
-    'Tamazight',
-    'French',
-    'Spanish',
-    'German',
-    'Italian',
-    'Chinese',
-    'Japanese',
-    'Portuguese',
-    'Russian',
-  ];
-
-  final List<String> _availableMusicStyles = [
-    'Pop',
-    'Rock',
-    'Jazz',
-    'Classical',
-    'Hip Hop',
-    'R&B',
-    'Rai',
-    'Soul',
-    'Electronic',
-    'Country',
-    'Reggae',
-    'Blues',
-    'Rap',
-  ];
 
   // Driver documents
   final List<DriverDocument> _documents = [];
@@ -97,18 +61,6 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
         debugPrint('✅ Name field set to: ${_nameController.text}');
       } else {
         debugPrint('⚠️ User is null!');
-      }
-
-      if (_driver != null) {
-        _rangeController.text = _driver!.range?.toString() ?? '5.0';
-
-        // Load preferences from metadata
-        final prefs = _driver!.preferences;
-        if (prefs != null) {
-          _smoking = prefs['smoking'] == true;
-          _selectedLanguages = List<String>.from(prefs['languages'] ?? []);
-          _selectedMusicStyles = List<String>.from(prefs['music_styles'] ?? []);
-        }
       }
 
       // Load driver documents
@@ -150,13 +102,6 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
         );
       }
 
-      // Prepare preferences metadata
-      final preferences = {
-        'smoking': _smoking,
-        'languages': _selectedLanguages,
-        'music_styles': _selectedMusicStyles,
-      };
-
       // Update user information (users table)
       await DriverService.updateUserInfo(
         name: _nameController.text.trim(),
@@ -165,12 +110,7 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
         profileImagePath: profileImageUrl,
       );
 
-      // Update driver information (drivers table)
-      final range = double.tryParse(_rangeController.text);
-      await DriverService.updateDriverInfo(
-        range: range,
-        preferences: preferences,
-      );
+      // No driver-specific info to update currently
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -202,108 +142,6 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
     }
   }
 
-  void _showAddLanguageDialog() {
-    final availableToAdd =
-        _availableLanguages
-            .where((lang) => !_selectedLanguages.contains(lang))
-            .toList();
-
-    if (availableToAdd.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All languages already selected')),
-      );
-      return;
-    }
-
-    String? selectedLanguage;
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Add Language'),
-            content: DropdownButtonFormField<String>(
-              value: selectedLanguage,
-              decoration: const InputDecoration(
-                labelText: 'Select Language',
-                border: OutlineInputBorder(),
-              ),
-              items:
-                  availableToAdd.map((lang) {
-                    return DropdownMenuItem(value: lang, child: Text(lang));
-                  }).toList(),
-              onChanged: (value) => selectedLanguage = value,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (selectedLanguage != null) {
-                    setState(() => _selectedLanguages.add(selectedLanguage!));
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Add'),
-              ),
-            ],
-          ),
-    );
-  }
-
-  void _showAddMusicStyleDialog() {
-    final availableToAdd =
-        _availableMusicStyles
-            .where((style) => !_selectedMusicStyles.contains(style))
-            .toList();
-
-    if (availableToAdd.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All music styles already selected')),
-      );
-      return;
-    }
-
-    String? selectedStyle;
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Add Music Style'),
-            content: DropdownButtonFormField<String>(
-              value: selectedStyle,
-              decoration: const InputDecoration(
-                labelText: 'Select Music Style',
-                border: OutlineInputBorder(),
-              ),
-              items:
-                  availableToAdd.map((style) {
-                    return DropdownMenuItem(value: style, child: Text(style));
-                  }).toList(),
-              onChanged: (value) => selectedStyle = value,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (selectedStyle != null) {
-                    setState(() => _selectedMusicStyles.add(selectedStyle!));
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Add'),
-              ),
-            ],
-          ),
-    );
-  }
-
   Future<void> _showAddDocumentDialog() async {
     String? selectedDocType;
     DateTime? expiryDate;
@@ -325,7 +163,7 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       DropdownButtonFormField<String>(
-                        value: selectedDocType,
+                        initialValue: selectedDocType,
                         decoration: const InputDecoration(
                           labelText: 'Document Type',
                           border: OutlineInputBorder(),
@@ -593,7 +431,7 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
 
                       // Gender
                       DropdownButtonFormField<String>(
-                        value: _selectedGender,
+                        initialValue: _selectedGender,
                         decoration: const InputDecoration(
                           labelText: 'Gender',
                           border: OutlineInputBorder(),
@@ -612,156 +450,6 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
                         onChanged: (value) {
                           setState(() => _selectedGender = value);
                         },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Range
-                      TextFormField(
-                        controller: _rangeController,
-                        decoration: const InputDecoration(
-                          labelText: 'Range (km)',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.radar),
-                          suffixText: 'km',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter range';
-                          }
-                          final range = double.tryParse(value);
-                          if (range == null || range <= 0) {
-                            return 'Please enter a valid range';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Preferences Section
-                      const Text(
-                        'Preferences',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Smoking
-                      Card(
-                        child: SwitchListTile(
-                          title: const Text('Smoking'),
-                          subtitle: Text(_smoking ? 'Yes' : 'No'),
-                          value: _smoking,
-                          onChanged: (value) {
-                            setState(() => _smoking = value);
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Languages
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Languages',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle),
-                                    onPressed: _showAddLanguageDialog,
-                                  ),
-                                ],
-                              ),
-                              if (_selectedLanguages.isEmpty)
-                                const Text(
-                                  'No languages selected',
-                                  style: TextStyle(color: Colors.grey),
-                                )
-                              else
-                                Wrap(
-                                  spacing: 8,
-                                  children:
-                                      _selectedLanguages.map((lang) {
-                                        return Chip(
-                                          label: Text(lang),
-                                          onDeleted: () {
-                                            setState(
-                                              () => _selectedLanguages.remove(
-                                                lang,
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      }).toList(),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Music Styles
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Music Styles',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle),
-                                    onPressed: _showAddMusicStyleDialog,
-                                  ),
-                                ],
-                              ),
-                              if (_selectedMusicStyles.isEmpty)
-                                const Text(
-                                  'No music styles selected',
-                                  style: TextStyle(color: Colors.grey),
-                                )
-                              else
-                                Wrap(
-                                  spacing: 8,
-                                  children:
-                                      _selectedMusicStyles.map((style) {
-                                        return Chip(
-                                          label: Text(style),
-                                          onDeleted: () {
-                                            setState(
-                                              () => _selectedMusicStyles.remove(
-                                                style,
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      }).toList(),
-                                ),
-                            ],
-                          ),
-                        ),
                       ),
                       const SizedBox(height: 32),
 
@@ -855,7 +543,6 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
-    _rangeController.dispose();
     super.dispose();
   }
 }

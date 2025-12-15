@@ -162,7 +162,7 @@ class EarningsService {
 
       debugPrint('📊 Trip details response: $response');
 
-      if (response == null || response.isEmpty) {
+      if (response.isEmpty) {
         debugPrint('⚠️ No trips found for this day');
         return [];
       }

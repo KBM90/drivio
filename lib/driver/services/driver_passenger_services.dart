@@ -17,9 +17,14 @@ class DriverPassengerService {
           user:users(*)
         ''')
               .eq('user_id', userId)
-              .single(); // Use .single() instead of .maybeSingle() to throw if not found
+              .maybeSingle(); // Use .maybeSingle() to handle multiple or zero results
 
       debugPrint('✅ Passenger data retrieved: $response');
+
+      // Check if passenger was found
+      if (response == null) {
+        throw Exception('Passenger with user ID $userId not found');
+      }
 
       // Parse and return the Passenger object
       return Passenger.fromJson(response);

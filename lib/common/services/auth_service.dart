@@ -67,21 +67,46 @@ class AuthService {
   /// Check if the current user is banned
   static Future<bool> isUserBanned() async {
     try {
+      await ensureValidSession(); // Ensure valid session before DB call
+
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) return false;
 
-      final data =
-          await _supabase
-              .from('users')
-              .select('banned')
-              .eq('user_id', userId)
-              .maybeSingle();
+      try {
+        final data =
+            await _supabase
+                .from('users')
+                .select('banned')
+                .eq('user_id', userId)
+                .maybeSingle();
 
-      if (data == null) return false;
+        if (data == null) return false;
 
-      final isBanned = data['banned'] as bool? ?? false;
+        final isBanned = data['banned'] as bool? ?? false;
 
-      return isBanned;
+        return isBanned;
+      } on PostgrestException catch (e) {
+        // Handle JWT expiration
+        if (e.code == 'PGRST303') {
+          debugPrint(
+            '⚠️ JWT Expired during banned check. Forcing refresh and retrying...',
+          );
+
+          await ensureValidSession(forceRefresh: true);
+
+          // Retry
+          final data =
+              await _supabase
+                  .from('users')
+                  .select('banned')
+                  .eq('user_id', userId)
+                  .maybeSingle();
+
+          if (data == null) return false;
+          return data['banned'] as bool? ?? false;
+        }
+        rethrow;
+      }
     } catch (e) {
       debugPrint('❌ Error checking banned status: $e');
       return false; // Default to not banned on error
@@ -177,9 +202,9 @@ class AuthService {
         return;
       }
 
-      debugPrint(
+      /* debugPrint(
         '🔍 Session check: isExpired=${session.isExpired}, forceRefresh=$forceRefresh',
-      );
+      );*/
 
       // Refresh if expired OR forced
       if (session.isExpired || forceRefresh) {
@@ -207,7 +232,7 @@ class AuthService {
           );
         }
       } else {
-        debugPrint('✅ Session is valid');
+        ///debugPrint('✅ Session is valid');
       }
     } catch (e) {
       debugPrint('❌ Error in ensureValidSession: $e');

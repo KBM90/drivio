@@ -1,5 +1,6 @@
 import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
+import 'package:drivio_app/common/services/notification_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -211,6 +212,16 @@ class RideRequestService {
 
       debugPrint('📍 Driver arrived for ride $rideRequestId');
 
+      // First, fetch the ride request to get passenger user_id
+      final rideData =
+          await Supabase.instance.client
+              .from('ride_requests')
+              .select('*, passenger:passengers(user_id)')
+              .eq('id', rideRequestId)
+              .eq('driver_id', driverId)
+              .single();
+
+      // Update ride status to arrived
       await Supabase.instance.client
           .from('ride_requests')
           .update({
@@ -221,6 +232,20 @@ class RideRequestService {
           .eq('driver_id', driverId);
 
       debugPrint('✅ Ride status updated to arrived');
+
+      // Send notification to passenger
+      if (rideData['passenger'] != null) {
+        final passengerUserId = rideData['passenger']['user_id'] as int;
+
+        await NotificationService.sendNotificationToUser(
+          userId: passengerUserId,
+          title: '🚗 Driver has arrived!',
+          body: 'Your driver is waiting at the pickup location.',
+          data: {'type': 'driver_arrived', 'ride_request_id': rideRequestId},
+        );
+
+        debugPrint('✅ Notification sent to passenger $passengerUserId');
+      }
     } catch (e) {
       debugPrint('❌ Error updating arrival status: $e');
       throw Exception('Failed to update arrival status: $e');

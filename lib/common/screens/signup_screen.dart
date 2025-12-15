@@ -7,6 +7,7 @@ import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -27,7 +28,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _businessNameController = TextEditingController();
   Timer? _debounce;
   List<String> _citySuggestions = [];
-  OSRMService _osrmService = OSRMService();
+  final OSRMService _osrmService = OSRMService();
 
   String _selectedRole = 'passenger'; // Default role
   bool _isLoading = false;
@@ -136,6 +137,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _cityController.clear();
       _citySuggestions = [];
     });
+  }
+
+  Future<bool> _checkPhoneExists(String phone) async {
+    try {
+      final response =
+          await Supabase.instance.client
+              .from('users')
+              .select('id')
+              .eq('phone', phone)
+              .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      debugPrint('Error checking phone existence: $e');
+      return false;
+    }
   }
 
   Widget _buildCityFilter() {
@@ -292,18 +309,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    // Check if phone number already exists
+    setState(() => _isLoading = true);
+
+    try {
+      final phoneExists = await _checkPhoneExists(_userPhone!);
+      if (phoneExists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'This phone number is already registered. Please use a different number or sign in.',
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error checking phone: $e');
+      // Continue with signup even if check fails
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final normalizedCity = OSRMService().normalizeCity(_selectedCity!);
 
-      // Prepare additional data for provider role
+      // Prepare additional data for provider and carrenter roles
       Map<String, dynamic>? additionalData;
       if (_selectedRole == 'provider') {
         additionalData = {
           'business_name': _businessNameController.text.trim(),
           'provider_type': _selectedProviderType,
         };
+      } else if (_selectedRole == 'carrenter') {
+        additionalData = {'business_name': _businessNameController.text.trim()};
       }
 
       final response = await AuthService.signUpWithEmail(
@@ -595,7 +639,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   // Provider Type Dropdown
                   DropdownButtonFormField<String>(
-                    value: _selectedProviderType,
+                    initialValue: _selectedProviderType,
                     decoration: InputDecoration(
                       labelText: 'Provider Type',
                       border: OutlineInputBorder(
@@ -638,6 +682,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   const SizedBox(height: 16),
                 ],
 
+                // Car Renter-specific fields
+                if (_selectedRole == 'carrenter') ...[
+                  // Business Name Field
+                  TextFormField(
+                    controller: _businessNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Business Name (Optional)',
+                      hintText: 'Your car rental business name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.green[300]!),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.car_rental,
+                        color: Colors.green,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.green[600]!,
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.green[50],
+                    ),
+                    keyboardType: TextInputType.text,
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Role Selection
                 const Text(
                   'I want to sign up as:',
@@ -645,10 +721,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Role Cards
-                Row(
+                // Role Cards - Using Wrap for better layout with 5 options
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
-                    Expanded(
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 72) / 2,
                       child: _RoleCard(
                         title: 'Passenger',
                         icon: Icons.person,
@@ -658,8 +737,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 72) / 2,
                       child: _RoleCard(
                         title: 'Driver',
                         icon: Icons.drive_eta,
@@ -669,14 +748,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 72) / 2,
                       child: _RoleCard(
                         title: 'Provider',
                         icon: Icons.store,
                         isSelected: _selectedRole == 'provider',
                         onTap: () {
                           setState(() => _selectedRole = 'provider');
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 72) / 2,
+                      child: _RoleCard(
+                        title: 'Delivery',
+                        icon: Icons.delivery_dining,
+                        isSelected: _selectedRole == 'deliveryperson',
+                        onTap: () {
+                          setState(() => _selectedRole = 'deliveryperson');
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 72) / 2,
+                      child: _RoleCard(
+                        title: 'Car Renter',
+                        icon: Icons.car_rental,
+                        isSelected: _selectedRole == 'carrenter',
+                        onTap: () {
+                          setState(() => _selectedRole = 'carrenter');
                         },
                       ),
                     ),

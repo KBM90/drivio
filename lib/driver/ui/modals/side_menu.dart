@@ -3,7 +3,7 @@ import 'package:drivio_app/common/screens/app_settings_screen.dart';
 import 'package:drivio_app/common/screens/inbox_page.dart';
 import 'package:drivio_app/common/screens/opportunities_page.dart';
 import 'package:drivio_app/common/screens/refer_friends_page.dart';
-import 'package:drivio_app/driver/ui/screens/services_page.dart';
+import 'package:drivio_app/common/screens/services_page.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:drivio_app/common/services/user_services.dart';
 import 'package:drivio_app/driver/ui/screens/account_page.dart';

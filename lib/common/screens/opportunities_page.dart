@@ -1,4 +1,4 @@
-import 'package:drivio_app/common/services/opportunities_service.dart';
+import 'package:drivio_app/driver/services/opportunities_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -491,7 +491,7 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen>
       case 'hours':
         final completed = progress['hours_worked'] ?? 0;
         final target = goal['hours'] ?? 0;
-        return '${completed.toStringAsFixed(1)} / ${target} hours worked';
+        return '${completed.toStringAsFixed(1)} / $target hours worked';
       default:
         return 'In progress';
     }

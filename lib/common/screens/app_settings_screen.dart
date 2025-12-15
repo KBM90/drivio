@@ -254,7 +254,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             trailing: Switch(
               value: _soundEnabled,
               onChanged: _toggleSound,
-              activeColor: _notificationsEnabled ? null : Colors.grey,
+              activeThumbColor: _notificationsEnabled ? null : Colors.grey,
             ),
             enabled: _notificationsEnabled,
           ),
@@ -265,7 +265,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             trailing: Switch(
               value: _vibrationEnabled,
               onChanged: _toggleVibration,
-              activeColor: _notificationsEnabled ? null : Colors.grey,
+              activeThumbColor: _notificationsEnabled ? null : Colors.grey,
             ),
             enabled: _notificationsEnabled,
           ),

@@ -252,4 +252,14 @@ class CarExpenseService {
         .order('expense_date', ascending: false)
         .map((data) => data.map((json) => CarExpense.fromJson(json)).toList());
   }
+
+  /// Reset all expenses for a driver (delete all records)
+  Future<void> resetAllExpenses(int driverId) async {
+    try {
+      await _supabase.from('car_expenses').delete().eq('driver_id', driverId);
+    } catch (e) {
+      print('❌ Error resetting expenses: $e');
+      rethrow;
+    }
+  }
 }

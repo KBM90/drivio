@@ -56,9 +56,7 @@ class _CarInfoScreenState extends State<CarInfoScreen> {
       _colors = VehicleService.getCarColors();
 
       // If no vehicle passed, try to fetch it
-      if (_existingVehicle == null) {
-        _existingVehicle = await VehicleService.getDriverVehicle();
-      }
+      _existingVehicle ??= await VehicleService.getDriverVehicle();
 
       // If editing existing vehicle, populate fields and load documents
       if (_existingVehicle != null) {
@@ -156,7 +154,7 @@ class _CarInfoScreenState extends State<CarInfoScreen> {
                     children: [
                       // Document Type Dropdown
                       DropdownButtonFormField<String>(
-                        value: selectedDocType,
+                        initialValue: selectedDocType,
                         decoration: const InputDecoration(
                           labelText: 'Document Type',
                           border: OutlineInputBorder(),
@@ -202,7 +200,7 @@ class _CarInfoScreenState extends State<CarInfoScreen> {
                               ),
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
 
                       // Expiry Date
@@ -491,7 +489,7 @@ class _CarInfoScreenState extends State<CarInfoScreen> {
 
                       // Company Dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedCompany,
+                        initialValue: _selectedCompany,
                         decoration: const InputDecoration(
                           labelText: 'Car Brand',
                           border: OutlineInputBorder(),
@@ -521,7 +519,7 @@ class _CarInfoScreenState extends State<CarInfoScreen> {
 
                       // Model Dropdown
                       DropdownButtonFormField<CarBrand>(
-                        value: _selectedModel,
+                        initialValue: _selectedModel,
                         decoration: const InputDecoration(
                           labelText: 'Car Model',
                           border: OutlineInputBorder(),
@@ -550,7 +548,7 @@ class _CarInfoScreenState extends State<CarInfoScreen> {
 
                       // Color Dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedColor,
+                        initialValue: _selectedColor,
                         decoration: const InputDecoration(
                           labelText: 'Color',
                           border: OutlineInputBorder(),

@@ -1,4 +1,11 @@
+import 'package:drivio_app/driver/providers/crash_report_provider.dart';
+import 'package:drivio_app/driver/providers/location_sharing_provider.dart';
+import 'package:drivio_app/driver/providers/ride_recording_provider.dart';
+import 'package:drivio_app/driver/ui/screens/crash_report_screen.dart';
+import 'package:drivio_app/driver/ui/screens/location_sharing_screen.dart';
+import 'package:drivio_app/driver/ui/screens/ride_recording_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class SaftyFloatingButton extends StatelessWidget {
   const SaftyFloatingButton({super.key});
@@ -53,38 +60,72 @@ class SaftyFloatingButton extends StatelessWidget {
                       "Record your trips with your phone or dashcam",
                     ),
                     trailing: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => ChangeNotifierProvider(
+                                  create: (_) => RideRecordingProvider(),
+                                  child: RideRecordingScreen(),
+                                ),
+                          ),
+                        );
+                      },
                       child: Text("Set up"),
                     ),
                   ),
                   ListTile(
-                    leading: Icon(Icons.wifi),
+                    leading: Icon(Icons.share_location),
                     title: Text("Follow My Ride"),
                     subtitle: Text(
                       "Share location and trip status with family and friends",
                     ),
-                    trailing: TextButton(
-                      onPressed: () {},
-                      child: Text("Set up"),
+                    trailing: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => ChangeNotifierProvider(
+                                  create: (_) => LocationSharingProvider(),
+                                  child: LocationSharingScreen(),
+                                ),
+                          ),
+                        );
+                      },
+                      child: Text("Send"),
                     ),
                   ),
+
                   ListTile(
-                    leading: Icon(Icons.check_circle),
-                    title: Text("Proof of Trip Status"),
-                    subtitle: Text(
-                      "Show law enforcement your current trip status",
-                    ),
-                    onTap: () {},
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.report),
+                    leading: Icon(Icons.report, color: Colors.red),
                     title: Text("Report a crash"),
-                    onTap: () {},
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.call),
-                    title: Text("911 Assistance"),
-                    onTap: () {},
+                    subtitle: Text(
+                      "Report an accident with photos and details",
+                    ),
+                    trailing: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => ChangeNotifierProvider(
+                                  create: (_) => CrashReportProvider(),
+                                  child: CrashReportScreen(),
+                                ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[700],
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text("Report"),
+                    ),
                   ),
                 ],
               ),

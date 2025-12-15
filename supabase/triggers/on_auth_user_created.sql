@@ -1,4 +1,6 @@
--- Drop existing trigger and function if they exist
+-- Fix for car_renter registration trigger
+-- This updates the trigger to handle car renter creation more robustly
+
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS handle_new_user();
 
@@ -29,7 +31,7 @@ BEGIN
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'name', 'User'),
     NEW.raw_user_meta_data->>'city',
-    NEW.raw_user_meta_data->>'country_code',
+    COALESCE(NEW.raw_user_meta_data->>'country_code', 'MA'),
     NEW.raw_user_meta_data->>'phone',
     user_role,
     NOW(),
@@ -88,6 +90,36 @@ BEGIN
       new_user_internal_id,
       COALESCE(NEW.raw_user_meta_data->>'business_name', NEW.raw_user_meta_data->>'name', 'Provider'),
       COALESCE(NEW.raw_user_meta_data->>'provider_type',NEW.raw_user_meta_data->>'provider_type'),
+      NOW(),
+      NOW()
+    );
+
+  ELSIF user_role = 'deliveryperson' THEN
+    INSERT INTO public.delivery_persons (
+      user_id,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      new_user_internal_id,
+      NOW(),
+      NOW()
+    );
+
+  ELSIF user_role = 'carrenter' THEN
+    -- Insert into car_renters with only required fields
+    -- business_name and city are optional
+    INSERT INTO public.car_renters (
+      user_id,
+      business_name,
+      city,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      new_user_internal_id,
+      NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'business_name', '')), ''),
+      NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'city', '')), ''),
       NOW(),
       NOW()
     );

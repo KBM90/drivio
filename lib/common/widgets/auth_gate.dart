@@ -7,6 +7,7 @@ import 'package:drivio_app/common/services/notification_service.dart';
 import 'package:drivio_app/common/providers/notification_provider.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
+import 'package:drivio_app/driver/providers/destination_provider.dart';
 import 'package:drivio_app/driver/providers/driver_passenger_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/passenger/providers/passenger_provider.dart';
@@ -16,7 +17,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({Key? key}) : super(key: key);
+  const AuthGate({super.key});
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -157,6 +158,7 @@ class _AuthGateState extends State<AuthGate> {
               ChangeNotifierProvider(create: (_) => DriverLocationProvider()),
               ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
               ChangeNotifierProvider(create: (_) => DriverProvider()),
+              ChangeNotifierProvider(create: (_) => DestinationProvider()),
               ChangeNotifierProvider(create: (_) => DriverPassengerProvider()),
               ChangeNotifierProvider(create: (_) => MapReportsProvider()),
               ChangeNotifierProvider(create: (_) => NotificationProvider()),
@@ -180,6 +182,8 @@ class _AuthGateState extends State<AuthGate> {
           );
         } else if (_userRole == 'provider') {
           return const _AppNavigator(initialRoute: AppRoutes.providerHome);
+        } else if (_userRole == 'carrenter') {
+          return const _AppNavigator(initialRoute: AppRoutes.carRenterHome);
         } else {
           // Role not loaded yet or invalid
           return Scaffold(

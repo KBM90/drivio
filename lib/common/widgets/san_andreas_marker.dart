@@ -9,13 +9,13 @@ class SanAndreasMarker extends StatelessWidget {
   final VoidCallback? onTap;
 
   const SanAndreasMarker({
-    Key? key,
+    super.key,
     required this.icon,
     required this.color,
     this.size = 45,
     this.label,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -4,6 +4,8 @@ import 'package:drivio_app/driver/services/vehicle_service.dart';
 import 'package:drivio_app/driver/ui/screens/car_info_screen.dart';
 import 'package:drivio_app/driver/ui/screens/driver_information_screen.dart';
 import 'package:drivio_app/driver/ui/screens/payment_settings_screen.dart';
+import 'package:drivio_app/driver/ui/screens/preferences_page.dart';
+import 'package:drivio_app/driver/ui/screens/trip_history_screen.dart';
 import 'package:flutter/material.dart';
 
 class AccountScreen extends StatefulWidget {
@@ -86,12 +88,33 @@ class _AccountScreenState extends State<AccountScreen> {
               );
             },
           ),
-          _buildListItem('Plus Card'),
-          _buildListItem('Tax Info'),
-          _buildListItem('Manage Uber account'),
-          _buildListItem('Edit Address'),
-          _buildListItem('Insurance'),
+          _buildListItem(
+            'Trip History',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TripHistoryScreen(),
+                ),
+              );
+            },
+          ),
+          _buildListItem(
+            'Preferences',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PreferencesScreen(),
+                ),
+              );
+            },
+          ),
+          _buildListItem('Documents & Verification'),
+          _buildListItem('Support & Help Center'),
+          _buildListItem('App Settings'),
           _buildListItem('Privacy'),
+          _buildListItem('Terms & Conditions'),
           const SizedBox(height: 24),
           _buildDeleteAccountButton(context),
         ],

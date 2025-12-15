@@ -55,28 +55,41 @@ class MapReportService {
   }
 
   static Future<List<MapReport>> getReportsWithinRadius() async {
+    debugPrint('🔍 MapReportService: getReportsWithinRadius started');
     try {
       final LatLng? driverLocation =
           await GeolocatorHelper.getCurrentLocation();
+
+      debugPrint('📍 Driver location: $driverLocation');
+
       if (driverLocation == null) {
+        debugPrint('❌ Unable to get driver location');
         throw Exception('Unable to get driver location');
       }
 
       // Ensure session is valid before making DB calls
       await AuthService.ensureValidSession();
+      debugPrint('✅ Session validated');
 
       // Fetch all active reports
+      debugPrint('📡 Fetching active reports from database...');
       final response = await Supabase.instance.client
           .from('map_reports')
           .select()
           .eq('status', 'Active');
 
+      debugPrint('📦 Database response: ${response.length} reports');
+
       final List<MapReport> reports =
           (response as List).map((json) => MapReport.fromJson(json)).toList();
 
-      // Filter by radius (e.g., 50km)
-      const double radiusInMeters = 50000;
+      // Filter by radius (5km)
+      const double radiusInMeters = 5000;
       final List<MapReport> nearbyReports = [];
+
+      debugPrint(
+        '🔄 Filtering reports within ${radiusInMeters / 1000}km radius...',
+      );
 
       for (var report in reports) {
         if (report.pointLocation != null &&
@@ -95,9 +108,11 @@ class MapReportService {
         }
       }
 
+      debugPrint('✅ Found ${nearbyReports.length} nearby reports');
       return nearbyReports;
     } catch (e) {
-      debugPrint('Error in getReportsWithinRadius: $e');
+      debugPrint('❌ Error in getReportsWithinRadius: $e');
+      debugPrint('   Stack trace: ${StackTrace.current}');
       rethrow;
     }
   }

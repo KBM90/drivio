@@ -1,14 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../common/models/provided_service.dart';
-import '../../../provider/services/provided_services_service.dart';
-import '../../../common/helpers/osrm_services.dart';
-import '../../../common/helpers/geolocator_helper.dart';
+import '../models/provided_service.dart';
+import '../../provider/services/provided_services_service.dart';
+import '../helpers/osrm_services.dart';
+import '../helpers/geolocator_helper.dart';
 import 'package:latlong2/latlong.dart';
+import '../../driver/ui/modals/order_service_dialog.dart';
+import '../widgets/custom_order_dialog.dart';
 
 class ServicesPage extends StatefulWidget {
-  const ServicesPage({super.key});
+  final bool showBackButton;
+
+  const ServicesPage({super.key, this.showBackButton = true});
 
   @override
   State<ServicesPage> createState() => _ServicesPageState();
@@ -157,6 +161,19 @@ class _ServicesPageState extends State<ServicesPage> {
     _loadServices();
   }
 
+  Future<void> _showOrderDialog(ProvidedService service) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => OrderServiceDialog(service: service),
+    );
+
+    // If order was placed successfully, optionally refresh or show confirmation
+    if (result == true && mounted) {
+      // Order was placed successfully - dialog already shows success message
+      debugPrint('✅ Order placed for service: ${service.name}');
+    }
+  }
+
   Widget _buildCityFilter() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -251,10 +268,13 @@ class _ServicesPageState extends State<ServicesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading:
+            widget.showBackButton
+                ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+                : null,
         title: const Text('Services'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
@@ -281,7 +301,29 @@ class _ServicesPageState extends State<ServicesPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCustomOrderDialog,
+        backgroundColor: Colors.blue,
+        icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
+        label: const Text(
+          'Custom Order',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        elevation: 4,
+      ),
     );
+  }
+
+  Future<void> _showCustomOrderDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => const CustomOrderDialog(),
+    );
+
+    // If order was placed successfully, optionally refresh or show confirmation
+    if (result == true && mounted) {
+      debugPrint('✅ Custom order placed successfully');
+    }
   }
 
   Widget _buildCategoryFilter() {
@@ -400,31 +442,59 @@ class _ServicesPageState extends State<ServicesPage> {
                         ),
                       ],
                     ),
-                    if (service.providerPhone != null)
-                      SizedBox(
-                        height: 32,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            final Uri launchUri = Uri(
-                              scheme: 'tel',
-                              path: service.providerPhone,
-                            );
-                            if (await canLaunchUrl(launchUri)) {
-                              await launchUrl(launchUri);
-                            }
-                          },
-                          icon: const Icon(Icons.call, size: 14),
-                          label: const Text(
-                            'Call',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                    Row(
+                      children: [
+                        // Order Button
+                        SizedBox(
+                          height: 32,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showOrderDialog(service),
+                            icon: const Icon(Icons.shopping_cart, size: 14),
+                            label: const Text(
+                              'Order',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        if (service.providerPhone != null) ...[
+                          const SizedBox(width: 8),
+                          // Call Button
+                          SizedBox(
+                            height: 32,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final Uri launchUri = Uri(
+                                  scheme: 'tel',
+                                  path: service.providerPhone,
+                                );
+                                if (await canLaunchUrl(launchUri)) {
+                                  await launchUrl(launchUri);
+                                }
+                              },
+                              icon: const Icon(Icons.call, size: 14),
+                              label: const Text(
+                                'Call',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ],

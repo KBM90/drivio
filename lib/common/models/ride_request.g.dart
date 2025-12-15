@@ -22,6 +22,12 @@ RideRequest _$RideRequestFromJson(Map<String, dynamic> json) => RideRequest(
           : TransportType.fromJson(
             json['transport_type'] as Map<String, dynamic>,
           ),
+  paymentMethod:
+      json['payment_method'] == null
+          ? null
+          : PaymentMethod.fromJson(
+            json['payment_method'] as Map<String, dynamic>,
+          ),
   status: json['status'] as String?,
   price: (json['price'] as num?)?.toDouble(),
   pickupLocation: Location.fromJson(
@@ -62,6 +68,7 @@ Map<String, dynamic> _$RideRequestToJson(RideRequest instance) =>
       'transport_type_id': instance.transportTypeId,
       'payment_method_id': instance.paymentMethodId,
       'transport_type': instance.transportType,
+      'payment_method': instance.paymentMethod,
       'status': instance.status,
       'price': instance.price,
       'pickup_location': instance.pickupLocation,

@@ -74,7 +74,7 @@ class EarningsData {
   }
 
   String get formattedOnlineTime {
-    return '$onlineHours h ${onlineMinutes} m';
+    return '$onlineHours h $onlineMinutes m';
   }
 
   String get formattedTotalBalance {

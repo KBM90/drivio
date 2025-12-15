@@ -51,18 +51,20 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
       );
 
       deviceLocationProvider.addListener(() {
-        setState(() {
-          _currentLocation = deviceLocationProvider.currentLocation;
-        });
-        if (_currentLocation != null) {
-          _mapController.move(_currentLocation!, 16.0);
+        if (mounted) {
+          setState(() {
+            _currentLocation = deviceLocationProvider.currentLocation;
+          });
+          if (_currentLocation != null) {
+            _mapController.move(_currentLocation!, 16.0);
+          }
         }
       });
 
       // 🔹 Fetch existing ride request
       await rideRequestProvider.fetchCurrentRideRequest();
 
-      if (rideRequestProvider.currentRideRequest != null) {
+      if (rideRequestProvider.currentRideRequest != null && mounted) {
         setState(() {
           _hasExistingRequest = true;
           _destination = GeolocatorHelper.locationToLatLng(
@@ -113,7 +115,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
       List<LatLng> newPolyline = await _osrmService
           .getRouteBetweenPickupAndDropoff(pickup, dropoff, context);
 
-      if (newPolyline.isNotEmpty) {
+      if (newPolyline.isNotEmpty && mounted) {
         final distance = await _osrmService.getDistance(pickup, dropoff);
 
         setState(() {
@@ -159,7 +161,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
       List<LatLng> newPolyline = await _osrmService
           .getRouteBetweenPickupAndDropoff(driverLocation, pickup, context);
 
-      if (newPolyline.isNotEmpty) {
+      if (newPolyline.isNotEmpty && mounted) {
         final distance = await _osrmService.getDistance(driverLocation, pickup);
 
         setState(() {
@@ -172,6 +174,12 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
     } catch (e) {
       debugPrint("Failed to fetch route: $e");
     }
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
   }
 
   @override
@@ -232,7 +240,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                   ), // London center
               initialZoom: 5.5,
               onTap: (tapPosition, latLng) async {
-                if (!_hasExistingRequest) {
+                if (!_hasExistingRequest && mounted) {
                   //fetch route from actual location because there is no registred ride request yet
                   //so _pickupLocation will be null
 
@@ -259,7 +267,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                   final pickup = result['pickup'] as LatLng?;
                   final destination = result['destination'] as LatLng?;
 
-                  if (pickup != null && destination != null) {
+                  if (pickup != null && destination != null && mounted) {
                     setState(() {
                       _pickupLocation = pickup;
                       _destination = destination;
@@ -388,7 +396,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                     final pickup = result['pickup'] as LatLng?;
                     final destination = result['destination'] as LatLng?;
 
-                    if (pickup != null && destination != null) {
+                    if (pickup != null && destination != null && mounted) {
                       setState(() {
                         _pickupLocation = pickup;
                         _destination = destination;
@@ -429,9 +437,11 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                             transportType,
                             paymentMethod,
                           ) async {
-                            setState(() {
-                              _confirmed = true;
-                            });
+                            if (mounted) {
+                              setState(() {
+                                _confirmed = true;
+                              });
+                            }
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Publishing ride request ...'),
@@ -492,13 +502,15 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                 mini: true,
                 backgroundColor: Colors.white,
                 onPressed: () {
-                  setState(() {
-                    _destination = null;
-                    _routePolyline.clear();
-                    _distance = 0.0;
-                    _confirmed = false;
-                    _hasExistingRequest = false;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _destination = null;
+                      _routePolyline.clear();
+                      _distance = 0.0;
+                      _confirmed = false;
+                      _hasExistingRequest = false;
+                    });
+                  }
                 },
                 child: const Icon(Icons.clear, color: Colors.red),
               ),

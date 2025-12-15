@@ -153,7 +153,7 @@ class _FinalRideConfirmationModalState
 
                 // Transport Dropdown
                 DropdownButtonFormField<TransportType>(
-                  value: selectedTransport,
+                  initialValue: selectedTransport,
                   decoration: InputDecoration(
                     labelText: 'Transport Type',
                     border: OutlineInputBorder(
@@ -188,7 +188,7 @@ class _FinalRideConfirmationModalState
                 filteredPaymentMethods.isEmpty
                     ? const CircularProgressIndicator()
                     : DropdownButtonFormField<PaymentMethod>(
-                      value: filteredPaymentMethods.first,
+                      initialValue: filteredPaymentMethods.first,
                       decoration: InputDecoration(
                         labelText: 'Payment Method',
                         border: OutlineInputBorder(

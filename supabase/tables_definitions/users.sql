@@ -29,7 +29,9 @@ create table public.users (
           'driver'::text,
           'courtier'::text,
           'provider'::text,
-          'admin'::text
+          'admin'::text,
+          'carrenter'::text,
+          'deliveryperson'::text
         ]
       )
     )

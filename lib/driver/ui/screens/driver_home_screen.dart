@@ -1,15 +1,15 @@
 import 'package:drivio_app/common/widgets/safty_floating_button.dart';
 import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
+import 'package:drivio_app/driver/providers/destination_provider.dart';
 import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/driver/ui/widgets/report_map_issue.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'driver_map_view.dart';
-import '../widgets/wallet_widget.dart';
 import '../widgets/menu_button.dart';
-import '../../../common/widgets/search_button.dart';
+import '../widgets/search_destination_button.dart';
 import '../widgets/status_bar.dart';
 
 /*class DriverHomeScreen extends StatelessWidget {
@@ -90,7 +90,25 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     0.02, // SafeArea + 2% of screen height
             right:
                 MediaQuery.of(context).size.width * 0.05, // 5% of screen width
-            child: SearchButton(),
+            child: SearchDestinationButton(
+              currentLocation:
+                  driver?.location != null
+                      ? LatLng(
+                        driver!.location!.latitude!,
+                        driver.location!.longitude!,
+                      )
+                      : null,
+              onDestinationSelected: (destination, destinationName) {
+                debugPrint(
+                  '📍 Destination selected: $destinationName at $destination',
+                );
+                // Set destination in provider
+                Provider.of<DestinationProvider>(
+                  context,
+                  listen: false,
+                ).setDestination(destination, destinationName);
+              },
+            ),
           ),
           if (driver != null)
             if (driver.status == DriverStatus.active)
@@ -138,7 +156,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ),
               ),
           if (driver != null) ReportMapIssue(driver: driver),
-          SaftyFloatingButton(),
+          if (driver?.status == DriverStatus.onTrip) SaftyFloatingButton(),
           if (driver?.status != DriverStatus.onTrip) StatusBar(),
         ],
       ),

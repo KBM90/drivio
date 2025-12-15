@@ -127,7 +127,7 @@ class NotificationService {
 
       // Check connection state after a delay
       Future.delayed(Duration(seconds: 2), () {
-        print('🔌 Connection state: ${channel.socket?.connectionState}');
+        print('🔌 Connection state: ${channel.socket.connectionState}');
       });
     } catch (e) {
       print('❌ Error setting up notification listener: $e');
@@ -174,6 +174,29 @@ class NotificationService {
       notificationDetails,
       payload: notification.data.toString(),
     );
+  }
+
+  /// Send a notification to a specific user
+  static Future<void> sendNotificationToUser({
+    required int userId,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      await _supabase.from('notifications').insert({
+        'user_id': userId,
+        'title': title,
+        'body': body,
+        'data': data,
+        'is_read': false,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      print('✅ Notification sent to user $userId: $title');
+    } catch (e) {
+      print('❌ Error sending notification: $e');
+      rethrow;
+    }
   }
 
   static Future<void> markAsRead(String notificationId) async {

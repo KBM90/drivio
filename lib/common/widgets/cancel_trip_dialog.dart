@@ -47,7 +47,7 @@ Future<String?> showCancelTripDialog(BuildContext context, bool isDriver) {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: selectedReason,
+                    initialValue: selectedReason,
                     hint: const Text('Select reason'),
                     items:
                         isDriver

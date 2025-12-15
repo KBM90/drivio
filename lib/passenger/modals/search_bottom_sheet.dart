@@ -33,26 +33,36 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
   }
 
   Future<void> _fetchUserCountry() async {
-    final location = await GeolocatorHelper.getCurrentLocation();
-    if (location != null) {
-      final code = await _osrmService.getCountryCode(
-        location.latitude,
-        location.longitude,
-      );
-      setState(() {
-        _countryCode = code;
-        // Initialize pickup with current location
-        _pickupLatLng = LatLng(location.latitude, location.longitude);
-      });
+    try {
+      final location = await GeolocatorHelper.getCurrentLocation();
+      if (location != null) {
+        final code = await _osrmService.getCountryCode(
+          location.latitude,
+          location.longitude,
+        );
+        setState(() {
+          _countryCode = code;
+          // Initialize pickup with current location
+          _pickupLatLng = LatLng(location.latitude, location.longitude);
+        });
 
-      // Optional: Pre-fill pickup with current location name
-      final placeName = await _osrmService.getPlaceName(
-        location.latitude,
-        location.longitude,
-      );
-      if (mounted) {
-        _pickupController.text = placeName;
+        // Optional: Pre-fill pickup with current location name
+        try {
+          final placeName = await _osrmService.getPlaceName(
+            location.latitude,
+            location.longitude,
+          );
+          if (mounted) {
+            _pickupController.text = placeName;
+          }
+        } catch (e) {
+          debugPrint("⚠️ Could not fetch place name: $e");
+          // Continue without place name - not critical
+        }
       }
+    } catch (e) {
+      debugPrint("❌ Error fetching user country: $e");
+      // Continue - the app can still work without country code
     }
   }
 

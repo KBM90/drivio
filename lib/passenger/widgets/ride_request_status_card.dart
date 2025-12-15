@@ -314,7 +314,7 @@ class RideRequestStatusWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${distance?.toStringAsFixed(1) ?? "0.0"}',
+                distance?.toStringAsFixed(1) ?? "0.0",
                 style: const TextStyle(
                   color: Colors.blue,
                   fontSize: 24,
@@ -682,9 +682,10 @@ class RideRequestStatusWidget extends StatelessWidget {
                   builder:
                       (context) => ChatScreen(
                         currentUserId: rideRequest.passenger.userId,
-                        otherUserId: rideRequest.driver!.userId,
+                        otherUserId: rideRequest.driver?.userId ?? 0,
                         currentUserName: rideRequest.passenger.name,
-                        otherUserName: rideRequest.driver!.user!.name,
+                        otherUserName:
+                            rideRequest.driver?.user?.name ?? 'Driver',
                         currentUserRole: 'passenger',
                       ),
                 ),
