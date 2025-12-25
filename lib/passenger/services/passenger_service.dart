@@ -12,8 +12,6 @@ class PassengerService {
         throw Exception('User not authenticated');
       }
 
-      debugPrint('🔍 Fetching passenger for user: ${user.id}');
-
       // Query by user_id instead of passenger id
       final response =
           await Supabase.instance.client
@@ -26,11 +24,9 @@ class PassengerService {
               .maybeSingle();
 
       if (response == null) {
-        debugPrint('⚠️ No passenger profile found for user');
         return null;
       }
 
-      debugPrint('✅ Current passenger data retrieved');
       return Passenger.fromJson(response);
     } on PostgrestException catch (e) {
       debugPrint('❌ Supabase error: ${e.message}');
@@ -73,8 +69,6 @@ class PassengerService {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', passengerId);
-
-      debugPrint('✅ Passenger location updated: ($latitude, $longitude)');
     } catch (e) {
       debugPrint('❌ Error updating passenger location: $e');
       // Don't rethrow to avoid crashing the app loop, just log

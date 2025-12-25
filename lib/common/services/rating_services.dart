@@ -4,14 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class RatingService {
   static Future<Map<String, dynamic>?> getRating(int ratedUserId) async {
     try {
-      debugPrint('Fetching ratings for user: $ratedUserId');
-
       final response = await Supabase.instance.client
           .from('ratings')
           .select('rating')
           .eq('rated_user', ratedUserId);
-
-      debugPrint('Ratings response: $response');
 
       final List<dynamic> data = response as List<dynamic>;
 
@@ -36,8 +32,6 @@ class RatingService {
       }
 
       final averageRating = totalRating / validRatings;
-
-      debugPrint('Average rating: $averageRating from $validRatings ratings');
 
       return {
         'averageRating': averageRating,

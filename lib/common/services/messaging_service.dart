@@ -49,7 +49,6 @@ class MessagingService {
       // Now insert the message (chat exists, so foreign key is satisfied)
       await _supabase.from('messages').insert(messageData.toMap());
 
-      debugPrint('✅ Message sent successfully');
       return true;
     } catch (e) {
       debugPrint('❌ Error sending message: $e');
@@ -92,8 +91,6 @@ class MessagingService {
           .eq('chat_id', chatId)
           .eq('receiver_id', currentUserId)
           .eq('is_read', false);
-
-      debugPrint('✅ Messages marked as read');
     } catch (e) {
       debugPrint('❌ Error marking messages as read: $e');
     }
@@ -132,7 +129,6 @@ class MessagingService {
     try {
       await _supabase.from('messages').delete().eq('id', messageId);
 
-      debugPrint('✅ Message deleted');
       return true;
     } catch (e) {
       debugPrint('❌ Error deleting message: $e');

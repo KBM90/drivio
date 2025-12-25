@@ -60,7 +60,6 @@ class TripHistoryService {
             }
           }).toList();
 
-      debugPrint('✅ Loaded ${trips.length} trips');
       return trips;
     } catch (e, stackTrace) {
       debugPrint('❌ Error loading trip history: $e');

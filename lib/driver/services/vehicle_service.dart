@@ -77,8 +77,6 @@ class VehicleService {
       }
 
       await _supabase.from('vehicles').update(updateData).eq('id', vehicleId);
-
-      debugPrint('✅ Vehicle updated successfully');
     } catch (e) {
       debugPrint('❌ Error updating vehicle: $e');
       rethrow;
@@ -123,7 +121,6 @@ class VehicleService {
           ''')
               .single();
 
-      debugPrint('✅ Vehicle created successfully');
       return Vehicle.fromJson(response);
     } catch (e) {
       debugPrint('❌ Error creating vehicle: $e');
@@ -150,7 +147,6 @@ class VehicleService {
           .from('vehicle_images')
           .getPublicUrl(path);
 
-      debugPrint('✅ Image uploaded: $publicUrl');
       return publicUrl;
     } catch (e) {
       debugPrint('❌ Error uploading vehicle image: $e');
@@ -170,8 +166,6 @@ class VehicleService {
         'vehicle_id': vehicleId,
         'image_path': imagePath,
       });
-
-      debugPrint('✅ Vehicle image reference saved');
     } catch (e) {
       debugPrint('❌ Error saving vehicle image reference: $e');
       rethrow;
@@ -327,8 +321,6 @@ class VehicleService {
         'image_id': imageId,
         'metadata': metadata,
       });
-
-      debugPrint('✅ Document added successfully');
     } catch (e) {
       debugPrint('❌ Error adding vehicle document: $e');
       rethrow;
@@ -340,7 +332,6 @@ class VehicleService {
     try {
       await AuthService.ensureValidSession();
       await _supabase.from('vehicle_documents').delete().eq('id', documentId);
-      debugPrint('✅ Document deleted successfully');
     } catch (e) {
       debugPrint('❌ Error deleting vehicle document: $e');
       rethrow;

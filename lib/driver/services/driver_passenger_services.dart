@@ -5,8 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class DriverPassengerService {
   static Future<Passenger> getPassenger(int userId) async {
     try {
-      debugPrint('🔍 Fetching passenger with user ID: $userId');
-
       // Query Supabase with join to get user data
       // Note: We query by user_id, not by passenger id
       final response =
@@ -18,8 +16,6 @@ class DriverPassengerService {
         ''')
               .eq('user_id', userId)
               .maybeSingle(); // Use .maybeSingle() to handle multiple or zero results
-
-      debugPrint('✅ Passenger data retrieved: $response');
 
       // Check if passenger was found
       if (response == null) {

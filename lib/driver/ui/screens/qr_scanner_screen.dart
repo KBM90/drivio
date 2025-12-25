@@ -29,7 +29,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           for (final barcode in barcodes) {
             if (barcode.rawValue != null) {
               _isScanned = true;
-              debugPrint('✅ QR Code found: ${barcode.rawValue}');
               Navigator.pop(context, barcode.rawValue);
               break;
             }

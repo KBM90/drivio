@@ -92,8 +92,6 @@ class ChangeStatus {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', rideRequestId);
-
-      debugPrint('✅ Ride request marked as arrived');
     } catch (e) {
       debugPrint('❌ Error marking ride as arrived: $e');
       throw Exception('Failed to mark ride as arrived: $e');

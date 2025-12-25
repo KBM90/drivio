@@ -48,17 +48,12 @@ class _DriverInformationScreenState extends State<DriverInformationScreen> {
       _driver = await DriverService.getDriver();
       _user = _driver?.user;
 
-      debugPrint('🔍 Driver loaded: ${_driver?.id}');
-      debugPrint('🔍 User loaded: ${_user?.name}');
-
       if (_user != null) {
         _nameController.text = _user!.name;
         _phoneController.text = _user!.phone ?? '';
         _emailController.text = _user!.email;
         _selectedGender = _user!.sexe;
         _currentProfileImageUrl = _user!.profileImagePath;
-
-        debugPrint('✅ Name field set to: ${_nameController.text}');
       } else {
         debugPrint('⚠️ User is null!');
       }

@@ -20,8 +20,6 @@ class ReportService {
         throw Exception('User not authenticated');
       }
 
-      debugPrint('📝 Submitting report: $reason for user $reportedUserId');
-
       // Create the report object
       final report = Report(
         reportedBy: currentUserId,
@@ -38,8 +36,6 @@ class ReportService {
       await Supabase.instance.client
           .from('reports')
           .insert(report.toCreateJson());
-
-      debugPrint('✅ Report submitted successfully');
     } on PostgrestException catch (e) {
       debugPrint('❌ Supabase error submitting report: ${e.message}');
       throw Exception('Failed to submit report: ${e.message}');

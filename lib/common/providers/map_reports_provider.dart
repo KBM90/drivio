@@ -24,13 +24,11 @@ class MapReportsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   MapReportsProvider() {
-    debugPrint('🏗️ MapReportsProvider: Constructor called');
     getReportsWithinRadius();
     _startPeriodicRefresh();
   }
 
   Future<void> getReportsWithinRadius() async {
-    debugPrint('📡 MapReportsProvider: Starting getReportsWithinRadius');
     _isLoading = true;
     _errorMessage = null;
     notifyListeners(); // Notify immediately when loading starts
@@ -48,9 +46,6 @@ class MapReportsProvider extends ChangeNotifier {
         );
 
         if (distance < _refreshDistanceThreshold) {
-          debugPrint(
-            '📍 Driver moved only ${distance.toStringAsFixed(0)}m, skipping refresh',
-          );
           _isLoading = false;
           notifyListeners();
           return;
@@ -63,7 +58,6 @@ class MapReportsProvider extends ChangeNotifier {
         _lastRefreshLocation = currentLocation;
       }
 
-      debugPrint('✅ MapReportsProvider: Fetched ${_reports.length} reports');
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
@@ -72,16 +66,12 @@ class MapReportsProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
-      debugPrint(
-        '🏁 MapReportsProvider: getReportsWithinRadius completed (loading: $_isLoading)',
-      );
     }
   }
 
   void _startPeriodicRefresh() {
     // Refresh reports every 30 seconds
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      debugPrint('⏰ Periodic refresh triggered');
       getReportsWithinRadius();
     });
   }

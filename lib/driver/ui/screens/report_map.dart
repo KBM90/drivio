@@ -52,10 +52,7 @@ class _ReportMapScreenState extends State<ReportMapScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('📍 ReportMap initState - reportType: ${widget.reportType}');
-    debugPrint(
-      '📍 Driver location: ${widget.driver.location?.latitude}, ${widget.driver.location?.longitude}',
-    );
+
     // Initialize drawing mode based on report type (no setState needed in initState)
     _isDrawingRoute = widget.reportType == 'Traffic';
   }
@@ -152,7 +149,6 @@ class _ReportMapScreenState extends State<ReportMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🔄 ReportMap: build called');
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: Scaffold(
@@ -162,11 +158,6 @@ class _ReportMapScreenState extends State<ReportMapScreen> {
             final reports = reportsProvider.reports;
             final isLoading = reportsProvider.isLoading;
             final errorMessage = reportsProvider.errorMessage;
-
-            debugPrint('📊 ReportMap Provider State:');
-            debugPrint('   - Reports count: ${reports.length}');
-            debugPrint('   - Is loading: $isLoading');
-            debugPrint('   - Error: $errorMessage');
 
             return Stack(
               children: [

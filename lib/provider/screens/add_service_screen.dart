@@ -41,7 +41,6 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
   Future<void> _fetchProviderType() async {
     try {
       final userId = await AuthService.getInternalUserId();
-      debugPrint(userId.toString());
       if (userId != null) {
         final serviceProviderService = ServiceProviderService();
         final providerType = await serviceProviderService.getProviderType(

@@ -20,10 +20,6 @@ class RideRequestService {
       final driverLocationGeometry =
           'SRID=4326;POINT(${driverLocation.longitude} ${driverLocation.latitude})';
 
-      debugPrint(
-        '🔍 Fetching rides near: $driverLocationGeometry for driver: $driverId',
-      );
-
       // Call RPC to get complete ride data with joins
       // This function uses SECURITY DEFINER to bypass RLS policies
       final List<dynamic> rpcResponse = await Supabase.instance.client.rpc(
@@ -36,11 +32,8 @@ class RideRequestService {
       );
 
       if (rpcResponse.isEmpty) {
-        debugPrint('ℹ️ No nearby ride requests found');
         return [];
       }
-
-      debugPrint('✅ Fetched ${rpcResponse.length} rides with complete data');
 
       // Convert to RideRequest objects directly from RPC response
       return (rpcResponse).map((json) {
@@ -73,8 +66,6 @@ class RideRequestService {
               )
               .eq('id', id)
               .single();
-
-      debugPrint("🔍 Raw Ride Request Response: $response");
 
       return RideRequest.fromJson(response);
     } catch (e) {
@@ -114,7 +105,6 @@ class RideRequestService {
       // Save current ride ID to SharedPreferences
       await SharedPreferencesHelper.setInt("currentRideId", rideRequestId);
 
-      debugPrint('✅ Ride request $rideRequestId accepted by driver $driverId');
       return response['message'] as String?;
     } catch (e) {
       debugPrint('❌ Error accepting ride request: $e');
@@ -154,7 +144,6 @@ class RideRequestService {
       // Clear current ride ID from SharedPreferences
       await SharedPreferencesHelper.remove("currentRideId");
 
-      debugPrint('✅ Trip $rideRequestId cancelled by driver');
       return response['message'] as String?;
     } catch (e) {
       debugPrint('❌ Error cancelling trip: $e');
@@ -231,8 +220,6 @@ class RideRequestService {
           .eq('id', rideRequestId)
           .eq('driver_id', driverId);
 
-      debugPrint('✅ Ride status updated to arrived');
-
       // Send notification to passenger
       if (rideData['passenger'] != null) {
         final passengerUserId = rideData['passenger']['user_id'] as int;
@@ -243,8 +230,6 @@ class RideRequestService {
           body: 'Your driver is waiting at the pickup location.',
           data: {'type': 'driver_arrived', 'ride_request_id': rideRequestId},
         );
-
-        debugPrint('✅ Notification sent to passenger $passengerUserId');
       }
     } catch (e) {
       debugPrint('❌ Error updating arrival status: $e');
@@ -257,8 +242,6 @@ class RideRequestService {
     try {
       final driverId = await AuthService.getDriverId();
       if (driverId == null) throw Exception('Driver not found');
-
-      debugPrint('🚀 Starting trip $rideRequestId with QR: $qrCode');
 
       // Verify QR code and start trip via RPC or direct update
       // For now, we'll verify locally and update
@@ -286,8 +269,6 @@ class RideRequestService {
           })
           .eq('id', rideRequestId)
           .eq('driver_id', driverId);
-
-      debugPrint('✅ Trip started successfully');
     } catch (e) {
       debugPrint('❌ Error starting trip: $e');
       throw Exception('Failed to start trip: $e');

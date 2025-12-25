@@ -17,14 +17,12 @@ class DestinationProvider with ChangeNotifier {
   void setDestination(LatLng destination, String name) {
     _selectedDestination = destination;
     _destinationName = name;
-    debugPrint('📍 Destination set: $name at $destination');
     notifyListeners();
   }
 
   /// Update the route polyline to the destination
   void setRoute(List<LatLng> route) {
     _routeToDestination = route;
-    debugPrint('🗺️ Route updated: ${route.length} points');
     notifyListeners();
   }
 
@@ -33,7 +31,6 @@ class DestinationProvider with ChangeNotifier {
     _selectedDestination = null;
     _destinationName = null;
     _routeToDestination = [];
-    debugPrint('🗑️ Destination cleared');
     notifyListeners();
   }
 }

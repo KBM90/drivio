@@ -25,7 +25,6 @@ class ThemeProvider extends ChangeNotifier {
       _isDarkMode = isDark;
       _isInitialized = true;
       notifyListeners();
-      debugPrint('✅ Theme loaded: ${_isDarkMode ? "Dark" : "Light"}');
     } catch (e) {
       debugPrint('❌ Error loading theme preference: $e');
       _isInitialized = true;
@@ -40,7 +39,6 @@ class ThemeProvider extends ChangeNotifier {
 
     try {
       await SharedPreferencesHelper.setBool('isDarkMode', _isDarkMode);
-      debugPrint('✅ Theme toggled to: ${_isDarkMode ? "Dark" : "Light"}');
     } catch (e) {
       debugPrint('❌ Error saving theme preference: $e');
     }
@@ -55,7 +53,6 @@ class ThemeProvider extends ChangeNotifier {
 
     try {
       await SharedPreferencesHelper.setBool('isDarkMode', _isDarkMode);
-      debugPrint('✅ Theme set to: ${_isDarkMode ? "Dark" : "Light"}');
     } catch (e) {
       debugPrint('❌ Error saving theme preference: $e');
     }

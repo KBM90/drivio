@@ -66,10 +66,6 @@ class EarningsService {
       final pStart = startDate.toIso8601String().split('T')[0];
       final pEnd = endDate.toIso8601String().split('T')[0];
 
-      debugPrint(
-        '🔄 Refreshing earnings for Driver $driverId: $pStart to $pEnd',
-      );
-
       // First refresh the summary for this period
       await _supabase.rpc(
         'refresh_driver_earnings_summary',
@@ -89,8 +85,6 @@ class EarningsService {
               .eq('period_start', pStart)
               .eq('period_end', pEnd)
               .maybeSingle();
-
-      debugPrint('📊 Earnings response: $response');
 
       if (response == null) {
         debugPrint('⚠️ No earnings summary found for period');
@@ -136,8 +130,6 @@ class EarningsService {
     try {
       final dateStr = date.toIso8601String().split('T')[0];
 
-      debugPrint('🔄 Fetching trip details for Driver $driverId on $dateStr');
-
       final response = await _supabase
           .from('ride_requests')
           .select('''
@@ -159,8 +151,6 @@ class EarningsService {
           .gte('created_at', '${dateStr}T00:00:00')
           .lte('created_at', '${dateStr}T23:59:59')
           .order('created_at', ascending: false);
-
-      debugPrint('📊 Trip details response: $response');
 
       if (response.isEmpty) {
         debugPrint('⚠️ No trips found for this day');
@@ -203,7 +193,6 @@ class EarningsService {
         }
       }
 
-      debugPrint('✅ Found ${trips.length} trips');
       return trips;
     } catch (e) {
       debugPrint('❌ Error fetching trip details: $e');

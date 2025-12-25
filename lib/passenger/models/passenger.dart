@@ -70,19 +70,10 @@ class Passenger {
       return null;
     }
 
-    // Debug logging
-    debugPrint('📦 Parsing Passenger JSON keys: ${json.keys.toList()}');
-    debugPrint('👤 User data present: ${json.containsKey('user')}');
-    if (json.containsKey('user') && json['user'] != null) {
-      debugPrint('👤 User data type: ${json['user'].runtimeType}');
-      debugPrint('👤 User data: ${json['user']}');
-    }
-
     User? parsedUser;
     try {
       if (json['user'] != null) {
         parsedUser = User.fromJson(json['user'] as Map<String, dynamic>);
-        debugPrint('✅ User parsed successfully: ${parsedUser.name}');
       } else {
         debugPrint('⚠️ User data is null in JSON');
       }

@@ -123,8 +123,6 @@ class DriverService {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', driverId);
-
-      debugPrint('✅ Location updated: ($latitude, $longitude)');
     } catch (e) {
       debugPrint('❌ Error updating location in supabase: $e');
       rethrow;
@@ -152,7 +150,6 @@ class DriverService {
           })
           .eq('id', driverId);
 
-      debugPrint('✅ Drop-off location updated: ($latitude, $longitude)');
       return true;
     } catch (e) {
       debugPrint('❌ Error updating driver drop-off location: $e');
@@ -189,8 +186,6 @@ class DriverService {
           .from('drivers')
           .update(updateData)
           .eq('id', driverId);
-
-      debugPrint('✅ Driver info updated successfully');
     } catch (e) {
       debugPrint('❌ Error updating driver info: $e');
       rethrow;
@@ -237,8 +232,6 @@ class DriverService {
           .from('users')
           .update(updateData)
           .eq('id', internalUserId);
-
-      debugPrint('✅ User info updated successfully');
     } catch (e) {
       debugPrint('❌ Error updating user info: $e');
       rethrow;
@@ -263,7 +256,6 @@ class DriverService {
           .from('service_images')
           .getPublicUrl(path);
 
-      debugPrint('✅ Profile image uploaded: $publicUrl');
       return publicUrl;
     } catch (e) {
       debugPrint('❌ Error uploading profile image: $e');

@@ -52,9 +52,6 @@ class PayPalService {
         return null;
       }
 
-      debugPrint(
-        '✅ PayPal account linked successfully: ${accountInfo['email']}',
-      );
       return accountInfo;
     } catch (e) {
       debugPrint('❌ Error linking PayPal account: $e');
@@ -229,8 +226,6 @@ class PayPalService {
               'updated_at': DateTime.now().toIso8601String(),
             })
             .eq('id', existingMethod['id']);
-
-        debugPrint('✅ Updated existing PayPal payment method');
       } else {
         // Insert new PayPal payment method
         await Supabase.instance.client.from('user_payment_methods').insert({
@@ -239,8 +234,6 @@ class PayPalService {
           'details': paypalDetails,
           'is_default': false,
         });
-
-        debugPrint('✅ Inserted new PayPal payment method');
       }
 
       return true;

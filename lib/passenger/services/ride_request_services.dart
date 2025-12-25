@@ -25,16 +25,12 @@ class RideRequestServices {
         throw Exception('Passenger profile not found. Please log in again.');
       }
 
-      debugPrint('🔍 Passenger ID: $passengerId');
-
       // Ensure session is valid before making DB calls
       await AuthService.ensureValidSession();
 
       // Calculate distance and duration
       final distance = await OSRMService().getDistance(pickup, destination);
       final duration = await OSRMService().getDuration(pickup, destination);
-
-      debugPrint('🔍 Distance: $distance, Duration: $duration');
 
       // Validate data
       if (distance <= 0) {
@@ -89,8 +85,6 @@ class RideRequestServices {
         // 'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
 
-      debugPrint('🔍 Attempting to insert: $rideRequestData');
-
       // Insert into Supabase
       final response =
           await Supabase.instance.client
@@ -100,8 +94,6 @@ class RideRequestServices {
               .single();
 
       final rideRequestId = response['id'];
-
-      debugPrint('✅ Ride request created successfully with ID: $rideRequestId');
 
       // ✅ Create notification for the user
       try {
@@ -115,7 +107,6 @@ class RideRequestServices {
             'data': {'ride_request_id': rideRequestId, 'category': 'system'},
             // 'created_at': DateTime.now().toUtc().toIso8601String(), // Let DB handle default
           });
-          debugPrint('✅ Notification created for ride request');
         }
       } catch (e) {
         debugPrint('⚠️ Failed to create notification: $e');
@@ -198,8 +189,6 @@ class RideRequestServices {
         debugPrint('No active ride request found');
         return null;
       }
-
-      debugPrint('✅ Ride request found with full data: $response');
 
       // Parse location data
       final pickupGeoJson = response['pickup_location'] as Map<String, dynamic>;
@@ -289,7 +278,6 @@ class RideRequestServices {
           .delete()
           .eq('id', rideRequestId);
 
-      debugPrint('✅ Ride request cancelled & logged successfully');
       return true;
     } on PostgrestException catch (e) {
       debugPrint('❌ Supabase error: ${e.message}');

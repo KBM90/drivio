@@ -35,7 +35,6 @@ void main() async {
 
   if (!storeExists) {
     await store.manage.create();
-    debugPrint('✅ Created new map store');
   } else {
     debugPrint('ℹ️ Map store already exists');
   }

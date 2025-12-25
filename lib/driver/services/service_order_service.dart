@@ -66,8 +66,6 @@ class ServiceOrderService {
         orderData['category'] = category;
       }
 
-      debugPrint('📦 Creating order: $orderData');
-
       final response =
           await _supabase
               .from('service_orders')
@@ -75,7 +73,6 @@ class ServiceOrderService {
               .select()
               .single();
 
-      debugPrint('✅ Order created successfully: ${response['id']}');
       return ServiceOrder.fromJson(response);
     } catch (e) {
       debugPrint('❌ Error creating order: $e');
@@ -105,8 +102,6 @@ class ServiceOrderService {
       query = query.order('created_at', ascending: false);
 
       final response = await query;
-
-      debugPrint('📋 Fetched ${response.length} orders for driver $driverId');
 
       return (response as List)
           .map((json) => ServiceOrder.fromJson(json))
@@ -156,7 +151,6 @@ class ServiceOrderService {
           .eq('driver_id', driverId)
           .eq('status', 'pending');
 
-      debugPrint('✅ Order $orderId cancelled successfully');
       return true;
     } catch (e) {
       debugPrint('❌ Error cancelling order $orderId: $e');

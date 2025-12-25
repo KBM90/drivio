@@ -32,6 +32,24 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     _checkAuthAndRole();
+
+    // ✅ Add explicit listener for auth state changes
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      if (event == AuthChangeEvent.signedIn ||
+          event == AuthChangeEvent.tokenRefreshed) {
+        if (mounted) {
+          _checkAuthAndRole();
+        }
+      } else if (event == AuthChangeEvent.signedOut) {
+        if (mounted) {
+          setState(() {
+            _userRole = null;
+            _isLoading = false;
+          });
+        }
+      }
+    });
   }
 
   Future<void> _checkAuthAndRole() async {
@@ -44,7 +62,6 @@ class _AuthGateState extends State<AuthGate> {
           debugPrint('⚠️ Session expired, attempting refresh...');
           try {
             await Supabase.instance.client.auth.refreshSession();
-            debugPrint('✅ Session refreshed successfully');
           } catch (e) {
             debugPrint('❌ Session refresh failed: $e');
             await AuthService.signOut();
@@ -185,6 +202,10 @@ class _AuthGateState extends State<AuthGate> {
         } else if (_userRole == 'carrenter') {
           return const _AppNavigator(initialRoute: AppRoutes.carRenterHome);
         } else {
+          debugPrint(
+            '⚠️ AuthGate: Invalid or null role - _userRole: $_userRole',
+          );
+          debugPrint('⚠️ AuthGate: Showing error screen');
           // Role not loaded yet or invalid
           return Scaffold(
             body: Center(

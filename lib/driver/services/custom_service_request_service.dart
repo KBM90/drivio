@@ -41,8 +41,6 @@ class CustomServiceRequestService {
         'status': 'pending',
       };
 
-      debugPrint('📦 Creating custom service request: $requestData');
-
       final response =
           await _supabase
               .from('custom_service_requests')
@@ -50,7 +48,6 @@ class CustomServiceRequestService {
               .select()
               .single();
 
-      debugPrint('✅ Custom request created successfully: ${response['id']}');
       return CustomServiceRequest.fromJson(response);
     } catch (e) {
       debugPrint('❌ Error creating custom request: $e');
@@ -80,10 +77,6 @@ class CustomServiceRequestService {
       query = query.order('created_at', ascending: false);
 
       final response = await query;
-
-      debugPrint(
-        '📋 Fetched ${response.length} custom requests for driver $driverId',
-      );
 
       return (response as List)
           .map((json) => CustomServiceRequest.fromJson(json))
@@ -131,7 +124,6 @@ class CustomServiceRequestService {
           .eq('driver_id', driverId)
           .eq('status', 'pending');
 
-      debugPrint('✅ Custom request $requestId cancelled successfully');
       return true;
     } catch (e) {
       debugPrint('❌ Error cancelling custom request $requestId: $e');

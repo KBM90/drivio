@@ -1,6 +1,7 @@
 import 'package:drivio_app/car_renter/models/car_renter.dart';
 import 'package:drivio_app/car_renter/services/car_rental_service.dart';
 import 'package:drivio_app/common/models/provided_car_rental.dart';
+import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class CarRenterProfileScreen extends StatefulWidget {
@@ -165,6 +166,50 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
                   ),
                 ),
               ),
+
+            const SizedBox(height: 16),
+
+            // Logout button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder:
+                        (context) => AlertDialog(
+                          title: const Text('Logout'),
+                          content: const Text(
+                            'Are you sure you want to logout?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text(
+                                'Logout',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                  );
+
+                  if (confirm == true && mounted) {
+                    await AuthService.signOut();
+                  }
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text('Logout'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
 
             const SizedBox(height: 32),
 

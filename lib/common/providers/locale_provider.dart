@@ -47,7 +47,6 @@ class LocaleProvider extends ChangeNotifier {
         _currentLocale = Locale(languageCode);
         _isInitialized = true;
         notifyListeners();
-        debugPrint('✅ Language loaded: $languageCode');
       } else {
         _isInitialized = true;
         notifyListeners();
@@ -83,7 +82,6 @@ class LocaleProvider extends ChangeNotifier {
         // Update local state
         _currentLocale = Locale(languageCode);
         notifyListeners();
-        debugPrint('✅ Language changed to: $languageCode');
         return true;
       } else {
         debugPrint('❌ No user logged in, cannot update language');

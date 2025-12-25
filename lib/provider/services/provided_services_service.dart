@@ -38,17 +38,9 @@ class ProvidedServicesService {
       if (city != null && city.isNotEmpty) {
         final normalizedCity = OSRMService().normalizeCity(city);
         query = query.eq('service_providers.users.city', normalizedCity);
-        debugPrint(
-          '🔍 Searching for normalized city: $normalizedCity (original: $city)',
-        );
       }
 
-      debugPrint('city: $city');
-      debugPrint('selectQuery: $selectQuery');
-
       final response = await query.order('created_at', ascending: false);
-
-      debugPrint('✅ Got ${(response as List).length} services');
 
       return (response as List)
           .map((e) => ProvidedService.fromJson(e))
@@ -70,13 +62,6 @@ class ProvidedServicesService {
           )
           .eq('provider_id', providerId)
           .order('created_at', ascending: false);
-
-      // Debug: Print raw response to see what data we're getting
-      debugPrint('🔍 Raw response from getProviderServices:');
-      for (var item in (response as List)) {
-        debugPrint('  Service: ${item['name']}');
-        debugPrint('  service_providers data: ${item['service_providers']}');
-      }
 
       return (response as List)
           .map((e) => ProvidedService.fromJson(e))
@@ -169,8 +154,6 @@ class ProvidedServicesService {
 
       // Delete service (cascade will delete service_images records)
       await _supabase.from('provided_services').delete().eq('id', serviceId);
-
-      debugPrint('✅ Service deleted successfully');
     } catch (e) {
       debugPrint('❌ Error deleting service: $e');
       rethrow;
@@ -359,8 +342,6 @@ class ProvidedServicesService {
           });
         }
       }
-
-      debugPrint('✅ Service updated successfully');
     } catch (e) {
       debugPrint('❌ Error updating service: $e');
       rethrow;

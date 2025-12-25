@@ -34,7 +34,6 @@ class DriverLocationProvider extends ChangeNotifier {
   }
 
   Future<void> getCurrentLocation() async {
-    debugPrint("🔍 DriverLocationProvider.getCurrentLocation() called");
     _isLoading = true;
     notifyListeners();
 
@@ -43,9 +42,6 @@ class DriverLocationProvider extends ChangeNotifier {
 
       if (location != null) {
         _currentPosition = GeolocatorHelper.latLngToPosition(location);
-        debugPrint(
-          "✅ Location fetched successfully: ${location.latitude}, ${location.longitude}",
-        );
       } else {
         debugPrint(
           "⚠️ Location is null - permissions may be denied or location services disabled",

@@ -340,7 +340,6 @@ class OSRMService {
             final props = features.first['properties'];
             final countryCode = props['countrycode'] as String?;
             if (countryCode != null) {
-              debugPrint("✅ Fallback successful: $countryCode");
               return countryCode.toUpperCase();
             }
           }
@@ -494,7 +493,6 @@ class OSRMService {
         }
 
         final result = cities.take(5).toList();
-        debugPrint('✅ Found ${result.length} cities: $result');
         return result;
       } else {
         debugPrint('⚠️ API returned non-200 status: ${response.statusCode}');

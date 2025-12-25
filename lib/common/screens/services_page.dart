@@ -170,7 +170,6 @@ class _ServicesPageState extends State<ServicesPage> {
     // If order was placed successfully, optionally refresh or show confirmation
     if (result == true && mounted) {
       // Order was placed successfully - dialog already shows success message
-      debugPrint('✅ Order placed for service: ${service.name}');
     }
   }
 
@@ -315,15 +314,10 @@ class _ServicesPageState extends State<ServicesPage> {
   }
 
   Future<void> _showCustomOrderDialog() async {
-    final result = await showDialog<bool>(
+    await showDialog<bool>(
       context: context,
       builder: (context) => const CustomOrderDialog(),
     );
-
-    // If order was placed successfully, optionally refresh or show confirmation
-    if (result == true && mounted) {
-      debugPrint('✅ Custom order placed successfully');
-    }
   }
 
   Widget _buildCategoryFilter() {

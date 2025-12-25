@@ -68,19 +68,14 @@ class PassengerRideRequestProvider extends ChangeNotifier {
 
   Future<void> fetchCurrentRideRequest() async {
     if (_isLoading) return; // ✅ Prevent duplicate calls
-    debugPrint('🚀 fetchCurrentRideRequest started');
     try {
       // Only show loading if we don't have data yet
       if (_currentRideRequest == null) {
-        debugPrint('⏳ Setting isLoading = true');
         _isLoading = true;
         notifyListeners();
       }
 
       final rideRequest = await RideRequestServices.getCurrentRideRequest();
-      debugPrint(
-        '✅ Ride request found: ID=${rideRequest?.id}, Status=${rideRequest?.status}',
-      );
 
       _currentRideRequest = rideRequest;
 
@@ -88,7 +83,6 @@ class PassengerRideRequestProvider extends ChangeNotifier {
         _listenToStatusChanges(_currentRideRequest!.id.toString());
       }
 
-      debugPrint('🏁 Setting isLoading = false');
       _isLoading = false;
       _hasFetched = true; // ✅ Mark as fetched
       notifyListeners();
@@ -104,8 +98,6 @@ class PassengerRideRequestProvider extends ChangeNotifier {
   void _listenToStatusChanges(String rideId) {
     // Cancel previous subscription if exists
     _stopListeningToStatus();
-
-    debugPrint('Starting to listen for status changes on ride: $rideId');
 
     _supabase
         .channel('public:ride_requests:$rideId')

@@ -23,7 +23,6 @@ class CarRentalService {
       final brands =
           (response as List).map((json) => CarBrand.fromJson(json)).toList();
 
-      debugPrint('✅ Loaded ${brands.length} car brands');
       return brands;
     } catch (e) {
       debugPrint('❌ Error loading car brands: $e');
@@ -52,14 +51,14 @@ class CarRentalService {
               category,
               average_consumption
             ),
-            car_renter:car_renters!inner(
+            car_renter:car_renters(
               id,
               user_id,
               business_name,
               city,
               rating,
               is_verified,
-              user:users!inner(
+              user:users(
                 id,
                 name,
                 phone,
@@ -81,10 +80,24 @@ class CarRentalService {
 
       final response = await query;
 
-      List<ProvidedCarRental> cars =
-          (response as List)
-              .map((json) => ProvidedCarRental.fromJson(json))
-              .toList();
+      if ((response as List).isEmpty) {
+        debugPrint('   ⚠️ No records returned from database');
+        return [];
+      }
+
+      // Log first record for debugging
+      if ((response as List).isNotEmpty) {}
+
+      List<ProvidedCarRental> cars = [];
+      for (var i = 0; i < (response as List).length; i++) {
+        try {
+          final car = ProvidedCarRental.fromJson((response as List)[i]);
+          cars.add(car);
+        } catch (parseError) {
+          debugPrint('   ❌ Error parsing car at index $i: $parseError');
+          debugPrint('   📄 Problematic record: ${(response as List)[i]}');
+        }
+      }
 
       // Calculate distances if user location is provided
       if (userLocation != null &&
@@ -113,10 +126,10 @@ class CarRentalService {
         });
       }
 
-      debugPrint('✅ Loaded ${cars.length} available rental cars');
       return cars;
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Error loading rental cars: $e');
+      debugPrint('   Stack trace: $stackTrace');
       return [];
     }
   }
@@ -175,10 +188,108 @@ class CarRentalService {
               .map((json) => ProvidedCarRental.fromJson(json))
               .toList();
 
-      debugPrint('✅ Loaded ${cars.length} cars for renter $renterId');
       return cars;
     } catch (e) {
       debugPrint('❌ Error loading renter cars: $e');
+      return [];
+    }
+  }
+
+  /// Get car renters in a specific city
+  Future<List<Map<String, dynamic>>> getCarRentersByCity(String city) async {
+    try {
+      // Use filter with case-insensitive comparison
+      final response = await _supabase
+          .from('car_renters')
+          .select('''
+            id,
+            user_id,
+            business_name,
+            city,
+            rating,
+            is_verified,
+            user:users(
+              id,
+              name,
+              phone,
+              profile_image_path
+            )
+          ''')
+          .eq('city', city) // Try exact match first
+          .order('rating', ascending: false);
+
+      // If no exact match, try case-insensitive search
+      if ((response as List).isEmpty) {
+        debugPrint('⚠️ No exact match, trying case-insensitive search...');
+
+        // Fetch all car renters and filter in Dart
+        final allResponse = await _supabase
+            .from('car_renters')
+            .select('''
+              id,
+              user_id,
+              business_name,
+              city,
+              rating,
+              is_verified,
+              user:users(
+                id,
+                name,
+                phone,
+                profile_image_path
+              )
+            ''')
+            .order('rating', ascending: false);
+
+        // Filter by city case-insensitively
+        final filtered =
+            (allResponse as List).where((renter) {
+              final renterCity = renter['city'] as String?;
+
+              final matches = renterCity?.toLowerCase() == city.toLowerCase();
+              return matches;
+            }).toList();
+
+        return filtered.cast<Map<String, dynamic>>();
+      }
+
+      return (response as List).cast<Map<String, dynamic>>();
+    } catch (e) {
+      debugPrint('❌ Error loading car renters by city: $e');
+      return [];
+    }
+  }
+
+  /// Get only available cars for a specific renter
+  Future<List<ProvidedCarRental>> getAvailableCarsByRenterId(
+    int renterId,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('provided_car_rentals')
+          .select('''
+            *,
+            car_brand:car_brands(
+              id,
+              company,
+              model,
+              thumbnail_image,
+              category,
+              average_consumption
+            )
+          ''')
+          .eq('car_renter_id', renterId)
+          .eq('is_available', true)
+          .order('daily_price', ascending: true);
+
+      final cars =
+          (response as List)
+              .map((json) => ProvidedCarRental.fromJson(json))
+              .toList();
+
+      return cars;
+    } catch (e) {
+      debugPrint('❌ Error loading available cars: $e');
       return [];
     }
   }
@@ -223,7 +334,6 @@ class CarRentalService {
               .select()
               .single();
 
-      debugPrint('✅ Rental request created successfully');
       return CarRentalRequest.fromJson(response);
     } catch (e) {
       debugPrint('❌ Error creating rental request: $e');
@@ -243,10 +353,19 @@ class CarRentalService {
             *,
             car_rental:provided_car_rentals!inner(
               id,
-              model,
+              car_renter_id,
+              car_brand_id,
               year,
+              city,
               daily_price,
-              images
+              images,
+              car_brand:car_brands(
+                id,
+                company,
+                model,
+                thumbnail_image,
+                category
+              )
             )
           ''')
           .eq('user_id', userId)
@@ -257,7 +376,6 @@ class CarRentalService {
               .map((json) => CarRentalRequest.fromJson(json))
               .toList();
 
-      debugPrint('✅ Loaded ${requests.length} rental requests');
       return requests;
     } catch (e) {
       debugPrint('❌ Error loading rental requests: $e');
@@ -276,11 +394,19 @@ class CarRentalService {
             *,
             car_rental:provided_car_rentals!inner(
               id,
-              model,
+              car_renter_id,
+              car_brand_id,
               year,
+              city,
               daily_price,
               images,
-              car_renter_id
+              car_brand:car_brands(
+                id,
+                company,
+                model,
+                thumbnail_image,
+                category
+              )
             )
           ''')
           .eq('car_rental.car_renter_id', renterId)
@@ -291,7 +417,6 @@ class CarRentalService {
               .map((json) => CarRentalRequest.fromJson(json))
               .toList();
 
-      debugPrint('✅ Loaded ${requests.length} requests for renter $renterId');
       return requests;
     } catch (e) {
       debugPrint('❌ Error loading renter requests: $e');
@@ -328,7 +453,6 @@ class CarRentalService {
               .select()
               .single();
 
-      debugPrint('✅ Added new car rental');
       return ProvidedCarRental.fromJson(response);
     } catch (e) {
       debugPrint('❌ Error adding car rental: $e');
@@ -370,7 +494,6 @@ class CarRentalService {
           .update(updates)
           .eq('id', carId);
 
-      debugPrint('✅ Updated car rental $carId');
       return true;
     } catch (e) {
       debugPrint('❌ Error updating car rental: $e');
@@ -383,7 +506,6 @@ class CarRentalService {
     try {
       await _supabase.from('provided_car_rentals').delete().eq('id', carId);
 
-      debugPrint('✅ Deleted car rental $carId');
       return true;
     } catch (e) {
       debugPrint('❌ Error deleting car rental: $e');
@@ -402,7 +524,6 @@ class CarRentalService {
           .update({'status': status})
           .eq('id', requestId);
 
-      debugPrint('✅ Updated request $requestId to $status');
       return true;
     } catch (e) {
       debugPrint('❌ Error updating request status: $e');

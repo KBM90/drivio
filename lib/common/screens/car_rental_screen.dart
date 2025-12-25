@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:drivio_app/common/models/provided_car_rental.dart';
 import 'package:drivio_app/car_renter/services/car_rental_service.dart';
 import 'package:drivio_app/car_renter/screens/car_renter_profile_screen.dart';
+import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class CarRentalScreen extends StatefulWidget {
   const CarRentalScreen({super.key});
@@ -117,6 +120,16 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                   ),
                 ],
               ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => const _NewRentalRequestDialog(),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('New Request'),
+      ),
     );
   }
 
@@ -351,11 +364,9 @@ class _CarCard extends StatelessWidget {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Booking feature coming soon!'),
-                            duration: Duration(seconds: 2),
-                          ),
+                        showDialog(
+                          context: context,
+                          builder: (context) => _BookingDialog(car: car),
                         );
                       },
                       child: const Text('Book Now'),
@@ -531,6 +542,973 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NewRentalRequestDialog extends StatefulWidget {
+  const _NewRentalRequestDialog();
+
+  @override
+  State<_NewRentalRequestDialog> createState() =>
+      _NewRentalRequestDialogState();
+}
+
+class _NewRentalRequestDialogState extends State<_NewRentalRequestDialog> {
+  final CarRentalService _service = CarRentalService();
+  final OSRMService _osrmService = OSRMService();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+
+  Timer? _debounce;
+  List<String> _citySuggestions = [];
+  String? _selectedCity;
+  List<Map<String, dynamic>> _carRenters = [];
+  Map<String, dynamic>? _selectedRenter;
+  List<ProvidedCarRental> _availableCars = [];
+  ProvidedCarRental? _selectedCar;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _isLoadingRenters = false;
+  bool _isLoadingCars = false;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _cityController.dispose();
+    _notesController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _searchCities(String query) async {
+    if (query.trim().length < 2) {
+      setState(() => _citySuggestions = []);
+      return;
+    }
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final suggestions = await _osrmService.searchCities(query);
+        if (mounted) {
+          setState(() => _citySuggestions = suggestions);
+        }
+      } catch (e) {
+        debugPrint('❌ Error searching cities: $e');
+      }
+    });
+  }
+
+  Future<void> _onCitySelected(String city) async {
+    setState(() {
+      _selectedCity = city;
+      _cityController.text = city;
+      _citySuggestions = [];
+      _isLoadingRenters = true;
+      _selectedRenter = null;
+      _carRenters = [];
+      _selectedCar = null;
+      _availableCars = [];
+    });
+
+    try {
+      // Pass the original city name - ilike will handle case-insensitive matching
+      final renters = await _service.getCarRentersByCity(city);
+
+      if (mounted) {
+        setState(() {
+          _carRenters = renters;
+          _isLoadingRenters = false;
+        });
+
+        if (renters.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No car renters found in $city'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading car renters: $e');
+      if (mounted) {
+        setState(() => _isLoadingRenters = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading car renters: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _onRenterSelected(Map<String, dynamic>? renter) async {
+    if (renter == null) return;
+
+    setState(() {
+      _selectedRenter = renter;
+      _isLoadingCars = true;
+      _selectedCar = null;
+      _availableCars = [];
+    });
+
+    try {
+      final cars = await _service.getAvailableCarsByRenterId(renter['id']);
+      if (mounted) {
+        setState(() {
+          _availableCars = cars;
+          _isLoadingCars = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading available cars: $e');
+      if (mounted) {
+        setState(() => _isLoadingCars = false);
+      }
+    }
+  }
+
+  Future<void> _submitRequest() async {
+    if (_selectedCar == null || _startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill all required fields'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final request = await _service.createRentalRequest(
+        carRentalId: _selectedCar!.id,
+        startDate: _startDate!,
+        endDate: _endDate!,
+        notes:
+            _notesController.text.trim().isEmpty
+                ? null
+                : _notesController.text.trim(),
+      );
+
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+
+        if (request != null) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Rental request submitted successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to submit request. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error submitting request: $e');
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'New Rental Request',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Form
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // City autocomplete
+                    const Text(
+                      'City *',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _cityController,
+                      decoration: InputDecoration(
+                        hintText: 'Search city...',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.location_city),
+                        suffixIcon:
+                            _selectedCity != null
+                                ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedCity = null;
+                                      _cityController.clear();
+                                      _citySuggestions = [];
+                                      _carRenters = [];
+                                      _selectedRenter = null;
+                                      _availableCars = [];
+                                      _selectedCar = null;
+                                    });
+                                  },
+                                )
+                                : null,
+                      ),
+                      onChanged: _searchCities,
+                    ),
+                    if (_citySuggestions.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        constraints: const BoxConstraints(maxHeight: 150),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _citySuggestions.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              leading: const Icon(Icons.location_on, size: 20),
+                              title: Text(_citySuggestions[index]),
+                              onTap:
+                                  () =>
+                                      _onCitySelected(_citySuggestions[index]),
+                              dense: true,
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+
+                    // Car Renter dropdown
+                    const Text(
+                      'Car Renter *',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<Map<String, dynamic>>(
+                      value: _selectedRenter,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Select car renter',
+                      ),
+                      items:
+                          _carRenters.map((renter) {
+                            final name =
+                                renter['business_name'] ??
+                                renter['user']?['name'] ??
+                                'Car Renter';
+                            final rating = renter['rating'] ?? 0.0;
+                            return DropdownMenuItem(
+                              value: renter,
+                              child: Row(
+                                children: [
+                                  Expanded(child: Text(name)),
+                                  if (renter['is_verified'] == true)
+                                    Icon(
+                                      Icons.verified,
+                                      size: 16,
+                                      color: Colors.blue[700],
+                                    ),
+                                  const SizedBox(width: 8),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.star,
+                                        size: 14,
+                                        color: Colors.amber,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        rating.toStringAsFixed(1),
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                      onChanged:
+                          _selectedCity == null || _isLoadingRenters
+                              ? null
+                              : _onRenterSelected,
+                    ),
+                    if (_isLoadingRenters)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: LinearProgressIndicator(),
+                      ),
+                    const SizedBox(height: 16),
+
+                    // Available Cars dropdown
+                    const Text(
+                      'Available Car *',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<ProvidedCarRental>(
+                      value: _selectedCar,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Select car',
+                      ),
+                      items:
+                          _availableCars.map((car) {
+                            return DropdownMenuItem(
+                              value: car,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      car.displayName,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${car.dailyPrice.toStringAsFixed(0)} MAD/day',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                      onChanged:
+                          _selectedRenter == null || _isLoadingCars
+                              ? null
+                              : (car) => setState(() => _selectedCar = car),
+                    ),
+                    if (_isLoadingCars)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: LinearProgressIndicator(),
+                      ),
+                    const SizedBox(height: 16),
+
+                    // Date range
+                    const Text(
+                      'Rental Period *',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: _startDate ?? DateTime.now(),
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 365),
+                                ),
+                              );
+                              if (date != null) {
+                                setState(() => _startDate = date);
+                              }
+                            },
+                            icon: const Icon(Icons.calendar_today, size: 18),
+                            label: Text(
+                              _startDate != null
+                                  ? DateFormat(
+                                    'MMM dd, yyyy',
+                                  ).format(_startDate!)
+                                  : 'Start Date',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: _endDate ?? DateTime.now(),
+                                firstDate: _startDate ?? DateTime.now(),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 365),
+                                ),
+                              );
+                              if (date != null) {
+                                setState(() => _endDate = date);
+                              }
+                            },
+                            icon: const Icon(Icons.calendar_today, size: 18),
+                            label: Text(
+                              _endDate != null
+                                  ? DateFormat('MMM dd, yyyy').format(_endDate!)
+                                  : 'End Date',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Notes
+                    const Text(
+                      'Notes (Optional)',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Add any special requests or notes...',
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Submit button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitRequest,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child:
+                    _isSubmitting
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Text('Submit Request'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingDialog extends StatefulWidget {
+  final ProvidedCarRental car;
+
+  const _BookingDialog({required this.car});
+
+  @override
+  State<_BookingDialog> createState() => _BookingDialogState();
+}
+
+class _BookingDialogState extends State<_BookingDialog> {
+  final CarRentalService _service = CarRentalService();
+  final TextEditingController _notesController = TextEditingController();
+
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  int? get _totalDays {
+    if (_startDate == null || _endDate == null) return null;
+    return _endDate!.difference(_startDate!).inDays + 1;
+  }
+
+  double? get _totalPrice {
+    if (_totalDays == null) return null;
+    return widget.car.dailyPrice * _totalDays!;
+  }
+
+  bool _isDateAvailable(DateTime date) {
+    if (widget.car.unavailableFrom == null ||
+        widget.car.unavailableUntil == null) {
+      return true; // No restrictions
+    }
+
+    // Normalize dates to compare only year, month, day
+    final unavailableStart = DateTime(
+      widget.car.unavailableFrom!.year,
+      widget.car.unavailableFrom!.month,
+      widget.car.unavailableFrom!.day,
+    );
+    final unavailableEnd = DateTime(
+      widget.car.unavailableUntil!.year,
+      widget.car.unavailableUntil!.month,
+      widget.car.unavailableUntil!.day,
+    );
+
+    final checkDate = DateTime(date.year, date.month, date.day);
+
+    // Date is available if it's before the unavailable period starts
+    // or after the unavailable period ends
+    return checkDate.isBefore(unavailableStart) ||
+        checkDate.isAfter(unavailableEnd);
+  }
+
+  /// Get the first available date for the date picker initial date
+  /// This ensures the initialDate satisfies the selectableDayPredicate
+  DateTime _getFirstAvailableDate(DateTime preferredDate) {
+    if (_isDateAvailable(preferredDate)) {
+      return preferredDate;
+    }
+
+    // If preferred date is unavailable, check if we should use the day after unavailable period
+    if (widget.car.unavailableFrom != null &&
+        widget.car.unavailableUntil != null) {
+      final unavailableEnd = DateTime(
+        widget.car.unavailableUntil!.year,
+        widget.car.unavailableUntil!.month,
+        widget.car.unavailableUntil!.day,
+      );
+
+      // Return the day after the unavailable period ends
+      return unavailableEnd.add(const Duration(days: 1));
+    }
+
+    return preferredDate;
+  }
+
+  Future<void> _submitBooking() async {
+    if (_startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select both start and end dates'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final request = await _service.createRentalRequest(
+        carRentalId: widget.car.id,
+        startDate: _startDate!,
+        endDate: _endDate!,
+        notes:
+            _notesController.text.trim().isEmpty
+                ? null
+                : _notesController.text.trim(),
+      );
+
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+
+        if (request != null) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Booking request submitted successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to submit booking. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error submitting booking: $e');
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 650),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Book Car Rental',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Car details
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.directions_car, color: Colors.blue[700], size: 32),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.car.displayName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          '${widget.car.dailyPrice.toStringAsFixed(0)} MAD/day',
+                          style: TextStyle(
+                            color: Colors.blue[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Form
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Unavailable period warning
+                    if (widget.car.unavailableFrom != null &&
+                        widget.car.unavailableUntil != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.red[400]!, width: 2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.event_busy,
+                                  color: Colors.red[800],
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Unavailable Period',
+                                    style: TextStyle(
+                                      color: Colors.red[900],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 36),
+                              child: Text(
+                                '${DateFormat('MMM dd, yyyy').format(widget.car.unavailableFrom!)} - ${DateFormat('MMM dd, yyyy').format(widget.car.unavailableUntil!)}',
+                                style: TextStyle(
+                                  color: Colors.red[900],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 36),
+                              child: Text(
+                                'These dates will appear disabled in the calendar',
+                                style: TextStyle(
+                                  color: Colors.red[700],
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // Date selection
+                    const Text(
+                      'Rental Period *',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Start date
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _getFirstAvailableDate(
+                            _startDate ?? DateTime.now(),
+                          ),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
+                          selectableDayPredicate: _isDateAvailable,
+                        );
+                        if (date != null) {
+                          setState(() {
+                            _startDate = date;
+                            // Reset end date if it's before the new start date
+                            if (_endDate != null && _endDate!.isBefore(date)) {
+                              _endDate = null;
+                            }
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_today, size: 18),
+                      label: SizedBox(
+                        width: double.infinity,
+                        child: Text(
+                          _startDate != null
+                              ? 'Start: ${DateFormat('MMM dd, yyyy').format(_startDate!)}'
+                              : 'Select Start Date',
+                          textAlign: TextAlign.left,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // End date
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: _getFirstAvailableDate(
+                            _endDate ?? _startDate ?? DateTime.now(),
+                          ),
+                          firstDate: _startDate ?? DateTime.now(),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
+                          selectableDayPredicate: _isDateAvailable,
+                        );
+                        if (date != null) {
+                          setState(() => _endDate = date);
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_today, size: 18),
+                      label: SizedBox(
+                        width: double.infinity,
+                        child: Text(
+                          _endDate != null
+                              ? 'End: ${DateFormat('MMM dd, yyyy').format(_endDate!)}'
+                              : 'Select End Date',
+                          textAlign: TextAlign.left,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Price calculation
+                    if (_totalDays != null && _totalPrice != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green[200]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Duration:',
+                                  style: TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                Text(
+                                  '$_totalDays ${_totalDays == 1 ? 'day' : 'days'}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Daily Rate:',
+                                  style: TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                Text(
+                                  '${widget.car.dailyPrice.toStringAsFixed(0)} MAD',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Total Price:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  '${_totalPrice!.toStringAsFixed(0)} MAD',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: Colors.green[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Notes
+                    const Text(
+                      'Notes (Optional)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _notesController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Add any special requests or notes...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Submit button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed:
+                    _isSubmitting || _startDate == null || _endDate == null
+                        ? null
+                        : _submitBooking,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child:
+                    _isSubmitting
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Text(
+                          'Submit Booking Request',
+                          style: TextStyle(fontSize: 16),
+                        ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

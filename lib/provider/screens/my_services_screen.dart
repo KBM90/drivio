@@ -113,7 +113,6 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
 
     // Check if it's an asset path
     if (imageUrl.startsWith('assets/')) {
-      debugPrint('🎨 Loading asset image: $imageUrl');
       return Image.asset(
         imageUrl,
         height: 100,
@@ -182,16 +181,10 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
         itemCount: _services.length,
         itemBuilder: (context, index) {
           final service = _services[index];
-          // Construct default image path based on provider type and category
-          debugPrint('🖼️ Building image for service: ${service.name}');
-          debugPrint('  - imageUrls: ${service.imageUrls}');
-          debugPrint('  - category: ${service.category}');
-          debugPrint('  - providerType: ${service.providerType}');
 
           String imageUrl;
           if (service.imageUrls!.isNotEmpty) {
             imageUrl = service.imageUrls!.first;
-            debugPrint('  ✅ Using uploaded image: $imageUrl');
           } else {
             // Convert category to snake_case for file name (e.g., "Brake Service" -> "brake_service")
             final categoryFileName =
@@ -202,7 +195,6 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                 'default';
             final providerType = service.providerType ?? 'other';
             imageUrl = 'assets/services/$providerType/$categoryFileName.png';
-            debugPrint('  ✅ Using default image: $imageUrl');
           }
 
           return Card(

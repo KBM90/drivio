@@ -33,7 +33,9 @@ class AuthService {
 
     // 2. Try SharedPreferences
     String? role = await SharedPreferencesHelper().getValue<String>('role');
-    if (role != null) return role;
+    if (role != null) {
+      return role;
+    }
 
     // 3. Try Database (public.users)
     role = await _getRoleFromDb();
@@ -42,13 +44,17 @@ class AuthService {
       return role;
     }
 
+    debugPrint('⚠️ AuthService: No role found from any source');
     return null;
   }
 
   static Future<String?> _getRoleFromDb() async {
     try {
       final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) return null;
+      if (userId == null) {
+        debugPrint('⚠️ AuthService: No userId found');
+        return null;
+      }
 
       final data =
           await _supabase
@@ -57,7 +63,8 @@ class AuthService {
               .eq('user_id', userId)
               .maybeSingle();
 
-      return data?['role'] as String?;
+      final role = data?['role'] as String?;
+      return role;
     } catch (e) {
       debugPrint('❌ Error fetching role from DB: $e');
       return null;
@@ -151,8 +158,6 @@ class AuthService {
       //    2. Record in drivers or passengers table
       // No manual insertion needed!
 
-      debugPrint('✅ Sign up successful for ${user.email} as $role');
-
       return response;
     } catch (e) {
       debugPrint('❌ Sign up error: $e');
@@ -179,7 +184,6 @@ class AuthService {
         }
       }
 
-      debugPrint('✅ Sign in successful: ${response.user?.email}');
       return response;
     } catch (e) {
       debugPrint('❌ Sign in error: $e');
@@ -202,20 +206,12 @@ class AuthService {
         return;
       }
 
-      /* debugPrint(
-        '🔍 Session check: isExpired=${session.isExpired}, forceRefresh=$forceRefresh',
-      );*/
-
       // Refresh if expired OR forced
       if (session.isExpired || forceRefresh) {
-        debugPrint(
-          '🔄 Refreshing session (Expired: ${session.isExpired}, Forced: $forceRefresh)...',
-        );
         try {
           final response = await _supabase.auth.refreshSession();
 
           if (response.session != null) {
-            debugPrint('✅ Session refreshed successfully');
           } else {
             debugPrint(
               '❌ Session refresh returned null - user needs to re-login',
@@ -231,8 +227,6 @@ class AuthService {
             'Session expired and refresh failed - please log in again',
           );
         }
-      } else {
-        ///debugPrint('✅ Session is valid');
       }
     } catch (e) {
       debugPrint('❌ Error in ensureValidSession: $e');
@@ -367,8 +361,6 @@ class AuthService {
       } else if (role == 'driver') {
         await getDriverId();
       }
-
-      debugPrint('✅ User data initialized');
     } catch (e) {
       debugPrint('❌ Error initializing user data: $e');
     }
@@ -384,8 +376,6 @@ class AuthService {
       _cachedInternalUserId = null;
       _cachedPassengerId = null;
       _cachedDriverId = null;
-
-      debugPrint('✅ Signed out successfully');
     } catch (e) {
       debugPrint('❌ Sign out error: $e');
       rethrow;
@@ -397,7 +387,6 @@ class AuthService {
     try {
       await _supabase.rpc('delete_own_account');
       await signOut(); // Ensure local session is cleared
-      debugPrint('✅ Account deleted successfully');
     } catch (e) {
       debugPrint('❌ Error deleting account: $e');
       throw Exception('Failed to delete account: $e');

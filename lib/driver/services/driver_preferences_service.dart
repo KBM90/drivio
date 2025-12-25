@@ -23,7 +23,6 @@ class DriverPreferencesService {
               .maybeSingle();
 
       if (response == null || response['preferences'] == null) {
-        debugPrint('ℹ️ No preferences found, returning defaults');
         return const DriverPreferences();
       }
 
@@ -83,9 +82,6 @@ class DriverPreferencesService {
 
       await _supabase.from('drivers').update(updateData).eq('id', driverId);
 
-      debugPrint(
-        '✅ Preferences${range != null ? ' and range' : ''} saved successfully',
-      );
       return true;
     } catch (e) {
       debugPrint('❌ Error saving preferences: $e');

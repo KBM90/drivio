@@ -46,12 +46,8 @@ class ProvidedService {
     String? pCity;
     String? pType;
     if (json['service_providers'] != null) {
-      debugPrint(
-        '🔍 service_providers data in fromJson: ${json['service_providers']}',
-      );
       pName = json['service_providers']['business_name'];
       pType = json['service_providers']['provider_type'];
-      debugPrint('🔍 Extracted provider_type: $pType');
       if (json['service_providers']['users'] != null) {
         pPhone = json['service_providers']['users']['phone'];
         pCity = json['service_providers']['users']['city'];

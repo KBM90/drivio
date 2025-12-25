@@ -28,8 +28,6 @@ class DeliveryService {
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       });
-
-      debugPrint('✅ Delivery request created successfully');
     } catch (e) {
       debugPrint('❌ Error creating delivery request: $e');
       throw Exception('Failed to create delivery request: $e');

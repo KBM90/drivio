@@ -100,7 +100,6 @@ class _InboxPageState extends State<InboxPage>
             }
 
             final notifications = snapshot.data!;
-            debugPrint('✅ Displaying ${notifications.length} notifications');
             return ListView.builder(
               itemCount: notifications.length,
               itemBuilder: (context, index) {

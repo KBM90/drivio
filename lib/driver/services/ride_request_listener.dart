@@ -49,9 +49,6 @@ class RideRequestListener {
                 schema: 'public',
                 table: 'ride_requests',
                 callback: (payload) async {
-                  debugPrint(
-                    '🔔 New ride request inserted: ${payload.newRecord}',
-                  );
                   await _fetchNearbyRides(onNearbyRideRequests, onError);
                 },
               )
@@ -60,7 +57,6 @@ class RideRequestListener {
                 schema: 'public',
                 table: 'ride_requests',
                 callback: (payload) async {
-                  debugPrint('🔄 Ride request updated: ${payload.newRecord}');
                   await _fetchNearbyRides(onNearbyRideRequests, onError);
                 },
               )
@@ -69,15 +65,10 @@ class RideRequestListener {
                 schema: 'public',
                 table: 'ride_requests',
                 callback: (payload) async {
-                  debugPrint('🗑️ Ride request deleted: ${payload.oldRecord}');
                   await _fetchNearbyRides(onNearbyRideRequests, onError);
                 },
               )
               .subscribe();
-
-      debugPrint(
-        '✅ Started listening for ride requests within $driverRange km',
-      );
     } catch (e) {
       debugPrint('❌ Error starting listener: $e');
       onError(e.toString());
@@ -110,7 +101,6 @@ class RideRequestListener {
 
       final nearbyRides = List<Map<String, dynamic>>.from(response as List);
 
-      debugPrint('📍 Found ${nearbyRides.length} nearby ride requests');
       onNearbyRideRequests(nearbyRides);
     } catch (e) {
       debugPrint('❌ Error fetching nearby rides: $e');
@@ -159,14 +149,11 @@ class RideRequestListener {
     }
   }
 
-  
-
   /// Stop listening for ride requests
   Future<void> stopListening() async {
     if (_channel != null) {
       await _supabase.removeChannel(_channel!);
       _channel = null;
-      debugPrint('🛑 Stopped listening for ride requests');
     }
   }
 
@@ -178,8 +165,6 @@ class RideRequestListener {
   /// Refresh driver data (range and other info)
   Future<void> refreshDriverData() async {
     try {
-      debugPrint('🔄 Refreshing driver data...');
-
       Driver? driver = await DriverService.getDriver();
 
       // Update internal state
@@ -192,10 +177,6 @@ class RideRequestListener {
         _driverLat = driver.location?.latitude;
         _driverLng = driver.location?.longitude;
       }
-
-      debugPrint(
-        '✅ Driver data refreshed: Range=$driverRange km, Location=($_driverLat, $_driverLng)',
-      );
     } catch (e) {
       debugPrint('❌ Error refreshing driver data: $e');
       rethrow;

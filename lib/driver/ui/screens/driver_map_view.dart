@@ -89,7 +89,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     if (driver == null) return;
 
     // Check driver status
-    debugPrint("🔍 _onDriverChanged - Driver Status is: ${driver.status}");
 
     // Clear routes when driver goes inactive OR when active without a ride request
     if (driver.status == DriverStatus.inactive) {
@@ -105,9 +104,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       // Clear ride request routes if there's no current ride request
       if (rideRequestsProvider.currentRideRequest == null) {
         if (_routePolyline.isNotEmpty || _destination != null) {
-          debugPrint(
-            "🗑️ Clearing routes - driver is active but no ride request",
-          );
           setState(() {
             _routePolyline = [];
             _routePolylineDriverToPickup = [];
@@ -120,7 +116,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
     // Fetch current ride request if driver is on_trip (for app restart scenario)
     if (driver.status == DriverStatus.onTrip && !_hasLoadedRideRequest) {
-      debugPrint("🔍 Driver is onTrip, calling _loadCurrentRideRequest");
       _hasLoadedRideRequest = true;
       await _loadCurrentRideRequest();
     }
@@ -130,7 +125,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
         !locationProvider.isLoading &&
         locationProvider.currentLocation != null &&
         !_hasInitialFetchDone) {
-      debugPrint("🔍 Driver is active, fetching nearby ride requests");
       _hasInitialFetchDone = true;
       rideRequestsProvider.getNearByRideRequests(
         locationProvider.currentLocation!,
@@ -146,17 +140,13 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       );
 
       if (currentRideId != null) {
-        debugPrint("📍 Loading current ride request: $currentRideId");
         await rideRequestsProvider.fetchRideRequest(currentRideId);
 
         // Verify the ride request was actually loaded
         if (rideRequestsProvider.currentRideRequest == null) {
-          debugPrint("⚠️ Failed to load ride request, going offline");
           await ChangeStatus().goOffline();
           await SharedPreferencesHelper.remove("currentRideId");
-        } else {
-          debugPrint("✅ Current ride request loaded");
-        }
+        } else {}
       } else {
         debugPrint("⚠️ No current ride ID found, going offline");
         await ChangeStatus().goOffline();
@@ -169,11 +159,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
   }
 
   Future<void> _onDestinationChanged() async {
-    debugPrint('🔔 _onDestinationChanged called');
-    debugPrint('   mounted: $mounted, _isMapReady: $_isMapReady');
-
     if (!mounted) {
-      debugPrint('   ⚠️ Widget not mounted, skipping');
       return;
     }
 
@@ -191,9 +177,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     final destination = destinationProvider.selectedDestination;
     final driverLocation = locationProvider.currentLocation;
 
-    debugPrint('   destination: $destination');
-    debugPrint('   driverLocation: $driverLocation');
-
     if (destination == null || driverLocation == null) {
       // Clear route if destination is cleared
       if (mounted) {
@@ -203,10 +186,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       }
       return;
     }
-
-    debugPrint(
-      '🗺️ Fetching route to search destination: ${destinationProvider.destinationName}',
-    );
 
     try {
       // Fetch route from driver to destination
@@ -238,7 +217,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                 ), // Increased padding for better visibility
               ),
             );
-            debugPrint('📷 Camera fitted to show entire route');
           }
         }
       }
@@ -420,7 +398,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       return;
     }
 
-    debugPrint("🗺️ Fetching route: Driver->Pickup and Pickup->Destination");
     try {
       // Fetch Driver -> Pickup
       final driverToPickup = await _osrmService.getRouteBetweenPickupAndDropoff(
@@ -433,20 +410,11 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
       final pickupToDropoff = await _osrmService
           .getRouteBetweenPickupAndDropoff(pickup, dropoff, context);
 
-      debugPrint(
-        "✅ Routes fetched: Driver->Pickup (${driverToPickup.length} points), Pickup->Dest (${pickupToDropoff.length} points)",
-      );
-
       if (mounted) {
         setState(() {
           _routePolylineDriverToPickup = driverToPickup;
           _routePolyline = pickupToDropoff;
         });
-        debugPrint("✅ Routes stored in state");
-        debugPrint(
-          "   _routePolylineDriverToPickup length: ${_routePolylineDriverToPickup.length}",
-        );
-        debugPrint("   _routePolyline length: ${_routePolyline.length}");
       }
     } catch (e) {
       debugPrint("❌ Failed to fetch route: $e");
@@ -522,9 +490,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                         currentRide.pickupLocation.longitude != null &&
                         currentRide.destinationLocation.latitude != null &&
                         currentRide.destinationLocation.longitude != null) {
-                      debugPrint(
-                        "🗺️ Fetching routes for active ride request on map ready",
-                      );
                       await _fetchRoute(
                         driverLocation,
                         LatLng(
@@ -663,7 +628,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                                     ),
                                     child: GestureDetector(
                                       onTap: () async {
-                                        debugPrint("pickup clicked");
                                         try {
                                           showRideRequestModal(
                                             context,
@@ -671,9 +635,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                                             rideRequestsProvider,
                                             driverProvider.currentDriver!,
                                           ).then((accepted) async {
-                                            debugPrint(
-                                              "🏁 Modal closed. Accepted: $accepted",
-                                            );
                                             if (accepted != true) {
                                               setState(() {
                                                 _routePolyline = [];

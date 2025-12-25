@@ -17,12 +17,8 @@ class DriverProvider extends ChangeNotifier {
   String? get statusMessage => _statusMessage;
 
   Future<void> getDriver(BuildContext context) async {
-    debugPrint("🔍 DriverProvider.getDriver() called");
     try {
       _currentDriver = await DriverService.getDriver();
-      debugPrint(
-        "✅ Driver fetched successfully: ID=${_currentDriver?.id}, Status=${_currentDriver?.status}",
-      );
 
       // Validate driver status - if on_trip but no active ride, reset to active
       await _validateDriverStatus();
@@ -37,9 +33,6 @@ class DriverProvider extends ChangeNotifier {
   /// Validates driver status and fixes inconsistencies
   /// If driver is on_trip but has no active ride, resets to active
   Future<void> _validateDriverStatus() async {
-    debugPrint("🔍 _validateDriverStatus called");
-    debugPrint("   Current driver status: ${_currentDriver?.status}");
-
     if (_currentDriver?.status == DriverStatus.onTrip) {
       try {
         // Check if there's an active ride in SharedPreferences
@@ -47,20 +40,14 @@ class DriverProvider extends ChangeNotifier {
           "currentRideId",
         );
 
-        debugPrint(
-          "🔍 Validating driver status: on_trip, currentRideId: $currentRideId",
-        );
-
         bool shouldReset = false;
 
         if (currentRideId == null) {
           // No ride ID in SharedPreferences
-          debugPrint("⚠️ No ride ID in SharedPreferences");
           shouldReset = true;
         } else {
           // Check if the ride actually exists and belongs to this driver
           try {
-            debugPrint("🔍 Checking ride $currentRideId in database...");
             final ride =
                 await Supabase.instance.client
                     .from('ride_requests')
@@ -68,29 +55,18 @@ class DriverProvider extends ChangeNotifier {
                     .eq('id', currentRideId)
                     .maybeSingle();
 
-            debugPrint("🔍 Ride query result: $ride");
-
             if (ride == null) {
-              debugPrint("⚠️ Ride $currentRideId not found in database");
               shouldReset = true;
             } else if (ride['driver_id'] != _currentDriver?.id) {
-              debugPrint(
-                "⚠️ Ride $currentRideId does not belong to this driver",
-              );
+              ;
               shouldReset = true;
             } else if (ride['status'] != 'accepted' &&
                 ride['status'] != 'arrived' &&
                 ride['status'] != 'in_progress') {
               // Only keep driver as on_trip if ride is in active states
-              debugPrint(
-                "⚠️ Ride $currentRideId has invalid status for on_trip: ${ride['status']}",
-              );
+
               shouldReset = true;
-            } else {
-              debugPrint(
-                "✅ Ride $currentRideId is valid with status: ${ride['status']}",
-              );
-            }
+            } else {}
           } catch (e) {
             debugPrint("⚠️ Error checking ride in database: $e");
             // Don't reset on network error
@@ -98,14 +74,8 @@ class DriverProvider extends ChangeNotifier {
         }
 
         if (shouldReset) {
-          debugPrint(
-            "⚠️ Driver marked as on_trip but no valid active ride. Resetting to active...",
-          );
           await SharedPreferencesHelper.remove("currentRideId");
           await toggleStatus('active');
-          debugPrint("✅ Driver status reset to active");
-        } else {
-          debugPrint("✅ Driver status is valid - active ride exists");
         }
       } catch (e) {
         debugPrint("❌ Error validating driver status: $e");
