@@ -9,11 +9,17 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:drivio_app/common/widgets/auth_gate.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:drivio_app/common/services/notification_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> initApp() async {
   await dotenv.load(fileName: ".env");
+
+  // ✅ Initialize Firebase Core FIRST (required for FCM)
+  await Firebase.initializeApp();
+
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
@@ -21,6 +27,9 @@ Future<void> initApp() async {
 
   // ✅ Initialize tile caching
   await FMTCObjectBoxBackend().initialise();
+
+  // ✅ Initialize NotificationService (FCM)
+  await NotificationService.initialize();
 }
 
 void main() async {

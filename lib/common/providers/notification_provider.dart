@@ -1,4 +1,5 @@
 import 'package:drivio_app/common/models/notification_model.dart';
+import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -18,7 +19,7 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> fetchNotifications() async {
-    final userId = _supabase.auth.currentUser?.id;
+    final userId = await AuthService.getInternalUserId();
     if (userId == null) return;
 
     _isLoading = true;
@@ -88,7 +89,7 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> markAllAsRead() async {
-    final userId = _supabase.auth.currentUser?.id;
+    final userId = await AuthService.getInternalUserId();
     if (userId == null) return;
 
     try {
@@ -114,8 +115,8 @@ class NotificationProvider extends ChangeNotifier {
     _unreadCount = _notifications.where((n) => !n.isRead).length;
   }
 
-  void _subscribeToNotifications() {
-    final userId = _supabase.auth.currentUser?.id;
+  void _subscribeToNotifications() async {
+    final userId = await AuthService.getInternalUserId();
     if (userId == null) return;
 
     _supabase

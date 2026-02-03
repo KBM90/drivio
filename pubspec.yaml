@@ -54,6 +54,7 @@ dependencies:
   flutter_svg:
   gif: ^2.3.0
   flutter_local_notifications: ^19.5.0  #caching 
+  firebase_messaging: ^15.1.0  # Push notifications when app is closed
   flutter_map_tile_caching: ^10.1.1
   #used for qr code and can be used for crypting
   uuid: ^4.5.1
@@ -71,7 +72,8 @@ dependencies:
   #flutter_soloud: ^3.4.6 maybe better than audioplayers
   fl_chart: ^0.69.0
   path_provider: ^2.1.4
-
+  flutter_offline_detection: ^0.0.1+1
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

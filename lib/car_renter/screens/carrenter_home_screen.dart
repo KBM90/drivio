@@ -4,10 +4,12 @@ import 'package:drivio_app/car_renter/services/car_rental_service.dart';
 import 'package:drivio_app/common/models/car_brand.dart';
 import 'package:drivio_app/common/models/car_rental_request.dart';
 import 'package:drivio_app/common/models/provided_car_rental.dart';
+import 'package:drivio_app/common/providers/notification_provider.dart';
 import 'package:drivio_app/common/screens/services_page.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CarRenterHomeScreen extends StatefulWidget {
@@ -92,6 +94,56 @@ class _CarRenterHomeScreenState extends State<CarRenterHomeScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(_carRenter!.businessName ?? 'Car Rental Dashboard'),
+        actions: [
+          // Notification Icon with Badge
+          Consumer<NotificationProvider>(
+            builder: (context, notifProvider, _) {
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () {
+                      // Navigate to notifications screen (to be implemented)
+                      // For now just show a snackbar
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'You have ${notifProvider.unreadCount} unread notifications',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  if (notifProvider.unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '${notifProvider.unreadCount}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _dashboardTabController,
           tabs: const [
@@ -209,8 +261,9 @@ class _RentalRequestsTabState extends State<_RentalRequestsTab> {
             children: [
               _FilterChip('All', 'all'),
               _FilterChip('Pending', 'pending'),
-              _FilterChip('Approved', 'approved'),
-              _FilterChip('Rejected', 'rejected'),
+              _FilterChip('Confirmed', 'confirmed'),
+              _FilterChip('Cancelled', 'cancelled'),
+              _FilterChip('Active', 'active'),
               _FilterChip('Completed', 'completed'),
             ],
           ),
@@ -282,12 +335,14 @@ class _RequestCard extends StatelessWidget {
     switch (request.status) {
       case 'pending':
         return Colors.orange;
-      case 'approved':
+      case 'confirmed':
         return Colors.green;
-      case 'rejected':
+      case 'active':
+        return Colors.blue;
+      case 'cancelled':
         return Colors.red;
       case 'completed':
-        return Colors.blue;
+        return Colors.purple;
       default:
         return Colors.grey;
     }
@@ -377,7 +432,7 @@ class _RequestCard extends StatelessWidget {
                       onPressed: () async {
                         await service.updateRequestStatus(
                           requestId: request.id,
-                          status: 'rejected',
+                          status: 'cancelled',
                         );
                         onStatusChanged();
                       },
@@ -394,7 +449,7 @@ class _RequestCard extends StatelessWidget {
                       onPressed: () async {
                         await service.updateRequestStatus(
                           requestId: request.id,
-                          status: 'approved',
+                          status: 'confirmed',
                         );
                         onStatusChanged();
                       },

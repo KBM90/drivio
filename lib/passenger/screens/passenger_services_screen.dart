@@ -1,4 +1,5 @@
 import 'package:drivio_app/common/screens/car_rental_screen.dart';
+import 'package:drivio_app/common/screens/flight_filter_screen.dart';
 import 'package:drivio_app/passenger/widgets/passenger_bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +10,8 @@ class PassengerServicesScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _services = const [
     // Core ride services
     {'icon': Icons.directions_car, 'label': 'Ride', 'promo': false},
-    {'icon': Icons.two_wheeler, 'label': 'Moto', 'promo': false},
+    {'icon': Icons.car_rental, 'label': 'Car rental', 'promo': false},
+    {'icon': Icons.food_bank, 'label': 'Food', 'promo': false},
     {'icon': Icons.flight_takeoff, 'label': 'Airport', 'promo': false},
 
     // Time-based services
@@ -22,8 +24,7 @@ class PassengerServicesScreen extends StatelessWidget {
     {'icon': Icons.inventory_2, 'label': 'Package', 'promo': false},
 
     // Special services
-    {'icon': Icons.car_rental, 'label': 'Car rental', 'promo': false},
-    {'icon': Icons.pets, 'label': 'Pet-friendly', 'promo': true},
+    // {'icon': Icons.pets, 'label': 'Pet-friendly', 'promo': true},
   ];
 
   @override
@@ -70,6 +71,14 @@ class PassengerServicesScreen extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const CarRentalScreen(),
+                            ),
+                          );
+                        } else if (svc['label'] == 'Airport') {
+                          // Navigate to Flight Filter screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const FlightFilterScreen(),
                             ),
                           );
                         } else {

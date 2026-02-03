@@ -334,6 +334,10 @@ class CarRentalService {
               .select()
               .single();
 
+      // ✅ Note: The database trigger automatically creates a notification
+      // for the car renter when this booking is inserted.
+      // See: supabase/migrations/create_car_rental_notification_triggers.sql
+
       return CarRentalRequest.fromJson(response);
     } catch (e) {
       debugPrint('❌ Error creating rental request: $e');
@@ -483,10 +487,12 @@ class CarRentalService {
       if (dailyPrice != null) updates['daily_price'] = dailyPrice;
       if (plateNumber != null) updates['plate_number'] = plateNumber;
       if (isAvailable != null) updates['is_available'] = isAvailable;
-      if (unavailableFrom != null)
+      if (unavailableFrom != null) {
         updates['unavailable_from'] = unavailableFrom.toIso8601String();
-      if (unavailableUntil != null)
+      }
+      if (unavailableUntil != null) {
         updates['unavailable_until'] = unavailableUntil.toIso8601String();
+      }
       if (features != null) updates['features'] = features;
 
       await _supabase
