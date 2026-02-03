@@ -45,4 +45,16 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Firebase service account credentials (NEVER commit these!)
+*firebase*adminsdk*.json
+google-services.json
+GoogleService-Info.plist
 
+# Supabase secrets
+.env
+.env.local
+*.env
+
+# Other sensitive files
+secrets/
+credentials/
