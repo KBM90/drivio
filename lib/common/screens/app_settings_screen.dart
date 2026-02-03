@@ -9,13 +9,16 @@ import 'package:provider/provider.dart';
 /// App Settings Screen
 /// Allows users to configure app preferences including language, theme, notifications, etc.
 class AppSettingsScreen extends StatefulWidget {
-  const AppSettingsScreen({super.key});
+  final bool automaticallyImplyLeading;
+
+  const AppSettingsScreen({super.key, this.automaticallyImplyLeading = true});
 
   @override
   State<AppSettingsScreen> createState() => _AppSettingsScreenState();
 }
 
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
+  // ... (existing state variables)
   bool _notificationsEnabled = true;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
@@ -199,13 +202,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text(AppLocalizations.of(context)!.settings)),
+        appBar: AppBar(
+          automaticallyImplyLeading: widget.automaticallyImplyLeading,
+          title: Text(AppLocalizations.of(context)!.settings),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: widget.automaticallyImplyLeading,
         title: Text(AppLocalizations.of(context)!.settings),
         elevation: 0,
       ),

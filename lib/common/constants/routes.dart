@@ -7,6 +7,7 @@ import 'package:drivio_app/passenger/screens/passenger_account_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_activity_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_services_screen.dart';
 import 'package:drivio_app/provider/screens/provider_home_screen.dart';
+import 'package:drivio_app/delivery_person/screens/delivery_person_home_screen.dart'; // Added import
 import 'package:flutter/material.dart';
 
 class AppRoutes {
@@ -19,6 +20,7 @@ class AppRoutes {
   static const String passengerServices = '/passengerServices';
   static const String passengerActivity = '/passengerActivity';
   static const String passengerAccount = '/passengerAccount';
+  static const String deliveryPersonHome = '/deliveryPersonHome'; // Added route
 
   static Map<String, WidgetBuilder> routes = {
     login: (context) => LoginScreen(),
@@ -30,5 +32,7 @@ class AppRoutes {
     passengerServices: (context) => PassengerServicesScreen(),
     passengerActivity: (context) => PassengerActivityScreen(),
     passengerAccount: (context) => PassengerAccountScreen(),
+    deliveryPersonHome:
+        (context) => const DeliveryPersonHomeScreen(), // Added builder
   };
 }

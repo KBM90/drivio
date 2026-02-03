@@ -211,6 +211,15 @@ class _AuthGateState extends State<AuthGate> {
             ],
             child: const _AppNavigator(initialRoute: AppRoutes.carRenterHome),
           );
+        } else if (_userRole == 'deliveryperson') {
+          return MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => NotificationProvider()),
+            ],
+            child: const _AppNavigator(
+              initialRoute: AppRoutes.deliveryPersonHome,
+            ),
+          );
         } else {
           debugPrint(
             '⚠️ AuthGate: Invalid or null role - _userRole: $_userRole',
