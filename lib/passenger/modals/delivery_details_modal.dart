@@ -158,7 +158,7 @@ class _DeliveryDetailsModalState extends State<DeliveryDetailsModal> {
                   }
                   return await _osrmService.searchPlaces(
                     textEditingValue.text,
-                    radiusKm: 50.0,
+                    radiusKm: 20.0,
                   );
                 },
                 displayStringForOption:

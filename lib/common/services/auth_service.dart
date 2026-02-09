@@ -124,7 +124,6 @@ class AuthService {
   static Future<AuthResponse> signUpWithEmail({
     required String name,
     required String email,
-    required String city,
     required String countryCode,
     required String phone,
     required String password,
@@ -138,7 +137,6 @@ class AuthService {
         data: {
           'role': role,
           'name': name,
-          'city': city,
           'country_code': countryCode,
           'phone': phone,
           ...?additionalData,

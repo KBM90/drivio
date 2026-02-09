@@ -30,6 +30,7 @@ class NotificationProvider extends ChangeNotifier {
           .from('notifications')
           .select()
           .eq('user_id', userId)
+          .eq('is_read', false) // Only fetch unread
           .order('created_at', ascending: false)
           .limit(50);
 
@@ -77,9 +78,9 @@ class NotificationProvider extends ChangeNotifier {
         // Let's just decrement unread count if it was unread.
         if (!_notifications[index].isRead) {
           _unreadCount--;
-          // We really should update the item to show it as read in UI.
-          // Let's do a quick hack: remove and re-insert modified? No.
-          // Let's just fetch again or rely on Realtime if we listen to updates.
+          _notifications.removeAt(
+            index,
+          ); // Remove from list since we only show unread
         }
       }
     } catch (e) {
@@ -100,12 +101,9 @@ class NotificationProvider extends ChangeNotifier {
           .eq('is_read', false);
 
       // Optimistic update
-      for (var i = 0; i < _notifications.length; i++) {
-        // We can't modify them.
-      }
+      _notifications.clear();
       _unreadCount = 0;
-      // Force refresh to get updated objects
-      await fetchNotifications();
+      notifyListeners();
     } catch (e) {
       debugPrint('Error marking all as read: $e');
     }
@@ -143,13 +141,21 @@ class NotificationProvider extends ChangeNotifier {
               final updatedNotification = NotificationModel.fromJson(
                 payload.newRecord,
               );
-              final index = _notifications.indexWhere(
-                (n) => n.id == updatedNotification.id,
-              );
-              if (index != -1) {
-                _notifications[index] = updatedNotification;
+              if (updatedNotification.isRead) {
+                _notifications.removeWhere(
+                  (n) => n.id == updatedNotification.id,
+                );
                 _calculateUnreadCount();
                 notifyListeners();
+              } else {
+                final index = _notifications.indexWhere(
+                  (n) => n.id == updatedNotification.id,
+                );
+                if (index != -1) {
+                  _notifications[index] = updatedNotification;
+                  _calculateUnreadCount();
+                  notifyListeners();
+                }
               }
             }
           },

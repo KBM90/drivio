@@ -442,64 +442,88 @@ class OSRMService {
     double? lat,
     double? lon,
     String? countryCode,
-    double radiusKm = 50.0, // Default 50km radius
+    double radiusKm = 20.0, // Default 20km radius (reduced from 50km)
   }) async {
-    // 1. Try Photon API first
+    // 1. Use Nominatim API with viewbox for bounded search
     try {
-      String url = "https://photon.komoot.io/api/?q=$query&limit=50";
+      String url =
+          "https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=50";
 
-      // Add bounding box if user location is provided
-      if (lat != null && lon != null) {
-        final bbox = _calculateBoundingBox(lat, lon, radiusKm);
-        url +=
-            "&bbox=${bbox['lonMin']},${bbox['latMin']},${bbox['lonMax']},${bbox['latMax']}";
-        url += "&lat=$lat&lon=$lon"; // Also bias results toward user location
+      if (countryCode != null) {
+        url += "&countrycodes=$countryCode";
       }
 
+      // Add viewbox for bounded search (more reliable than Photon)
+      if (lat != null && lon != null) {
+        final bbox = _calculateBoundingBox(lat, lon, radiusKm);
+        // Nominatim viewbox format: left,top,right,bottom (lonMin,latMax,lonMax,latMin)
+        url +=
+            "&viewbox=${bbox['lonMin']},${bbox['latMax']},${bbox['lonMax']},${bbox['latMin']}";
+        url += "&bounded=1"; // STRICT: Only return results within viewbox
+      } else {
+        debugPrint(
+          "⚠️ WARNING: No user location provided! Results will not be filtered by distance.",
+        );
+      }
+
+      debugPrint("🔍 Searching Nominatim: $url");
+
       final response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 5));
+          .get(
+            Uri.parse(url),
+            headers: {
+              "User-Agent": "Drivio", // Required by Nominatim
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final features = data['features'] as List;
+        final List<dynamic> data = json.decode(response.body);
 
-        // Filter by country code (MANDATORY for accuracy)
-        final filteredFeatures =
-            features.where((f) {
-              final props = f['properties'];
+        debugPrint("📍 Nominatim returned ${data.length} results");
 
-              // ✅ STRICT Country filtering
-              if (countryCode != null) {
-                final cc = props['countrycode'] as String?;
-                if (cc == null ||
-                    cc.toLowerCase() != countryCode.toLowerCase()) {
-                  return false;
-                }
-              }
-
-              return true;
-            }).toList();
-
-        // ✅ Calculate distance and sort by proximity
+        // Calculate distance for each result
         final resultsWithDistance =
-            filteredFeatures.map((feature) {
-              final geometry = feature['geometry'];
-              final coordinates = geometry['coordinates'] as List;
-              final resultLat = coordinates[1].toDouble();
-              final resultLon = coordinates[0].toDouble();
+            data.map((item) {
+              final itemLat = double.parse(item['lat'].toString());
+              final itemLon = double.parse(item['lon'].toString());
 
-              // Calculate distance from user location
               double distance = double.infinity;
               if (lat != null && lon != null) {
-                distance = _calculateDistance(lat, lon, resultLat, resultLon);
+                distance = _calculateDistance(lat, lon, itemLat, itemLon);
               }
 
-              return {'feature': feature, 'distance': distance};
+              return {'item': item, 'distance': distance};
             }).toList();
 
+        // ✅ Filter by distance (only keep results within radius)
+        final nearbyResults =
+            resultsWithDistance.where((item) {
+              final distance = item['distance'] as double;
+              return distance <= radiusKm;
+            }).toList();
+
+        debugPrint("📏 Within ${radiusKm}km: ${nearbyResults.length} results");
+
+        // ✅ Fallback: If very few results within radius, expand to 2x radius
+        List<Map<String, dynamic>> finalResults = nearbyResults;
+        if (nearbyResults.length < 3 && resultsWithDistance.isNotEmpty) {
+          final expandedResults =
+              resultsWithDistance.where((item) {
+                final distance = item['distance'] as double;
+                return distance <= radiusKm * 2; // Expand to 2x radius
+              }).toList();
+
+          if (expandedResults.length > nearbyResults.length) {
+            debugPrint(
+              "⚠️ Expanding search to ${radiusKm * 2}km (found ${expandedResults.length} results)",
+            );
+            finalResults = expandedResults;
+          }
+        }
+
         // Sort by distance (nearest first)
-        resultsWithDistance.sort((a, b) {
+        finalResults.sort((a, b) {
           final distA = a['distance'] as double;
           final distB = b['distance'] as double;
           return distA.compareTo(distB);
@@ -507,45 +531,45 @@ class OSRMService {
 
         // Take top 5 nearest results
         final topFeatures =
-            resultsWithDistance.take(5).map((item) => item['feature']).toList();
+            finalResults.take(5).map((item) => item['item']).toList();
 
-        return topFeatures.map((feature) {
-          final properties = feature['properties'];
-          final geometry = feature['geometry'];
-          final coordinates = geometry['coordinates'] as List;
+        if (topFeatures.isEmpty) {
+          debugPrint("❌ No results found after all filtering");
+        }
 
-          String name =
-              properties['name'] ??
-              properties['city'] ??
-              properties['street'] ??
-              "Unknown";
+        return topFeatures.map((item) {
+          final address = item['address'] as Map<String, dynamic>?;
 
-          // Extract type/category information
-          String? type = properties['type'] ?? properties['osm_value'];
-          String? osmKey = properties['osm_key'];
+          String name = item['name'] ?? item['display_name'].split(',')[0];
 
-          // Construct a display name
+          // Build display name
           List<String> displayParts = [];
-          if (properties['name'] != null) displayParts.add(properties['name']);
-          if (properties['street'] != null) {
-            displayParts.add(properties['street']);
+          if (item['name'] != null && item['name'].toString().isNotEmpty) {
+            displayParts.add(item['name']);
           }
-          if (properties['city'] != null) displayParts.add(properties['city']);
-          if (properties['country'] != null) {
-            displayParts.add(properties['country']);
+          if (address != null) {
+            if (address['road'] != null) displayParts.add(address['road']);
+            if (address['city'] != null) {
+              displayParts.add(address['city']);
+            } else if (address['town'] != null) {
+              displayParts.add(address['town']);
+            } else if (address['village'] != null) {
+              displayParts.add(address['village']);
+            }
           }
 
-          String displayName = displayParts.toSet().join(
-            ', ',
-          ); // Remove duplicates
+          String displayName =
+              displayParts.isNotEmpty
+                  ? displayParts.toSet().join(', ')
+                  : item['display_name'];
 
           return {
             'name': name,
             'display_name': displayName,
-            'lat': coordinates[1].toDouble(),
-            'lon': coordinates[0].toDouble(),
-            'type': type,
-            'osm_key': osmKey,
+            'lat': double.parse(item['lat'].toString()),
+            'lon': double.parse(item['lon'].toString()),
+            'type': item['type'],
+            'osm_key': item['class'],
           };
         }).toList();
       }

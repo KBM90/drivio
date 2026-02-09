@@ -108,8 +108,12 @@ class _DeliveryRequestsScreenState extends State<DeliveryRequestsScreen> {
               final delivery = requests[index];
               return Card(
                 elevation: 2,
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -121,24 +125,127 @@ class _DeliveryRequestsScreenState extends State<DeliveryRequestsScreen> {
                     ).then((_) => _loadRequests()); // Refresh on return
                   },
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Row 1: Header (Category + ID | Price)
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              '${delivery.category} #${delivery.id}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).primaryColor.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _getCategoryIcon(delivery.category),
+                                size: 18,
+                                color: Theme.of(context).primaryColor,
                               ),
                             ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    delivery.category,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    '#${delivery.id}',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  delivery.price != null
+                                      ? '\$${delivery.price!.toStringAsFixed(2)}'
+                                      : 'N/A',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                                if (delivery.distanceKm != null)
+                                  Text(
+                                    '${delivery.distanceKm!.toStringAsFixed(1)} km',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        const Divider(height: 16),
+
+                        // Row 2: Pickup
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.my_location,
+                              size: 14,
+                              color: Colors.blue,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                delivery.pickupNotes ?? 'Pickup Location',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        // Row 3: Dropoff
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                delivery.dropoffNotes ?? 'Dropoff Location',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Row 4: Status
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
-                                vertical: 4,
+                                vertical: 2,
                               ),
                               decoration: BoxDecoration(
                                 color:
@@ -148,75 +255,16 @@ class _DeliveryRequestsScreenState extends State<DeliveryRequestsScreen> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                delivery.status == 'accepted'
-                                    ? 'Accepted'
-                                    : 'New Request',
+                                delivery.status.toUpperCase(),
                                 style: TextStyle(
                                   color:
                                       delivery.status == 'accepted'
                                           ? Colors.green
                                           : Colors.blue,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        if (delivery.description != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            delivery.description!,
-                            style: TextStyle(color: Colors.grey[600]),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_outlined, size: 16),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                delivery.pickupNotes ?? 'Pickup Location',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.flag_outlined, size: 16),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                delivery.dropoffNotes ?? 'Dropoff Location',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => DeliveryDetailsScreen(
-                                          deliveryId: delivery.id,
-                                        ),
-                                  ),
-                                ).then((_) => _loadRequests());
-                              },
-                              child: const Text('View Details'),
                             ),
                           ],
                         ),
@@ -230,5 +278,24 @@ class _DeliveryRequestsScreenState extends State<DeliveryRequestsScreen> {
         },
       ),
     );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'documents':
+        return Icons.description;
+      case 'food':
+        return Icons.restaurant;
+      case 'groceries':
+        return Icons.shopping_cart;
+      case 'electronics':
+        return Icons.devices;
+      case 'clothing':
+        return Icons.checkroom;
+      case 'furniture':
+        return Icons.weekend;
+      default:
+        return Icons.local_shipping;
+    }
   }
 }

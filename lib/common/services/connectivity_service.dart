@@ -27,7 +27,7 @@ class ConnectivityService {
   Timer? _timer;
 
   void _startMonitoring() {
-    // Check immediately
+    // Check immediately and emit initial status
     _checkConnection();
 
     // Poll every 5 seconds
@@ -35,6 +35,8 @@ class ConnectivityService {
       _checkConnection();
     });
   }
+
+  bool _isFirstCheck = true;
 
   Future<void> _checkConnection() async {
     bool isConnected = false;
@@ -50,7 +52,9 @@ class ConnectivityService {
     final newStatus =
         isConnected ? InternetStatus.connected : InternetStatus.disconnected;
 
-    if (_lastStatus != newStatus) {
+    // Always emit on first check, then only on changes
+    if (_isFirstCheck || _lastStatus != newStatus) {
+      _isFirstCheck = false;
       _lastStatus = newStatus;
       _controller.add(newStatus);
     }

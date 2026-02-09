@@ -201,6 +201,45 @@ class AppLocalizations {
       'join_drivio_message': 'Join Drivio using my referral code:',
       'and_earn_rewards': 'and earn rewards! Download the app now.',
       'pending_signup': 'Pending signup',
+
+      // Signup
+      'join_drivio': 'Join Drivio',
+      'create_account_subtitle': 'Create your account to get started',
+      'i_want_to_signup_as': 'I want to sign up as:',
+      'driver': 'Driver',
+      'provider': 'Provider',
+      'delivery_person': 'Delivery',
+      'car_renter': 'Car Renter',
+      'full_name': 'Full Name',
+      'enter_your_name': 'Please enter your name',
+      'name_length_error': 'Name must be at least 2 characters',
+      'name_format_error':
+          'Name can only contain letters, spaces, hyphens, and apostrophes',
+      'enter_your_email': 'Please enter your email',
+      'invalid_email': 'Please enter a valid email',
+      'password': 'Password',
+      'enter_password': 'Please enter a password',
+      'password_length_error': 'Password must be at least 6 characters',
+      'confirm_password': 'Confirm Password',
+      'confirm_your_password': 'Please confirm your password',
+      'passwords_do_not_match': 'Passwords do not match',
+      'business_name': 'Business Name',
+      'enter_business_name': 'Please enter your business name',
+      'business_name_length_error':
+          'Business name must be at least 2 characters',
+      'provider_type': 'Provider Type',
+      'select_provider_type': 'Please select a provider type',
+      'business_name_optional': 'Business Name (Optional)',
+      'car_rental_business_name_hint': 'Your car rental business name',
+      'create_account': 'Create Account',
+      'already_have_account': 'Already have an account? ',
+      'sign_in': 'Sign In',
+      'select_city_error': 'Please select a city.',
+      'phone_already_registered':
+          'This phone number is already registered. Please use a different number or sign in.',
+      'account_created_success':
+          'Account created! Please check your email to verify.',
+      'signup_failed': 'Sign up failed:',
     },
     'fr': {
       // Common
@@ -392,6 +431,46 @@ class AppLocalizations {
       'and_earn_rewards':
           'et gagnez des récompenses! Téléchargez l\'app maintenant.',
       'pending_signup': 'Inscription en attente',
+
+      // Signup
+      'join_drivio': 'Rejoindre Drivio',
+      'create_account_subtitle': 'Créez votre compte pour commencer',
+      'i_want_to_signup_as': 'Je veux m\'inscrire en tant que :',
+      'driver': 'Chauffeur',
+      'provider': 'Fournisseur',
+      'delivery_person': 'Livreur',
+      'car_renter': 'Loueur de voitures',
+      'full_name': 'Nom complet',
+      'enter_your_name': 'Veuillez entrer votre nom',
+      'name_length_error': 'Le nom doit contenir au moins 2 caractères',
+      'name_format_error':
+          'Le nom ne peut contenir que des lettres, des espaces, des traits d\'union et des apostrophes',
+      'enter_your_email': 'Veuillez entrer votre email',
+      'invalid_email': 'Veuillez entrer un email valide',
+      'password': 'Mot de passe',
+      'enter_password': 'Veuillez entrer un mot de passe',
+      'password_length_error':
+          'Le mot de passe doit contenir au moins 6 caractères',
+      'confirm_password': 'Confirmer le mot de passe',
+      'confirm_your_password': 'Veuillez confirmer votre mot de passe',
+      'passwords_do_not_match': 'Les mots de passe ne correspondent pas',
+      'business_name': 'Nom de l\'entreprise',
+      'enter_business_name': 'Veuillez entrer le nom de votre entreprise',
+      'business_name_length_error':
+          'Le nom de l\'entreprise doit contenir au moins 2 caractères',
+      'provider_type': 'Type de fournisseur',
+      'select_provider_type': 'Veuillez sélectionner un type de fournisseur',
+      'business_name_optional': 'Nom de l\'entreprise (Optionnel)',
+      'car_rental_business_name_hint':
+          'Votre nom d\'entreprise de location de voitures',
+      'create_account': 'Créer un compte',
+      'already_have_account': 'Vous avez déjà un compte ? ',
+      'sign_in': 'Se connecter',
+      'select_city_error': 'Veuillez sélectionner une ville.',
+      'phone_already_registered':
+          'Ce numéro de téléphone est déjà enregistré. Veuillez utiliser un numéro différent ou vous connecter.',
+      'account_created_success': 'Compte créé ! Veuillez vérifier votre email.',
+      'signup_failed': 'L\'inscription a échoué :',
     },
     'ar': {
       // Common
@@ -582,6 +661,45 @@ class AppLocalizations {
       'join_drivio_message': 'انضم إلى دريفيو باستخدام كود الإحالة الخاص بي:',
       'and_earn_rewards': 'واكسب المكافآت! حمل التطبيق الآن.',
       'pending_signup': 'التسجيل قيد الانتظار',
+
+      // Signup
+      'join_drivio': 'انضم إلى دريفيو',
+      'create_account_subtitle': 'أنشئ حسابك للبدء',
+      'i_want_to_signup_as': 'أريد التسجيل كـ:',
+      'driver': 'سائق',
+      'provider': 'مقدم خدمة',
+      'delivery_person': 'عامل توصيل',
+      'car_renter': 'مؤجر سيارات',
+      'full_name': 'الاسم الكامل',
+      'enter_your_name': 'يرجى إدخال اسمك',
+      'name_length_error': 'يجب أن يكون الاسم 2 أحرف على الأقل',
+      'name_format_error':
+          'يمكن أن يحتوي الاسم فقط على أحرف ومسافات وواصلات وفواصل عليا',
+      'enter_your_email': 'يرجى إدخال بريدك الإلكتروني',
+      'invalid_email': 'يرجى إدخال بريد إلكتروني صالح',
+      'password': 'كلمة المرور',
+      'enter_password': 'يرجى إدخال كلمة مرور',
+      'password_length_error': 'يجب أن تكون كلمة المرور 6 أحرف على الأقل',
+      'confirm_password': 'تأكيد كلمة المرور',
+      'confirm_your_password': 'يرجى تأكيد كلمة المرور',
+      'passwords_do_not_match': 'كلمات المرور غير متطابقة',
+      'business_name': 'اسم العمل التجاري',
+      'enter_business_name': 'يرجى إدخال اسم عملك التجاري',
+      'business_name_length_error':
+          'يجب أن يكون اسم العمل التجاري 2 أحرف على الأقل',
+      'provider_type': 'نوع مقدم الخدمة',
+      'select_provider_type': 'يرجى اختيار نوع مقدم الخدمة',
+      'business_name_optional': 'اسم العمل التجاري (اختياري)',
+      'car_rental_business_name_hint': 'اسم عملك التجاري لتأجير السيارات',
+      'create_account': 'إنشاء حساب',
+      'already_have_account': 'هل لديك حساب بالفعل؟ ',
+      'sign_in': 'تسجيل الدخول',
+      'select_city_error': 'يرجى اختيار مدينة.',
+      'phone_already_registered':
+          'رقم الهاتف هذا مسجل بالفعل. يرجى استخدام رقم آخر أو تسجيل الدخول.',
+      'account_created_success':
+          'تم إنشاء الحساب! يرجى التحقق من بريدك الإلكتروني للتفعيل.',
+      'signup_failed': 'فشل التسجيل:',
     },
     'es': {
       // Common
@@ -773,6 +891,46 @@ class AppLocalizations {
       'join_drivio_message': 'Únete a Drivio usando mi código de referido:',
       'and_earn_rewards': 'y gana recompensas! Descarga la app ahora.',
       'pending_signup': 'Registro pendiente',
+
+      // Signup
+      'join_drivio': 'Únete a Drivio',
+      'create_account_subtitle': 'Crea tu cuenta para comenzar',
+      'i_want_to_signup_as': 'Quiero registrarme como:',
+      'driver': 'Conductor',
+      'provider': 'Proveedor',
+      'delivery_person': 'Repartidor',
+      'car_renter': 'Rentador de autos',
+      'full_name': 'Nombre completo',
+      'enter_your_name': 'Por favor ingresa tu nombre',
+      'name_length_error': 'El nombre debe tener al menos 2 caracteres',
+      'name_format_error':
+          'El nombre solo puede contener letras, espacios, guiones y apóstrofes',
+      'enter_your_email': 'Por favor ingresa tu correo electrónico',
+      'invalid_email': 'Por favor ingresa un correo electrónico válido',
+      'password': 'Contraseña',
+      'enter_password': 'Por favor ingresa una contraseña',
+      'password_length_error': 'La contraseña debe tener al menos 6 caracteres',
+      'confirm_password': 'Confirmar contraseña',
+      'confirm_your_password': 'Por favor confirma tu contraseña',
+      'passwords_do_not_match': 'Las contraseñas no coinciden',
+      'business_name': 'Nombre del negocio',
+      'enter_business_name': 'Por favor ingresa el nombre de tu negocio',
+      'business_name_length_error':
+          'El nombre del negocio debe tener al menos 2 caracteres',
+      'provider_type': 'Tipo de proveedor',
+      'select_provider_type': 'Por favor selecciona un tipo de proveedor',
+      'business_name_optional': 'Nombre del negocio (Opcional)',
+      'car_rental_business_name_hint':
+          'Nombre de tu negocio de alquiler de autos',
+      'create_account': 'Crear cuenta',
+      'already_have_account': '¿Ya tienes una cuenta? ',
+      'sign_in': 'Iniciar sesión',
+      'select_city_error': 'Por favor selecciona una ciudad.',
+      'phone_already_registered':
+          'Este número de teléfono ya está registrado. Por favor usa un número diferente o inicia sesión.',
+      'account_created_success':
+          '¡Cuenta creada! Por favor verifica tu correo electrónico.',
+      'signup_failed': 'El registro falló:',
     },
     'de': {
       // Common
@@ -965,6 +1123,46 @@ class AppLocalizations {
       'and_earn_rewards':
           'und verdiene Belohnungen! Lade die App jetzt herunter.',
       'pending_signup': 'Anmeldung ausstehend',
+
+      // Signup
+      'join_drivio': 'Tritt Drivio bei',
+      'create_account_subtitle': 'Erstelle dein Konto, um zu beginnen',
+      'i_want_to_signup_as': 'Ich möchte mich anmelden als:',
+      'driver': 'Fahrer',
+      'provider': 'Anbieter',
+      'delivery_person': 'Lieferant',
+      'car_renter': 'Autovermieter',
+      'full_name': 'Vollständiger Name',
+      'enter_your_name': 'Bitte gib deinen Namen ein',
+      'name_length_error': 'Der Name muss mindestens 2 Zeichen lang sein',
+      'name_format_error':
+          'Der Name darf nur Buchstaben, Leerzeichen, Bindestriche und Apostrophe enthalten',
+      'enter_your_email': 'Bitte gib deine E-Mail-Adresse ein',
+      'invalid_email': 'Bitte gib eine gültige E-Mail-Adresse ein',
+      'password': 'Passwort',
+      'enter_password': 'Bitte gib ein Passwort ein',
+      'password_length_error':
+          'Das Passwort muss mindestens 6 Zeichen lang sein',
+      'confirm_password': 'Passwort bestätigen',
+      'confirm_your_password': 'Bitte bestätige dein Passwort',
+      'passwords_do_not_match': 'Passwörter stimmen nicht überein',
+      'business_name': 'Geschäftsname',
+      'enter_business_name': 'Bitte gib deinen Geschäftsnamen ein',
+      'business_name_length_error':
+          'Der Geschäftsname muss mindestens 2 Zeichen lang sein',
+      'provider_type': 'Anbietertyp',
+      'select_provider_type': 'Bitte wähle einen Anbietertyp',
+      'business_name_optional': 'Geschäftsname (Optional)',
+      'car_rental_business_name_hint': 'Dein Autovermietungs-Geschäftsname',
+      'create_account': 'Konto erstellen',
+      'already_have_account': 'Hast du bereits ein Konto? ',
+      'sign_in': 'Anmelden',
+      'select_city_error': 'Bitte wähle eine Stadt.',
+      'phone_already_registered':
+          'Diese Telefonnummer ist bereits registriert. Bitte verwende eine andere Nummer oder melde dich an.',
+      'account_created_success':
+          'Konto erstellt! Bitte überprüfe deine E-Mail zur Bestätigung.',
+      'signup_failed': 'Anmeldung fehlgeschlagen:',
     },
   };
 
@@ -1053,6 +1251,44 @@ class AppLocalizations {
   String get nowOffline => translate('now_offline');
   String get errorOccurred => translate('error_occurred');
   String get pleaseTryAgain => translate('please_try_again');
+
+  // Signup
+  String get email => translate('email');
+  String get phone => translate('phone');
+  String get joinDrivio => translate('join_drivio');
+  String get createAccountSubtitle => translate('create_account_subtitle');
+  String get iWantToSignupAs => translate('i_want_to_signup_as');
+  String get driver => translate('driver');
+  String get provider => translate('provider');
+  String get deliveryPerson => translate('delivery_person');
+  String get carRenter => translate('car_renter');
+  String get fullName => translate('full_name');
+  String get enterYourName => translate('enter_your_name');
+  String get nameLengthError => translate('name_length_error');
+  String get nameFormatError => translate('name_format_error');
+  String get enterYourEmail => translate('enter_your_email');
+  String get invalidEmail => translate('invalid_email');
+  String get password => translate('password');
+  String get enterPassword => translate('enter_password');
+  String get passwordLengthError => translate('password_length_error');
+  String get confirmPassword => translate('confirm_password');
+  String get confirmYourPassword => translate('confirm_your_password');
+  String get passwordsDoNotMatch => translate('passwords_do_not_match');
+  String get businessName => translate('business_name');
+  String get enterBusinessName => translate('enter_business_name');
+  String get businessNameLengthError => translate('business_name_length_error');
+  String get providerType => translate('provider_type');
+  String get selectProviderType => translate('select_provider_type');
+  String get businessNameOptional => translate('business_name_optional');
+  String get carRentalBusinessNameHint =>
+      translate('car_rental_business_name_hint');
+  String get createAccount => translate('create_account');
+  String get alreadyHaveAccount => translate('already_have_account');
+  String get signIn => translate('sign_in');
+  String get selectCityError => translate('select_city_error');
+  String get phoneAlreadyRegistered => translate('phone_already_registered');
+  String get accountCreatedSuccess => translate('account_created_success');
+  String get signupFailed => translate('signup_failed');
 }
 
 /// Localization Delegate

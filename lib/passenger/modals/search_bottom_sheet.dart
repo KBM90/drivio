@@ -76,6 +76,15 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
     }
 
     _debounce = Timer(const Duration(milliseconds: 300), () async {
+      // Require minimum 3 characters for meaningful search results
+      if (query.length < 3) {
+        setState(() {
+          _suggestions = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
       setState(() => _isLoading = true);
 
       // ✅ Don't search without country code to ensure proper filtering
@@ -85,12 +94,16 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
         return;
       }
 
+      debugPrint(
+        "🔍 Searching for '$query' with location: ${_pickupLatLng?.latitude}, ${_pickupLatLng?.longitude}, country: $_countryCode",
+      );
+
       final results = await _osrmService.searchPlaces(
         query,
         lat: _pickupLatLng?.latitude,
         lon: _pickupLatLng?.longitude,
         countryCode: _countryCode,
-        radiusKm: 50.0, // Search within 50km radius
+        radiusKm: 20.0, // Search within 20km radius
       );
 
       if (mounted) {

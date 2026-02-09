@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -31,9 +32,20 @@ class LocaleProvider extends ChangeNotifier {
     _loadLanguagePreference();
   }
 
-  /// Load language preference from Supabase users table
+  /// Load language preference from SharedPreferences and then Supabase
   Future<void> _loadLanguagePreference() async {
     try {
+      // 1. Load from SharedPreferences first (fastest)
+      final prefs = await SharedPreferences.getInstance();
+      final savedLanguage = prefs.getString('language_code');
+
+      if (savedLanguage != null &&
+          supportedLanguages.containsKey(savedLanguage)) {
+        _currentLocale = Locale(savedLanguage);
+        notifyListeners();
+      }
+
+      // 2. If logged in, sync with Supabase
       final userId = AuthService.currentUserId;
       if (userId != null) {
         final userData =
@@ -43,15 +55,21 @@ class LocaleProvider extends ChangeNotifier {
                 .eq('user_id', userId)
                 .maybeSingle();
 
-        final languageCode = userData?['language'] as String? ?? 'en';
-        _currentLocale = Locale(languageCode);
-        _isInitialized = true;
-        notifyListeners();
-      } else {
-        _isInitialized = true;
-        notifyListeners();
-        debugPrint('ℹ️ No user logged in, using default language: en');
+        if (userData != null) {
+          final languageCode = userData['language'] as String? ?? 'en';
+
+          // If Supabase has a different language, update local state
+          if (languageCode != _currentLocale.languageCode) {
+            _currentLocale = Locale(languageCode);
+            // Also update SharedPreferences to keep them in sync
+            await prefs.setString('language_code', languageCode);
+            notifyListeners();
+          }
+        }
       }
+
+      _isInitialized = true;
+      notifyListeners();
     } catch (e) {
       debugPrint('❌ Error loading language preference: $e');
       _isInitialized = true;
@@ -59,7 +77,7 @@ class LocaleProvider extends ChangeNotifier {
     }
   }
 
-  /// Set language and update in Supabase users table
+  /// Set language and update in SharedPreferences and Supabase
   Future<bool> setLocale(String languageCode) async {
     if (!supportedLanguages.containsKey(languageCode)) {
       debugPrint('❌ Unsupported language code: $languageCode');
@@ -71,22 +89,24 @@ class LocaleProvider extends ChangeNotifier {
     }
 
     try {
+      // 1. Update local state immediatey
+      _currentLocale = Locale(languageCode);
+      notifyListeners();
+
+      // 2. Persist to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('language_code', languageCode);
+
+      // 3. If logged in, update Supabase
       final userId = AuthService.currentUserId;
       if (userId != null) {
-        // Update in Supabase
         await Supabase.instance.client
             .from('users')
             .update({'language': languageCode})
             .eq('user_id', userId);
-
-        // Update local state
-        _currentLocale = Locale(languageCode);
-        notifyListeners();
-        return true;
-      } else {
-        debugPrint('❌ No user logged in, cannot update language');
-        return false;
       }
+
+      return true;
     } catch (e) {
       debugPrint('❌ Error updating language: $e');
       return false;

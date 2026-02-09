@@ -1,5 +1,6 @@
 import 'package:drivio_app/common/providers/notification_provider.dart';
-import 'package:drivio_app/common/screens/app_settings_screen.dart';
+import 'package:drivio_app/common/screens/notifications_screen.dart';
+import 'package:drivio_app/delivery_person/screens/delivery_person_settings_screen.dart';
 import 'package:drivio_app/delivery_person/providers/delivery_person_location_provider.dart';
 import 'package:drivio_app/delivery_person/screens/delivery_history_screen.dart';
 import 'package:drivio_app/delivery_person/screens/delivery_requests_screen.dart';
@@ -20,7 +21,7 @@ class _DeliveryPersonHomeScreenState extends State<DeliveryPersonHomeScreen> {
   static const List<Widget> _screens = <Widget>[
     DeliveryRequestsScreen(),
     DeliveryHistoryScreen(),
-    AppSettingsScreen(automaticallyImplyLeading: false),
+    DeliveryPersonSettingsScreen(),
   ];
 
   static const List<String> _titles = <String>[
@@ -62,15 +63,13 @@ class _DeliveryPersonHomeScreenState extends State<DeliveryPersonHomeScreen> {
                           IconButton(
                             icon: const Icon(Icons.notifications_outlined),
                             onPressed: () {
-                              final count = notifProvider.unreadCount;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'You have $count unread notifications',
-                                  ),
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => const NotificationsScreen(),
                                 ),
                               );
-                              // TODO: Navigate to notification list screen
                             },
                           ),
                           if (notifProvider.unreadCount > 0)

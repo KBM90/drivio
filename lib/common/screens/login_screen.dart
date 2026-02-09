@@ -37,12 +37,11 @@ class _LoginScreenState extends State<LoginScreen> {
         // ✅ Initialize user data (cache role, IDs, etc.)
         await AuthService.initializeUserData();
 
-        // ✅ DON'T NAVIGATE MANUALLY
-        // The AuthGate StreamBuilder will automatically detect the auth change
-        // and navigate to the correct screen with providers
+        // Get user role for navigation
+        final role = await AuthService.getUserRole();
 
-        // Optional: Show success message
         if (mounted) {
+          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Login successful!'),
@@ -50,6 +49,24 @@ class _LoginScreenState extends State<LoginScreen> {
               duration: Duration(seconds: 1),
             ),
           );
+
+          // Navigate based on role
+          if (role == 'passenger') {
+            Navigator.of(context).pushReplacementNamed(AppRoutes.passengerHome);
+          } else if (role == 'driver') {
+            Navigator.of(context).pushReplacementNamed(AppRoutes.driverHome);
+          } else if (role == 'provider') {
+            Navigator.of(context).pushReplacementNamed(AppRoutes.providerHome);
+          } else if (role == 'carrenter') {
+            Navigator.of(context).pushReplacementNamed(AppRoutes.carRenterHome);
+          } else if (role == 'deliveryperson') {
+            Navigator.of(
+              context,
+            ).pushReplacementNamed(AppRoutes.deliveryPersonHome);
+          } else {
+            // Fallback or error handling if role is unknown
+            debugPrint('Unknown role: $role');
+          }
         }
       }
     } catch (e) {
