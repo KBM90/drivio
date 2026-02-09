@@ -18,7 +18,6 @@ class DriverLocationProvider extends ChangeNotifier {
           ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
           : null;
   Position? get currentPosition => _currentPosition; // Add getter for Position
-  double get heading => _currentPosition?.heading ?? 0.0;
   LatLng? get destination => _destination;
   bool get isLoading => _isLoading;
   Driver? get currentDriver => _currentDriver;

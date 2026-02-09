@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
 import 'package:drivio_app/common/models/location.dart';
 import 'package:drivio_app/common/providers/map_reports_provider.dart';
 import 'package:drivio_app/common/widgets/cached_tile_layer.dart';
+import 'package:drivio_app/common/widgets/navigation_marker.dart';
 import 'package:drivio_app/driver/providers/destination_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/driver_passenger_provider.dart';
@@ -534,7 +534,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                 Consumer<DriverLocationProvider>(
                   builder: (context, locationProvider, child) {
                     final location = locationProvider.currentLocation;
-                    final heading = locationProvider.heading;
 
                     if (location == null) return const SizedBox.shrink();
 
@@ -542,20 +541,12 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                       markers: [
                         Marker(
                           point: location,
-                          child: Transform.rotate(
-                            angle: (heading * math.pi / 180),
-                            child: const Icon(
-                              Icons.navigation,
-                              size: 30,
-                              color: Color.fromARGB(255, 8, 8, 8),
-                            ),
-                            /**
-                             *  Image.asset(
-      'assets/cars/car_top.png',  // <-- your image
-      width: 40,
-      height: 40,
-    ),
-                             */
+                          child: NavigationMarker(
+                            heading:
+                                locationProvider.currentPosition?.heading ??
+                                0.0,
+                            size: 30,
+                            color: const Color.fromARGB(255, 8, 8, 8),
                           ),
                         ),
                       ],

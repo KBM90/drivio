@@ -21,6 +21,7 @@ DeliveryRequest _$DeliveryRequestFromJson(Map<String, dynamic> json) =>
       pickupLocation: DeliveryRequest._parseLocation(json['pickup_location']),
       status: json['status'] as String,
       price: (json['price'] as num?)?.toDouble(),
+      proposedPrice: (json['proposed_price'] as num?)?.toDouble(),
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
       createdAt:
           json['created_at'] == null
@@ -45,6 +46,7 @@ Map<String, dynamic> _$DeliveryRequestToJson(DeliveryRequest instance) =>
       'pickup_location': instance.pickupLocation,
       'status': instance.status,
       'price': instance.price,
+      'proposed_price': instance.proposedPrice,
       'distance_km': instance.distanceKm,
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),

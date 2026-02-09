@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
+import 'package:drivio_app/delivery_person/services/delivery_person_service.dart';
 import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:drivio_app/passenger/services/passenger_service.dart';
 import 'package:flutter/foundation.dart';
@@ -93,6 +94,11 @@ class DeviceLocationProvider extends ChangeNotifier {
           );
         } else if (role == 'passenger') {
           await PassengerService.updatePassengerLocation(
+            position.latitude,
+            position.longitude,
+          );
+        } else if (role == 'deliveryperson') {
+          await DeliveryPersonService.updateDeliveryPersonLocation(
             position.latitude,
             position.longitude,
           );

@@ -31,6 +31,9 @@ class DeliveryRequest {
   final String status;
   final double? price;
 
+  @JsonKey(name: 'proposed_price')
+  final double? proposedPrice;
+
   @JsonKey(name: 'distance_km')
   final double? distanceKm;
 
@@ -52,6 +55,7 @@ class DeliveryRequest {
     this.pickupLocation,
     required this.status,
     this.price,
+    this.proposedPrice,
     this.distanceKm,
     this.createdAt,
     this.updatedAt,

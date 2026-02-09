@@ -18,6 +18,7 @@ class AuthService {
   static int? _cachedInternalUserId;
   static int? _cachedPassengerId;
   static int? _cachedDriverId;
+  static int? _cachedDeliveryPersonId;
 
   /// Get user role from metadata, SharedPreferences, or Database
   static Future<String?> getUserRole() async {
@@ -349,6 +350,34 @@ class AuthService {
     }
   }
 
+  /// Get delivery person ID for current user
+  static Future<int?> getDeliveryPersonId() async {
+    if (_cachedDeliveryPersonId != null) return _cachedDeliveryPersonId;
+
+    try {
+      final internalUserId = await getInternalUserId();
+      if (internalUserId == null) return null;
+
+      final response =
+          await _supabase
+              .from('delivery_persons')
+              .select('id')
+              .eq('user_id', internalUserId)
+              .maybeSingle();
+
+      if (response == null) {
+        debugPrint('⚠️ No delivery person profile found');
+        return null;
+      }
+
+      _cachedDeliveryPersonId = response['id'] as int?;
+      return _cachedDeliveryPersonId;
+    } catch (e) {
+      debugPrint('❌ Error getting delivery person ID: $e');
+      return null;
+    }
+  }
+
   /// Initialize and cache all user-related IDs
   static Future<void> initializeUserData() async {
     try {
@@ -376,6 +405,7 @@ class AuthService {
       _cachedInternalUserId = null;
       _cachedPassengerId = null;
       _cachedDriverId = null;
+      _cachedDeliveryPersonId = null;
     } catch (e) {
       debugPrint('❌ Sign out error: $e');
       rethrow;

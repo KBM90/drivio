@@ -6,6 +6,7 @@ import 'package:drivio_app/passenger/screens/passenger_home_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_account_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_activity_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_services_screen.dart';
+import 'package:drivio_app/passenger/screens/customer_delivery_tracking_screen.dart';
 import 'package:drivio_app/provider/screens/provider_home_screen.dart';
 import 'package:drivio_app/delivery_person/screens/delivery_person_home_screen.dart'; // Added import
 import 'package:flutter/material.dart';
@@ -21,6 +22,7 @@ class AppRoutes {
   static const String passengerActivity = '/passengerActivity';
   static const String passengerAccount = '/passengerAccount';
   static const String deliveryPersonHome = '/deliveryPersonHome'; // Added route
+  static const String customerDeliveryTracking = '/customer-delivery-tracking';
 
   static Map<String, WidgetBuilder> routes = {
     login: (context) => LoginScreen(),
@@ -35,4 +37,16 @@ class AppRoutes {
     deliveryPersonHome:
         (context) => const DeliveryPersonHomeScreen(), // Added builder
   };
+
+  // Route handler for routes with arguments
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    if (settings.name == customerDeliveryTracking) {
+      final deliveryId = settings.arguments as int;
+      return MaterialPageRoute(
+        builder:
+            (context) => CustomerDeliveryTrackingScreen(deliveryId: deliveryId),
+      );
+    }
+    return null;
+  }
 }

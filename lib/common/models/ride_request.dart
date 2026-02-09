@@ -51,6 +51,7 @@ class RideRequest {
   final String? qrCode;
   @JsonKey(name: 'qr_code_scanned')
   final bool? qrCodeScanned;
+  final String? instructions;
 
   RideRequest({
     required this.id,
@@ -75,6 +76,7 @@ class RideRequest {
     this.updatedAt,
     this.qrCode,
     this.qrCodeScanned,
+    this.instructions,
   });
 
   RideRequest.create({
@@ -92,6 +94,7 @@ class RideRequest {
     this.preferences,
     this.distanceKm,
     this.estimatedTimeMin,
+    this.instructions,
   }) : id = 0,
        requestedAt = null,
        acceptedAt = null,
@@ -160,6 +163,7 @@ class RideRequest {
               : Location(latitude: null, longitude: null),
       qrCode: json['qr_code'] as String?,
       qrCodeScanned: json['qr_code_scanned'] as bool?,
+      instructions: json['instructions'] as String?,
     );
   }
 
@@ -261,6 +265,7 @@ class RideRequest {
     DateTime? updatedAt,
     String? qrCode,
     bool? qrCodeScanned,
+    String? instructions,
   }) {
     return RideRequest(
       id: id ?? this.id,
@@ -284,6 +289,7 @@ class RideRequest {
       updatedAt: updatedAt ?? this.updatedAt,
       qrCode: qrCode ?? this.qrCode,
       qrCodeScanned: qrCodeScanned ?? this.qrCodeScanned,
+      instructions: instructions ?? this.instructions,
     );
   }
 }

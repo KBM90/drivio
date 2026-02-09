@@ -15,7 +15,8 @@ create table public.delivery_requests (
   updated_at timestamp with time zone not null default timezone ('utc'::text, now()),
   constraint delivery_requests_pkey primary key (id),
   constraint delivery_requests_delivery_person_id_fkey foreign KEY (delivery_person_id) references delivery_persons (id),
-  constraint delivery_requests_passenger_id_fkey foreign KEY (passenger_id) references passengers (id) on delete CASCADE
+  constraint delivery_requests_passenger_id_fkey foreign KEY (passenger_id) references passengers (id) on delete CASCADE,
+  constraint delivery_requests_status_check check (status in ('pending', 'accepted', 'picking_up', 'picked_up', 'delivering', 'completed', 'cancelled'))
 ) TABLESPACE pg_default;
 
 create index IF not exists delivery_requests_delivery_location_idx on public.delivery_requests using gist (delivery_location) TABLESPACE pg_default;

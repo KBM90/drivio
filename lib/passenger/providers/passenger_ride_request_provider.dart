@@ -44,6 +44,7 @@ class PassengerRideRequestProvider extends ChangeNotifier {
     required transportTypeId,
     required price,
     required paymentMethodId,
+    String? instructions, // Add instructions parameter
   }) async {
     try {
       final rideRequestId = await RideRequestServices.createRideRequest(
@@ -52,6 +53,7 @@ class PassengerRideRequestProvider extends ChangeNotifier {
         transportTypeId: transportTypeId,
         price: price,
         paymentMethodId: paymentMethodId,
+        instructions: instructions, // Pass instructions
       );
 
       // ✅ After creating, fetch and start listening

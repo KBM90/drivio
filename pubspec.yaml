@@ -101,6 +101,7 @@ flutter:
     - assets/google.png
     - assets/profile.png
     - assets/cars/
+    - assets/transport_types/
     - assets/persons/
     - assets/others/
     - assets/services/

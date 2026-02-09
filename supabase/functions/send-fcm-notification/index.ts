@@ -58,10 +58,29 @@ serve(async (req) => {
         const fcm_token = tokenData.fcm_token
 
         // Get Firebase service account from environment variable
-        const serviceAccount = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT') || '{}')
+        const firebaseServiceAccountRaw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')
 
-        if (!serviceAccount.project_id) {
-            throw new Error('FIREBASE_SERVICE_ACCOUNT not configured')
+        if (!firebaseServiceAccountRaw) {
+            console.error('❌ FIREBASE_SERVICE_ACCOUNT environment variable is not set')
+            throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is missing. Please configure it in Supabase Dashboard.')
+        }
+
+        let serviceAccount: any
+        try {
+            serviceAccount = JSON.parse(firebaseServiceAccountRaw)
+        } catch (parseError) {
+            console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT:', parseError)
+            console.error('Raw value length:', firebaseServiceAccountRaw.length)
+            console.error('First 100 chars:', firebaseServiceAccountRaw.substring(0, 100))
+            throw new Error('FIREBASE_SERVICE_ACCOUNT contains invalid JSON. Please check the format.')
+        }
+
+        if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
+            console.error('❌ FIREBASE_SERVICE_ACCOUNT is missing required fields')
+            console.error('Has project_id:', !!serviceAccount.project_id)
+            console.error('Has private_key:', !!serviceAccount.private_key)
+            console.error('Has client_email:', !!serviceAccount.client_email)
+            throw new Error('FIREBASE_SERVICE_ACCOUNT is missing required fields (project_id, private_key, client_email)')
         }
 
         // Get OAuth2 access token for FCM
@@ -70,6 +89,14 @@ serve(async (req) => {
         // Send FCM notification
         const fcmUrl = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`
 
+        // Convert data to string key-value pairs (FCM requirement)
+        const fcmData: Record<string, string> = {}
+        if (data && typeof data === 'object') {
+            for (const [key, value] of Object.entries(data)) {
+                fcmData[key] = typeof value === 'string' ? value : JSON.stringify(value)
+            }
+        }
+
         const message = {
             message: {
                 token: fcm_token,
@@ -77,7 +104,7 @@ serve(async (req) => {
                     title: title,
                     body: body,
                 },
-                data: data || {},
+                data: fcmData,
                 android: {
                     priority: 'high',
                     notification: {
@@ -129,7 +156,25 @@ serve(async (req) => {
 
 // Helper function to get OAuth2 access token
 async function getAccessToken(serviceAccount: any): Promise<string> {
-    const jwtHeader = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
+    // Helper function for URL-safe base64 encoding (without padding)
+    function base64UrlEncode(str: string): string {
+        const base64 = btoa(str)
+        return base64
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '')
+    }
+
+    function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+        const bytes = new Uint8Array(buffer)
+        let binary = ''
+        for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i])
+        }
+        return base64UrlEncode(binary)
+    }
+
+    const jwtHeader = base64UrlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
 
     const now = Math.floor(Date.now() / 1000)
     const jwtClaimSet = {
@@ -140,7 +185,7 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
         iat: now,
     }
 
-    const jwtClaimSetEncoded = btoa(JSON.stringify(jwtClaimSet))
+    const jwtClaimSetEncoded = base64UrlEncode(JSON.stringify(jwtClaimSet))
     const signatureInput = `${jwtHeader}.${jwtClaimSetEncoded}`
 
     // Import private key
@@ -159,7 +204,10 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
         new TextEncoder().encode(signatureInput)
     )
 
-    const jwt = `${signatureInput}.${btoa(String.fromCharCode(...new Uint8Array(signature)))}`
+    const signatureEncoded = arrayBufferToBase64Url(signature)
+    const jwt = `${signatureInput}.${signatureEncoded}`
+
+    console.log('🔑 Generated JWT token (first 50 chars):', jwt.substring(0, 50))
 
     // Exchange JWT for access token
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -168,7 +216,14 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
         body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
     })
 
+    if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text()
+        console.error('❌ OAuth2 token exchange failed:', errorText)
+        throw new Error(`Failed to get OAuth2 token: ${errorText}`)
+    }
+
     const tokenData = await tokenResponse.json()
+    console.log('✅ Successfully obtained OAuth2 access token')
     return tokenData.access_token
 }
 

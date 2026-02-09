@@ -2,6 +2,7 @@ import 'package:drivio_app/common/constants/routes.dart';
 import 'package:drivio_app/common/constants/transport_constants.dart';
 import 'package:drivio_app/common/helpers/error_handler.dart';
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
+import 'package:drivio_app/common/helpers/map_helper.dart';
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/providers/device_location_provider.dart';
 import 'package:drivio_app/common/widgets/cached_tile_layer.dart';
@@ -36,6 +37,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
   double _distanceFromDriverToPickup = 0.0;
   bool? _confirmed = false;
   List<Marker> markers = [];
+  String? _instructions; // Add instructions variable
 
   @override
   void initState() {
@@ -103,46 +105,24 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
   }
 
   Future<void> _fetchRoute(LatLng pickup, LatLng dropoff) async {
-    // 🔹 Validate coordinates (0.0, 0.0 is invalid)
-    if (pickup.latitude == 0.0 ||
-        pickup.longitude == 0.0 ||
-        dropoff.latitude == 0.0 ||
-        dropoff.longitude == 0.0) {
-      return;
-    }
-
-    try {
-      List<LatLng> newPolyline = await _osrmService
-          .getRouteBetweenPickupAndDropoff(pickup, dropoff, context);
-
-      if (newPolyline.isNotEmpty && mounted) {
-        final distance = await _osrmService.getDistance(pickup, dropoff);
-
-        setState(() {
-          _routePolyline = newPolyline;
-          _distance = distance;
-        });
-        _fitCameraToRoute(newPolyline);
-      } else {
-        if (newPolyline.isEmpty && mounted) {
-          handleAppError(context, 'No route found');
-        }
-      }
-    } catch (e) {
-      debugPrint("Failed to fetch route: $e");
-      if (mounted) {
-        handleAppError(context, 'Failed to fetch route');
-      }
-    }
-  }
-
-  void _fitCameraToRoute(List<LatLng> routePoints) {
-    if (routePoints.isEmpty) return;
-
-    final bounds = LatLngBounds.fromPoints(routePoints);
-    _mapController.fitCamera(
-      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50.0)),
+    final result = await MapHelper.fetchRoute(
+      osrmService: _osrmService,
+      pickup: pickup,
+      dropoff: dropoff,
+      context: context,
     );
+
+    if (result != null && mounted) {
+      setState(() {
+        _routePolyline = result['polyline'] as List<LatLng>;
+        _distance = result['distance'] as double;
+      });
+      MapHelper.fitCameraToRoute(_mapController, result['polyline']);
+    } else {
+      if (mounted) {
+        handleAppError(context, 'No route found');
+      }
+    }
   }
 
   Future<void> _fetchRouteFromDriver(
@@ -176,6 +156,72 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
     }
   }
 
+  void _showConfirmationModal() {
+    if (_destination == null || _pickupLocation == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => FinalRideConfirmationModal(
+            distance: _distance,
+            initialTransport: TransportConstants.transports.first,
+            initialInstructions: _instructions,
+            onConfirm: (price, transport, paymentMethod, instructions) async {
+              setState(() {
+                _instructions = instructions;
+              });
+
+              final rideRequestProvider =
+                  Provider.of<PassengerRideRequestProvider>(
+                    context,
+                    listen: false,
+                  );
+
+              try {
+                await rideRequestProvider.createRequest(
+                  pickup: _pickupLocation!,
+                  destination: _destination!,
+                  transportTypeId: transport.id,
+                  price: price,
+                  paymentMethodId: paymentMethod.id,
+                  instructions: instructions,
+                );
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Ride request created successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  setState(() {
+                    _confirmed = true;
+                    _hasExistingRequest = true;
+                  });
+
+                  // Navigate back to home page
+                  Navigator.pushReplacementNamed(
+                    context,
+                    AppRoutes.passengerHome,
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to create ride request: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+    );
+  }
+
   @override
   void dispose() {
     _mapController.dispose();
@@ -197,48 +243,14 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
       ),
       body: Stack(
         children: [
-          // Add this as a child in your Stack containing the map
-          Positioned(
-            top: 20,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF00FF00), width: 2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Los Santos',
-                    style: TextStyle(
-                      color: const Color(0xFF00FF00),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Courier', // Retro font
-                    ),
-                  ),
-                  Text(
-                    '12:00',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-          ),
           // Flutter Map
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
               initialCenter:
                   _currentLocation ??
-                  LatLng(
-                    31.7917, // latitude (rough center of Morocco)
-                    -7.0926, // longitude (rough center of Morocco)
-                  ), // London center
-              initialZoom: 5.5,
+                  LatLng(31.7917, -7.0926), // Default to Casablanca, Morocco
+              initialZoom: 15.0,
               onTap: (tapPosition, latLng) async {
                 if (!_hasExistingRequest && mounted) {
                   //fetch route from actual location because there is no registred ride request yet
@@ -353,8 +365,8 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                   polylines: [
                     Polyline(
                       points: _routePolyline,
-                      color: const Color.fromARGB(255, 3, 243, 27),
-                      strokeWidth: 2,
+                      color: Colors.black, // Primary route color
+                      strokeWidth: 4, // Thicker line
                     ),
                   ],
                 ),
@@ -364,18 +376,39 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                   polylines: [
                     Polyline(
                       points: _routePolylineDriverToPickup,
-                      color: const Color.fromARGB(255, 9, 107, 245),
-                      strokeWidth: 2,
+                      color:
+                          Colors.blueAccent, // Distinct color for driver path
+                      strokeWidth: 4, // Thicker line
                     ),
                   ],
                 ),
             ],
           ),
 
-          // Search Bar Positioned on top
+          // 📍 Current Location Button
+          Positioned(
+            bottom: _destination == null ? 140 : 100,
+            right: 16,
+            child: FloatingActionButton(
+              heroTag: 'currentLocation',
+              mini: false,
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              elevation: 4,
+              shape: const CircleBorder(),
+              onPressed: () {
+                if (_currentLocation != null) {
+                  _mapController.move(_currentLocation!, 16.0);
+                }
+              },
+              child: const Icon(Icons.my_location),
+            ),
+          ),
+
+          // 🔍 Modern Search Bar (Floating at bottom)
           if (_destination == null)
             Positioned(
-              bottom: 60,
+              top: 60, // Moved to top for better UX
               left: 16,
               right: 16,
               child: GestureDetector(
@@ -395,6 +428,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                   if (result != null && result is Map) {
                     final pickup = result['pickup'] as LatLng?;
                     final destination = result['destination'] as LatLng?;
+                    final action = result['action'] as String?;
 
                     if (pickup != null && destination != null && mounted) {
                       setState(() {
@@ -402,105 +436,65 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                         _destination = destination;
                       });
                       await _fetchRoute(pickup, destination);
+
+                      if (action == 'confirm') {
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (mounted) {
+                            _showConfirmationModal();
+                          }
+                        });
+                      }
                     }
                   }
                 },
-                child: const SearchBarWidget(),
+                child: Hero(tag: 'searchBar', child: const SearchBarWidget()),
               ),
             ),
-          // Confirm Destination Button
+
+          // ✅ Confirm Destination Button
           if (_destination != null && _confirmed == false)
             Positioned(
-              bottom: 20,
+              bottom: 30,
               left: 16,
               right: 16,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 233, 96, 4),
-                ),
-                onPressed: () {
-                  // Trigger trip request logic here
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20),
+              child: SafeArea(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black, // Primary App Color
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    builder:
-                        (_) => FinalRideConfirmationModal(
-                          distance: _distance,
-                          initialTransport: TransportConstants.transports.first,
-                          onConfirm: (
-                            price,
-                            transportType,
-                            paymentMethod,
-                          ) async {
-                            if (mounted) {
-                              setState(() {
-                                _confirmed = true;
-                              });
-                            }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Publishing ride request ...'),
-                                duration: const Duration(seconds: 5),
-                              ),
-                            );
-
-                            if (_currentLocation == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Current location not available. Please wait...',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            final message = await rideRequestProvider
-                                .createRequest(
-                                  pickup: _currentLocation!,
-                                  destination: _destination!,
-                                  transportTypeId: transportType.id,
-                                  price: price,
-                                  paymentMethodId: paymentMethod.id,
-                                );
-
-                            // Show the message in a SnackBar
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(message['message']),
-                                  duration: const Duration(seconds: 3),
-                                ),
-                              );
-                              Navigator.pushReplacementNamed(
-                                context,
-                                AppRoutes.passengerHome,
-                              );
-                            }
-                          },
-                        ),
-                  );
-                },
-                child: const Text(
-                  "Confirm Destination",
-                  style: TextStyle(color: Colors.white),
+                    onPressed: _showConfirmationModal,
+                    child: const Text(
+                      "Confirm Destination",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          // Reset Destination Button
+
+          // ❌ Reset Destination Button (Floating top-right)
           if (_destination != null)
             Positioned(
-              top: 20,
-              right: 20,
+              top: 60,
+              left: 16,
               child: FloatingActionButton(
                 heroTag: 'resetDestination',
                 mini: true,
                 backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                elevation: 4,
+                shape: const CircleBorder(),
                 onPressed: () {
                   if (mounted) {
                     setState(() {
@@ -512,7 +506,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                     });
                   }
                 },
-                child: const Icon(Icons.clear, color: Colors.red),
+                child: const Icon(Icons.arrow_back),
               ),
             ),
           if (_hasExistingRequest)

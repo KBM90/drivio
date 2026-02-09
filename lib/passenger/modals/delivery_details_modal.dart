@@ -1,5 +1,6 @@
 import 'package:drivio_app/common/providers/device_location_provider.dart';
 import 'package:drivio_app/passenger/services/delivery_service.dart';
+import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -18,6 +19,34 @@ class _DeliveryDetailsModalState extends State<DeliveryDetailsModal> {
   final _pickupNotesController = TextEditingController();
   final _dropoffNotesController = TextEditingController();
   bool _isLoading = false;
+  String? _currentCity;
+  Map<String, dynamic>? _selectedLocation;
+  final OSRMService _osrmService = OSRMService();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCurrentCity();
+  }
+
+  Future<void> _fetchCurrentCity() async {
+    final deviceLocationProvider = Provider.of<DeviceLocationProvider>(
+      context,
+      listen: false,
+    );
+    final location = deviceLocationProvider.currentLocation;
+    if (location != null) {
+      final city = await _osrmService.getCityFromCoordinates(
+        location.latitude!,
+        location.longitude!,
+      );
+      if (mounted) {
+        setState(() {
+          _currentCity = city;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -38,14 +67,24 @@ class _DeliveryDetailsModalState extends State<DeliveryDetailsModal> {
       // Ideally, this modal should be opened AFTER selecting locations, or include location picking.
       // Assuming for this step we just create the request record.
 
-      final deviceLocationProvider = Provider.of<DeviceLocationProvider>(
-        context,
-        listen: false,
-      );
-      final currentLocation = deviceLocationProvider.currentLocation;
+      double lat;
+      double lng;
 
-      if (currentLocation == null) {
-        throw Exception('Current location not available');
+      if (_selectedLocation != null) {
+        lat = _selectedLocation!['lat'];
+        lng = _selectedLocation!['lon'];
+      } else {
+        final deviceLocationProvider = Provider.of<DeviceLocationProvider>(
+          context,
+          listen: false,
+        );
+        final currentLocation = deviceLocationProvider.currentLocation;
+
+        if (currentLocation == null) {
+          throw Exception('Current location not available');
+        }
+        lat = currentLocation.latitude;
+        lng = currentLocation.longitude;
       }
 
       await DeliveryService.createDeliveryRequest(
@@ -53,15 +92,28 @@ class _DeliveryDetailsModalState extends State<DeliveryDetailsModal> {
         description: _descriptionController.text,
         pickupNotes: _pickupNotesController.text,
         dropoffNotes: _dropoffNotesController.text,
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
+        latitude: lat,
+        longitude: lng,
       );
 
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+      // Get the created delivery request
+      final activeDelivery = await DeliveryService.getActiveDeliveryRequest();
+
+      if (mounted && activeDelivery != null) {
+        // Close modal
+        Navigator.of(context).pop();
+
+        // Navigate to tracking screen
+        Navigator.of(context).pushNamed(
+          '/customer-delivery-tracking',
+          arguments: activeDelivery.id,
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Delivery request created successfully!'),
+            content: Text(
+              'Delivery request created! Waiting for delivery person...',
+            ),
           ),
         );
       }
@@ -98,6 +150,45 @@ class _DeliveryDetailsModalState extends State<DeliveryDetailsModal> {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
+            if (_currentCity != null) ...[
+              Autocomplete<Map<String, dynamic>>(
+                optionsBuilder: (TextEditingValue textEditingValue) async {
+                  if (textEditingValue.text.isEmpty) {
+                    return const Iterable<Map<String, dynamic>>.empty();
+                  }
+                  return await _osrmService.searchPlaces(
+                    textEditingValue.text,
+                    radiusKm: 50.0,
+                  );
+                },
+                displayStringForOption:
+                    (Map<String, dynamic> option) =>
+                        option['display_name'] ?? '',
+                onSelected: (Map<String, dynamic> selection) {
+                  setState(() {
+                    _selectedLocation = selection;
+                  });
+                },
+                fieldViewBuilder: (
+                  context,
+                  textEditingController,
+                  focusNode,
+                  onFieldSubmitted,
+                ) {
+                  return TextFormField(
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    decoration: InputDecoration(
+                      labelText: 'Pickup Location (in $_currentCity)',
+                      hintText: 'Search for a place',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: const Icon(Icons.search),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
             TextFormField(
               controller: _descriptionController,
               decoration: const InputDecoration(

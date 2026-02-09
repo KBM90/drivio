@@ -351,40 +351,163 @@ class OSRMService {
     return null;
   }
 
-  Future<List<Map<String, dynamic>>> searchPlaces(
-    String query, {
-    double? lat,
-    double? lon,
-    String? countryCode,
-  }) async {
-    // Request more results to allow for filtering
-    String url = "https://photon.komoot.io/api/?q=$query&limit=20";
-    if (lat != null && lon != null) {
-      url += "&lat=$lat&lon=$lon";
+  Future<String?> getCityFromCoordinates(double lat, double lng) async {
+    // 1. Try Nominatim first
+    try {
+      final String url =
+          "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng";
+
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: {
+              "User-Agent": "Drivio", // Required by Nominatim API
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final address = data['address'] as Map<String, dynamic>?;
+
+        if (address != null) {
+          if (address['city'] != null) {
+            debugPrint("✅ City fetched from Nominatim: ${address['city']}");
+            return address['city'];
+          }
+          if (address['town'] != null) {
+            debugPrint("✅ Town fetched from Nominatim: ${address['town']}");
+            return address['town'];
+          }
+          if (address['village'] != null) {
+            debugPrint(
+              "✅ Village fetched from Nominatim: ${address['village']}",
+            );
+            return address['village'];
+          }
+        }
+      } else {
+        debugPrint("⚠️ Nominatim returned status ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("⚠️ Nominatim failed: $e");
+      debugPrint("🔄 Trying Photon API fallback...");
     }
 
+    // 2. Fallback to Photon reverse geocoding
     try {
+      final String url = "https://photon.komoot.io/reverse?lat=$lat&lon=$lng";
+
       final response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        final features = data['features'] as List?;
+
+        if (features != null && features.isNotEmpty) {
+          final properties = features[0]['properties'] as Map<String, dynamic>?;
+
+          if (properties != null) {
+            if (properties['city'] != null) {
+              debugPrint("✅ City fetched from Photon: ${properties['city']}");
+              return properties['city'];
+            }
+            if (properties['town'] != null) {
+              debugPrint("✅ Town fetched from Photon: ${properties['town']}");
+              return properties['town'];
+            }
+            if (properties['village'] != null) {
+              debugPrint(
+                "✅ Village fetched from Photon: ${properties['village']}",
+              );
+              return properties['village'];
+            }
+          }
+        }
+      } else {
+        debugPrint("⚠️ Photon returned status ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("❌ Photon fallback also failed: $e");
+    }
+
+    debugPrint("❌ Could not fetch city from any geocoding service");
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> searchPlaces(
+    String query, {
+    double? lat,
+    double? lon,
+    String? countryCode,
+    double radiusKm = 50.0, // Default 50km radius
+  }) async {
+    // 1. Try Photon API first
+    try {
+      String url = "https://photon.komoot.io/api/?q=$query&limit=50";
+
+      // Add bounding box if user location is provided
+      if (lat != null && lon != null) {
+        final bbox = _calculateBoundingBox(lat, lon, radiusKm);
+        url +=
+            "&bbox=${bbox['lonMin']},${bbox['latMin']},${bbox['lonMax']},${bbox['latMax']}";
+        url += "&lat=$lat&lon=$lon"; // Also bias results toward user location
+      }
+
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
         final features = data['features'] as List;
 
-        // Filter by country code if provided
+        // Filter by country code (MANDATORY for accuracy)
         final filteredFeatures =
-            countryCode != null
-                ? features.where((f) {
-                  final props = f['properties'];
-                  final cc = props['countrycode'] as String?;
-                  return cc != null &&
-                      cc.toLowerCase() == countryCode.toLowerCase();
-                }).toList()
-                : features;
+            features.where((f) {
+              final props = f['properties'];
 
-        // Take top 5
-        final topFeatures = filteredFeatures.take(5).toList();
+              // ✅ STRICT Country filtering
+              if (countryCode != null) {
+                final cc = props['countrycode'] as String?;
+                if (cc == null ||
+                    cc.toLowerCase() != countryCode.toLowerCase()) {
+                  return false;
+                }
+              }
+
+              return true;
+            }).toList();
+
+        // ✅ Calculate distance and sort by proximity
+        final resultsWithDistance =
+            filteredFeatures.map((feature) {
+              final geometry = feature['geometry'];
+              final coordinates = geometry['coordinates'] as List;
+              final resultLat = coordinates[1].toDouble();
+              final resultLon = coordinates[0].toDouble();
+
+              // Calculate distance from user location
+              double distance = double.infinity;
+              if (lat != null && lon != null) {
+                distance = _calculateDistance(lat, lon, resultLat, resultLon);
+              }
+
+              return {'feature': feature, 'distance': distance};
+            }).toList();
+
+        // Sort by distance (nearest first)
+        resultsWithDistance.sort((a, b) {
+          final distA = a['distance'] as double;
+          final distB = b['distance'] as double;
+          return distA.compareTo(distB);
+        });
+
+        // Take top 5 nearest results
+        final topFeatures =
+            resultsWithDistance.take(5).map((item) => item['feature']).toList();
 
         return topFeatures.map((feature) {
           final properties = feature['properties'];
@@ -427,8 +550,141 @@ class OSRMService {
         }).toList();
       }
     } catch (e) {
-      debugPrint("Error searching places: $e");
+      debugPrint("⚠️ Photon API failed: $e");
+      debugPrint("🔄 Switching to Nominatim Fallback...");
     }
+
+    // 2. Fallback to Nominatim API
+    return _searchPlacesNominatim(
+      query,
+      lat: lat,
+      lon: lon,
+      countryCode: countryCode,
+    );
+  }
+
+  /// Calculate distance between two coordinates using Haversine formula
+  /// Returns distance in kilometers
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const earthRadiusKm = 6371.0;
+
+    final dLat = _degreesToRadians(lat2 - lat1);
+    final dLon = _degreesToRadians(lon2 - lon1);
+
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(_degreesToRadians(lat1)) *
+            cos(_degreesToRadians(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadiusKm * c;
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * pi / 180;
+  }
+
+  /// Calculates a bounding box around a center point with given radius in km
+  /// Returns a Map with lonMin, latMin, lonMax, latMax
+  Map<String, double> _calculateBoundingBox(
+    double lat,
+    double lon,
+    double radiusKm,
+  ) {
+    // Earth's radius in km
+    const double earthRadiusKm = 6371.0;
+
+    // Convert radius to radians
+    final double radDist = radiusKm / earthRadiusKm;
+
+    // Convert lat/lon to radians
+    final double latRad = _degreesToRadians(lat);
+    final double lonRad = _degreesToRadians(lon);
+
+    // Calculate bounding box
+    final double latMin = latRad - radDist;
+    final double latMax = latRad + radDist;
+
+    // Longitude calculation needs to account for latitude
+    final double deltaLon = asin(sin(radDist) / cos(latRad));
+    final double lonMin = lonRad - deltaLon;
+    final double lonMax = lonRad + deltaLon;
+
+    // Convert back to degrees
+    return {
+      'latMin': latMin * 180 / pi,
+      'latMax': latMax * 180 / pi,
+      'lonMin': lonMin * 180 / pi,
+      'lonMax': lonMax * 180 / pi,
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> _searchPlacesNominatim(
+    String query, {
+    double? lat,
+    double? lon,
+    String? countryCode,
+  }) async {
+    try {
+      String url =
+          "https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=10";
+
+      if (countryCode != null) {
+        url += "&countrycodes=$countryCode";
+      }
+
+      // Nominatim doesn't support simple lat/lon bias in search URL same way as Photon
+      // But we can use viewbox if we wanted, for now simple search is better than nothing.
+
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: {
+              "User-Agent": "Drivio", // Required by Nominatim APIPolicy
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        return data.take(5).map((item) {
+          final address = item['address'] as Map<String, dynamic>?;
+
+          String name = item['name'] ?? "";
+          if (name.isEmpty && address != null) {
+            name =
+                address['road'] ??
+                address['city'] ??
+                item['display_name'].split(',')[0];
+          }
+
+          return {
+            'name': name,
+            'display_name': item['display_name'],
+            'lat': double.parse(item['lat']),
+            'lon': double.parse(item['lon']),
+            'type': item['type'], // e.g. "residential"
+            'osm_key': item['class'], // e.g. "highway"
+          };
+        }).toList();
+      } else {
+        debugPrint(
+          "❌ Nominatim API return non-200 status: ${response.statusCode}",
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ Nominatim Fallback failed: $e");
+    }
+
     return [];
   }
 

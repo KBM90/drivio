@@ -1,5 +1,6 @@
 import 'package:drivio_app/common/providers/notification_provider.dart';
 import 'package:drivio_app/common/screens/app_settings_screen.dart';
+import 'package:drivio_app/delivery_person/providers/delivery_person_location_provider.dart';
 import 'package:drivio_app/delivery_person/screens/delivery_history_screen.dart';
 import 'package:drivio_app/delivery_person/screens/delivery_requests_screen.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,16 @@ class _DeliveryPersonHomeScreenState extends State<DeliveryPersonHomeScreen> {
     'Delivery History',
     'Settings',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Update delivery person location once when app opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final locationProvider = context.read<DeliveryPersonLocationProvider>();
+      locationProvider.updateCurrentLocation();
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {

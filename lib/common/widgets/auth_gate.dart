@@ -5,6 +5,7 @@ import 'package:drivio_app/common/screens/banned_user_screen.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:drivio_app/common/services/notification_service.dart';
 import 'package:drivio_app/common/providers/notification_provider.dart';
+import 'package:drivio_app/delivery_person/providers/delivery_person_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/providers/driver_provider.dart';
 import 'package:drivio_app/driver/providers/destination_provider.dart';
@@ -13,6 +14,8 @@ import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/passenger/providers/passenger_provider.dart';
 import 'package:drivio_app/passenger/providers/passenger_ride_request_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:drivio_app/common/screens/no_internet_screen.dart';
+import 'package:drivio_app/common/services/connectivity_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 
@@ -121,135 +124,163 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<AuthState>(
-      stream: Supabase.instance.client.auth.onAuthStateChange,
-      builder: (context, snapshot) {
-        // ✅ Use WidgetsBinding.addPostFrameCallback to schedule setState after build
-        if (snapshot.hasData) {
-          final event = snapshot.data!.event;
+    return StreamBuilder<InternetStatus>(
+      stream: ConnectivityService.instance.onStatusChange,
+      builder: (context, internetSnapshot) {
+        final internetStatus = internetSnapshot.data;
 
-          if (event == AuthChangeEvent.signedIn ||
-              event == AuthChangeEvent.tokenRefreshed) {
-            // Schedule the update AFTER the current build completes
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _checkAuthAndRole();
-              }
-            });
-          } else if (event == AuthChangeEvent.signedOut) {
-            // Schedule the update AFTER the current build completes
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  _userRole = null;
-                  _isLoading = false;
+        if (internetStatus == InternetStatus.disconnected) {
+          return const NoInternetScreen();
+        }
+
+        return StreamBuilder<AuthState>(
+          stream: Supabase.instance.client.auth.onAuthStateChange,
+          builder: (context, snapshot) {
+            // ✅ Use WidgetsBinding.addPostFrameCallback to schedule setState after build
+            if (snapshot.hasData) {
+              final event = snapshot.data!.event;
+
+              if (event == AuthChangeEvent.signedIn ||
+                  event == AuthChangeEvent.tokenRefreshed) {
+                // Schedule the update AFTER the current build completes
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    _checkAuthAndRole();
+                  }
+                });
+              } else if (event == AuthChangeEvent.signedOut) {
+                // Schedule the update AFTER the current build completes
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _userRole = null;
+                      _isLoading = false;
+                    });
+                  }
                 });
               }
-            });
-          }
-        }
+            }
 
-        // Show loading while checking auth state
-        if (_isLoading || snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+            // Show loading while checking auth state
+            if (_isLoading ||
+                snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-        final session = snapshot.hasData ? snapshot.data!.session : null;
+            final session = snapshot.hasData ? snapshot.data!.session : null;
 
-        // User is not logged in
-        if (session == null) {
-          return AppRoutes.routes[AppRoutes.login]!(context);
-        }
+            // User is not logged in
+            if (session == null) {
+              return AppRoutes.routes[AppRoutes.login]!(context);
+            }
 
-        // User is banned - show banned screen
-        if (_isBanned) {
-          return const BannedUserScreen();
-        }
+            // User is banned - show banned screen
+            if (_isBanned) {
+              return const BannedUserScreen();
+            }
 
-        // User is logged in - wrap with providers based on role
-        if (_userRole == 'driver') {
-          return MultiProvider(
-            providers: [
-              ChangeNotifierProvider(create: (_) => DriverLocationProvider()),
-              ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
-              ChangeNotifierProvider(create: (_) => DriverProvider()),
-              ChangeNotifierProvider(create: (_) => DestinationProvider()),
-              ChangeNotifierProvider(create: (_) => DriverPassengerProvider()),
-              ChangeNotifierProvider(create: (_) => MapReportsProvider()),
-              ChangeNotifierProvider(create: (_) => NotificationProvider()),
-            ],
-            child: _AppNavigator(initialRoute: AppRoutes.driverHome),
-          );
-        } else if (_userRole == 'passenger') {
-          return MultiProvider(
-            providers: [
-              ChangeNotifierProvider(
-                create: (_) => PassengerRideRequestProvider(),
-              ),
-              ChangeNotifierProvider(create: (context) => PassengerProvider()),
-
-              ChangeNotifierProvider(
-                create: (context) => DeviceLocationProvider(),
-              ),
-              ChangeNotifierProvider(create: (_) => NotificationProvider()),
-            ],
-            child: _AppNavigator(initialRoute: AppRoutes.passengerHome),
-          );
-        } else if (_userRole == 'provider') {
-          return MultiProvider(
-            providers: [
-              ChangeNotifierProvider(create: (_) => NotificationProvider()),
-            ],
-            child: const _AppNavigator(initialRoute: AppRoutes.providerHome),
-          );
-        } else if (_userRole == 'carrenter') {
-          return MultiProvider(
-            providers: [
-              ChangeNotifierProvider(create: (_) => NotificationProvider()),
-            ],
-            child: const _AppNavigator(initialRoute: AppRoutes.carRenterHome),
-          );
-        } else if (_userRole == 'deliveryperson') {
-          return MultiProvider(
-            providers: [
-              ChangeNotifierProvider(create: (_) => NotificationProvider()),
-            ],
-            child: const _AppNavigator(
-              initialRoute: AppRoutes.deliveryPersonHome,
-            ),
-          );
-        } else {
-          debugPrint(
-            '⚠️ AuthGate: Invalid or null role - _userRole: $_userRole',
-          );
-          debugPrint('⚠️ AuthGate: Showing error screen');
-          // Role not loaded yet or invalid
-          return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Error: Could not determine user role.'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      await AuthService.signOut();
-                      if (context.mounted) {
-                        setState(() {
-                          _userRole = null;
-                          _isLoading = false;
-                        });
-                      }
-                    },
-                    child: const Text('Sign Out'),
+            // User is logged in - wrap with providers based on role
+            if (_userRole == 'driver') {
+              return MultiProvider(
+                providers: [
+                  ChangeNotifierProvider(
+                    create: (_) => DriverLocationProvider(),
                   ),
+                  ChangeNotifierProvider(create: (_) => RideRequestsProvider()),
+                  ChangeNotifierProvider(create: (_) => DriverProvider()),
+                  ChangeNotifierProvider(create: (_) => DestinationProvider()),
+                  ChangeNotifierProvider(
+                    create: (_) => DriverPassengerProvider(),
+                  ),
+                  ChangeNotifierProvider(create: (_) => MapReportsProvider()),
+                  ChangeNotifierProvider(create: (_) => NotificationProvider()),
                 ],
-              ),
-            ),
-          );
-        }
+                child: _AppNavigator(initialRoute: AppRoutes.driverHome),
+              );
+            } else if (_userRole == 'passenger') {
+              return MultiProvider(
+                providers: [
+                  ChangeNotifierProvider(
+                    create: (_) => PassengerRideRequestProvider(),
+                  ),
+                  ChangeNotifierProvider(
+                    create: (context) => PassengerProvider(),
+                  ),
+
+                  ChangeNotifierProvider(
+                    create: (context) => DeviceLocationProvider(),
+                  ),
+                  ChangeNotifierProvider(create: (_) => NotificationProvider()),
+                ],
+                child: _AppNavigator(initialRoute: AppRoutes.passengerHome),
+              );
+            } else if (_userRole == 'provider') {
+              return MultiProvider(
+                providers: [
+                  ChangeNotifierProvider(create: (_) => NotificationProvider()),
+                ],
+                child: const _AppNavigator(
+                  initialRoute: AppRoutes.providerHome,
+                ),
+              );
+            } else if (_userRole == 'carrenter') {
+              return MultiProvider(
+                providers: [
+                  ChangeNotifierProvider(create: (_) => NotificationProvider()),
+                ],
+                child: const _AppNavigator(
+                  initialRoute: AppRoutes.carRenterHome,
+                ),
+              );
+            } else if (_userRole == 'deliveryperson') {
+              return MultiProvider(
+                providers: [
+                  ChangeNotifierProvider(
+                    create: (_) => DeviceLocationProvider(),
+                  ),
+                  ChangeNotifierProvider(
+                    create: (_) => DeliveryPersonLocationProvider(),
+                  ),
+                  ChangeNotifierProvider(create: (_) => NotificationProvider()),
+                ],
+                child: const _AppNavigator(
+                  initialRoute: AppRoutes.deliveryPersonHome,
+                ),
+              );
+            } else {
+              debugPrint(
+                '⚠️ AuthGate: Invalid or null role - _userRole: $_userRole',
+              );
+              debugPrint('⚠️ AuthGate: Showing error screen');
+              // Role not loaded yet or invalid
+              return Scaffold(
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Error: Could not determine user role.'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () async {
+                          await AuthService.signOut();
+                          if (context.mounted) {
+                            setState(() {
+                              _userRole = null;
+                              _isLoading = false;
+                            });
+                          }
+                        },
+                        child: const Text('Sign Out'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+          },
+        );
       },
     );
   }
@@ -267,6 +298,14 @@ class _AppNavigator extends StatelessWidget {
       initialRoute: initialRoute,
       onGenerateRoute: (settings) {
         final routeName = settings.name ?? initialRoute;
+
+        // Try AppRoutes.onGenerateRoute first for routes with arguments
+        final customRoute = AppRoutes.onGenerateRoute(settings);
+        if (customRoute != null) {
+          return customRoute;
+        }
+
+        // Fall back to regular routes
         final routeBuilder = AppRoutes.routes[routeName];
 
         if (routeBuilder != null) {

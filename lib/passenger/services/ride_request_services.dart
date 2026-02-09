@@ -17,6 +17,7 @@ class RideRequestServices {
     required int transportTypeId,
     required double price,
     required int paymentMethodId,
+    String? instructions, // Add instructions parameter
   }) async {
     try {
       // Get passenger ID from AuthService
@@ -80,9 +81,7 @@ class RideRequestServices {
         'duration': duration,
         'qr_code': qrCodeValue,
         'qr_code_scanned': false,
-        // Remove these as triggers will handle them
-        // 'created_at': DateTime.now().toUtc().toIso8601String(),
-        // 'updated_at': DateTime.now().toUtc().toIso8601String(),
+        'instructions': instructions, // Add instructions to data
       };
 
       // Insert into Supabase

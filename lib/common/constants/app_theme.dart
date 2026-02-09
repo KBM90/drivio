@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 
 /// App theme definitions for light and dark modes
 class AppTheme {
-  // Primary color (consistent across themes)
-  static const Color primaryColor = Color(0xFF2196F3);
-  static const Color accentColor = Color(0xFF03A9F4);
+  // Primary color (Deep Purple)
+  static const Color primaryColor = Color(0xFF673AB7);
+  // Accent color (Vibrant Cyan)
+  static const Color accentColor = Color(0xFF00E5FF);
+
+  // Brand Gradient
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [primaryColor, accentColor],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   /// Light Theme
   static ThemeData lightTheme = ThemeData(
