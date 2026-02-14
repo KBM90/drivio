@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../common/screens/login_screen.dart';
+
 import 'add_service_screen.dart';
 import 'my_services_screen.dart';
 
-import 'provider_profile_screen.dart';
+import 'provider_bookings_screen.dart';
+import 'provider_settings_screen.dart';
 
 class ProviderHomeScreen extends StatefulWidget {
   const ProviderHomeScreen({super.key});
@@ -21,30 +21,31 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
     MyServicesScreen(
       onRefreshCallback: (callback) => _refreshServices = callback,
     ), // My Services
-    const Center(child: Text('My Bookings')), // Placeholder for Bookings
-    const ProviderProfileScreen(), // Profile
+    const ProviderBookingsScreen(), // My Bookings
+    const ProviderSettingsScreen(), // Settings (Profile + App Settings)
   ];
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
   }
 
-  Future<void> _signOut() async {
-    await Supabase.instance.client.auth.signOut();
-    if (mounted) {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Provider Dashboard'),
+        automaticallyImplyLeading: false,
+        title: Image.asset(
+          'assets/app/app_logo_without_background.png',
+          height: 70,
+        ),
+        centerTitle: true,
         actions: [
-          IconButton(icon: const Icon(Icons.logout), onPressed: _signOut),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              // TODO: Show notifications
+            },
+          ),
         ],
       ),
       body: _screens[_selectedIndex],
@@ -55,7 +56,10 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
             icon: Icon(Icons.calendar_today),
             label: 'Bookings',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.green,

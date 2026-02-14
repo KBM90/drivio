@@ -110,15 +110,6 @@ class _SearchBottomSheetState extends State<SearchBottomSheet> {
         setState(() {
           _suggestions = results ?? [];
           _isLoading = false;
-          if (results == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  "Unable to search. Please check your internet connection.",
-                ),
-              ),
-            );
-          }
         });
       }
     });

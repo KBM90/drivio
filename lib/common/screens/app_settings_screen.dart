@@ -5,6 +5,7 @@ import 'package:drivio_app/common/providers/locale_provider.dart';
 import 'package:drivio_app/common/l10n/app_localizations.dart';
 import 'package:drivio_app/common/services/notification_service.dart';
 import 'package:provider/provider.dart';
+import 'package:drivio_app/common/constants/routes.dart';
 
 /// App Settings Screen
 /// Allows users to configure app preferences including language, theme, notifications, etc.
@@ -215,7 +216,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         automaticallyImplyLeading: widget.automaticallyImplyLeading,
         title: Text(AppLocalizations.of(context)!.settings),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report_outlined),
+            tooltip: 'Report a problem',
+            onPressed: () {
+              Navigator.of(context).pushNamed(AppRoutes.reportIssue);
+            },
+          ),
+        ],
       ),
+
       body: ListView(
         children: [
           // Appearance Section

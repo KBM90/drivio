@@ -151,7 +151,7 @@ class _DeliveryPersonVehicleScreenState
 
                       // Vehicle Type Dropdown
                       DropdownButtonFormField<String>(
-                        value: _vehicleType,
+                        initialValue: _vehicleType,
                         decoration: const InputDecoration(
                           labelText: 'Vehicle Type',
                           border: OutlineInputBorder(),

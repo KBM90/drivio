@@ -1,5 +1,5 @@
 import 'package:drivio_app/common/providers/device_location_provider.dart';
-import 'package:drivio_app/passenger/services/delivery_service.dart';
+import 'package:drivio_app/delivery_person/services/delivery_service.dart';
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -37,8 +37,8 @@ class _DeliveryDetailsModalState extends State<DeliveryDetailsModal> {
     final location = deviceLocationProvider.currentLocation;
     if (location != null) {
       final city = await _osrmService.getCityFromCoordinates(
-        location.latitude!,
-        location.longitude!,
+        location.latitude,
+        location.longitude,
       );
       if (mounted) {
         setState(() {

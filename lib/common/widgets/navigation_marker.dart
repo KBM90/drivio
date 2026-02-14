@@ -19,8 +19,8 @@ class NavigationMarker extends StatelessWidget {
   const NavigationMarker({
     super.key,
     required this.heading,
-    this.size = 30,
-    this.color = Colors.blue,
+    this.size = 20,
+    this.color = Colors.black,
     this.child,
   });
 
@@ -31,7 +31,8 @@ class NavigationMarker extends StatelessWidget {
 
     return Transform.rotate(
       angle: angle,
-      child: child ?? Icon(Icons.navigation, color: color, size: size),
+      child:
+          child ?? Icon(Icons.assistant_navigation, color: color, size: size),
     );
   }
 }

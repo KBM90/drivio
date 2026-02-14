@@ -64,6 +64,27 @@ class ServiceProviderService {
     }
   }
 
+  /// Fetch a provider profile by provider (service_providers.id)
+  Future<ServiceProvider?> getProviderById(int providerId) async {
+    try {
+      await AuthService.ensureValidSession();
+      final response =
+          await _supabase
+              .from('service_providers')
+              .select('*, users(name, phone, city)')
+              .eq('id', providerId)
+              .maybeSingle();
+
+      if (response != null) {
+        return ServiceProvider.fromJson(response);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching provider by id: $e');
+      return null;
+    }
+  }
+
   Future<void> updateProviderProfile({
     required int userId,
     required String businessName,

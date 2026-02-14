@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:drivio_app/common/models/provided_car_rental.dart';
 import 'package:drivio_app/car_renter/services/car_rental_service.dart';
-import 'package:drivio_app/car_renter/screens/car_renter_profile_screen.dart';
+import 'package:drivio_app/common/screens/car_renter_public_profile_screen.dart';
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -323,7 +323,7 @@ class _CarCard extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder:
-                                  (context) => CarRenterProfileScreen(
+                                  (context) => CarRenterPublicProfileScreen(
                                     carRenter: car.carRenter!,
                                   ),
                             ),
@@ -445,7 +445,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
           const Text('City', style: TextStyle(fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedCity,
+            initialValue: _selectedCity,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               hintText: 'All cities',
@@ -823,7 +823,7 @@ class _NewRentalRequestDialogState extends State<_NewRentalRequestDialog> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<Map<String, dynamic>>(
-                      value: _selectedRenter,
+                      initialValue: _selectedRenter,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         hintText: 'Select car renter',
@@ -884,7 +884,7 @@ class _NewRentalRequestDialogState extends State<_NewRentalRequestDialog> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<ProvidedCarRental>(
-                      value: _selectedCar,
+                      initialValue: _selectedCar,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         hintText: 'Select car',

@@ -197,7 +197,40 @@ class DeliveryService {
           json as Map,
         );
 
-        return DeliveryRequest.fromJson(deliveryData);
+        var request = DeliveryRequest.fromJson(deliveryData);
+
+        // Calculate total distance: Driver -> Pickup -> Delivery
+        if (request.pickupLocation?.latitude != null &&
+            request.pickupLocation?.longitude != null &&
+            request.deliveryLocation?.latitude != null &&
+            request.deliveryLocation?.longitude != null) {
+          final Distance distance = const Distance();
+
+          final double distToPickup = distance.as(
+            LengthUnit.Kilometer,
+            deliveryPersonLocation,
+            LatLng(
+              request.pickupLocation!.latitude!,
+              request.pickupLocation!.longitude!,
+            ),
+          );
+
+          final double distToDropoff = distance.as(
+            LengthUnit.Kilometer,
+            LatLng(
+              request.pickupLocation!.latitude!,
+              request.pickupLocation!.longitude!,
+            ),
+            LatLng(
+              request.deliveryLocation!.latitude!,
+              request.deliveryLocation!.longitude!,
+            ),
+          );
+
+          request = request.copyWith(distanceKm: distToPickup + distToDropoff);
+        }
+
+        return request;
       }).toList();
     } catch (e) {
       debugPrint('❌ Error fetching nearby delivery requests: $e');

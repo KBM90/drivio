@@ -11,6 +11,7 @@ import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:drivio_app/common/widgets/auth_gate.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:drivio_app/common/services/notification_service.dart';
+import 'package:drivio_app/common/providers/notification_provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -53,6 +54,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: const MyApp(),
     ),

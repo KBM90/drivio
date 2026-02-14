@@ -9,14 +9,15 @@ class ServiceOrderService {
   /// Create a new service order (regular or custom)
   /// For regular orders: provide serviceId and providerId
   /// For custom orders: provide customServiceName and category
+  /// Can be called by any user (driver, car renter, passenger, etc.)
   Future<ServiceOrder?> createOrder({
     int? serviceId,
     int? providerId,
     String? customServiceName,
     String? category,
-    required String driverName,
-    required String driverPhone,
-    String? driverLocation, // PostGIS format: "POINT(lng lat)"
+    required String requesterName,
+    required String requesterPhone,
+    String? requesterLocation, // PostGIS format: "POINT(lng lat)"
     int quantity = 1,
     String? notes,
     String preferredContactMethod = 'phone',
@@ -36,22 +37,28 @@ class ServiceOrderService {
         );
       }
 
-      final driverId = await AuthService.getDriverId();
-      if (driverId == null) {
-        throw Exception('Driver not found');
+      // Get the current user's ID (works for any role)
+      final requesterUserId = await AuthService.getInternalUserId();
+      if (requesterUserId == null) {
+        final authUserId = AuthService.currentUserId;
+        final role = await AuthService.getUserRole();
+        debugPrint('❌ Failed to get internal user ID. Auth User ID: $authUserId, Role: $role');
+        throw Exception(
+          'User not found. Please ensure you are logged in and your profile exists in the system.',
+        );
       }
 
       // Ensure session is valid
       await AuthService.ensureValidSession();
 
       final orderData = {
-        'driver_id': driverId,
+        'requester_user_id': requesterUserId,
         'quantity': quantity,
         'notes': notes,
         'preferred_contact_method': preferredContactMethod,
-        'driver_name': driverName,
-        'driver_phone': driverPhone,
-        'driver_location': driverLocation,
+        'requester_name': requesterName,
+        'requester_phone': requesterPhone,
+        'requester_location': requesterLocation,
         'status': 'pending',
       };
 
@@ -80,12 +87,12 @@ class ServiceOrderService {
     }
   }
 
-  /// Get all orders for the current driver
-  Future<List<ServiceOrder>> getDriverOrders({String? status}) async {
+  /// Get all orders for the current user (any role)
+  Future<List<ServiceOrder>> getUserOrders({String? status}) async {
     try {
-      final driverId = await AuthService.getDriverId();
-      if (driverId == null) {
-        throw Exception('Driver not found');
+      final requesterUserId = await AuthService.getInternalUserId();
+      if (requesterUserId == null) {
+        throw Exception('User not found');
       }
 
       await AuthService.ensureValidSession();
@@ -93,7 +100,7 @@ class ServiceOrderService {
       dynamic query = _supabase
           .from('service_orders')
           .select('*, provided_services(name, price, currency)')
-          .eq('driver_id', driverId);
+          .eq('requester_user_id', requesterUserId);
 
       if (status != null) {
         query = query.eq('status', status);
@@ -107,9 +114,15 @@ class ServiceOrderService {
           .map((json) => ServiceOrder.fromJson(json))
           .toList();
     } catch (e) {
-      debugPrint('❌ Error fetching driver orders: $e');
+      debugPrint('❌ Error fetching user orders: $e');
       rethrow;
     }
+  }
+
+  /// Get all orders for the current driver (deprecated - use getUserOrders)
+  @Deprecated('Use getUserOrders instead')
+  Future<List<ServiceOrder>> getDriverOrders({String? status}) async {
+    return getUserOrders(status: status);
   }
 
   /// Get a specific order by ID
@@ -134,21 +147,22 @@ class ServiceOrderService {
   }
 
   /// Cancel an order (only if status is 'pending')
+  /// Only the requester can cancel their own order
   Future<bool> cancelOrder(int orderId) async {
     try {
-      final driverId = await AuthService.getDriverId();
-      if (driverId == null) {
-        throw Exception('Driver not found');
+      final requesterUserId = await AuthService.getInternalUserId();
+      if (requesterUserId == null) {
+        throw Exception('User not found');
       }
 
       await AuthService.ensureValidSession();
 
-      // Only allow cancelling pending orders
+      // Only allow cancelling pending orders by the requester
       await _supabase
           .from('service_orders')
           .update({'status': 'cancelled'})
           .eq('id', orderId)
-          .eq('driver_id', driverId)
+          .eq('requester_user_id', requesterUserId)
           .eq('status', 'pending');
 
       return true;
@@ -158,12 +172,12 @@ class ServiceOrderService {
     }
   }
 
-  /// Get order count by status for the current driver
+  /// Get order count by status for the current user (any role)
   Future<Map<String, int>> getOrderCountsByStatus() async {
     try {
-      final driverId = await AuthService.getDriverId();
-      if (driverId == null) {
-        throw Exception('Driver not found');
+      final requesterUserId = await AuthService.getInternalUserId();
+      if (requesterUserId == null) {
+        throw Exception('User not found');
       }
 
       await AuthService.ensureValidSession();
@@ -171,7 +185,7 @@ class ServiceOrderService {
       final response = await _supabase
           .from('service_orders')
           .select('status')
-          .eq('driver_id', driverId);
+          .eq('requester_user_id', requesterUserId);
 
       final counts = <String, int>{
         'pending': 0,

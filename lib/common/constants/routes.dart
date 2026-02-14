@@ -1,5 +1,6 @@
 import 'package:drivio_app/common/screens/login_screen.dart';
 import 'package:drivio_app/common/screens/signup_screen.dart';
+import 'package:drivio_app/common/screens/report_issue_screen.dart';
 import 'package:drivio_app/car_renter/screens/carrenter_home_screen.dart';
 import 'package:drivio_app/driver/ui/screens/driver_home_screen.dart';
 import 'package:drivio_app/passenger/screens/passenger_home_screen.dart';
@@ -23,6 +24,7 @@ class AppRoutes {
   static const String passengerAccount = '/passengerAccount';
   static const String deliveryPersonHome = '/deliveryPersonHome'; // Added route
   static const String customerDeliveryTracking = '/customer-delivery-tracking';
+  static const String reportIssue = '/report-issue';
 
   static Map<String, WidgetBuilder> routes = {
     login: (context) => LoginScreen(),
@@ -36,6 +38,7 @@ class AppRoutes {
     passengerAccount: (context) => PassengerAccountScreen(),
     deliveryPersonHome:
         (context) => const DeliveryPersonHomeScreen(), // Added builder
+    reportIssue: (context) => const ReportIssueScreen(),
   };
 
   // Route handler for routes with arguments

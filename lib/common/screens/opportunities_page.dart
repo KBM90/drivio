@@ -1,3 +1,4 @@
+import 'package:drivio_app/common/constants/routes.dart';
 import 'package:drivio_app/driver/services/opportunities_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -60,6 +61,17 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Opportunities'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report_outlined),
+            tooltip: 'Report a problem',
+            onPressed: () {
+              Navigator.of(context).pushNamed(
+                AppRoutes.reportIssue,
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [Tab(text: 'Events'), Tab(text: 'Campaigns')],

@@ -55,6 +55,7 @@ class AppLocalizations {
       'inactive': 'Inactive',
       'available': 'Available',
       'busy': 'Busy',
+      'status': 'Status',
       'go_online': 'Go Online',
       'go_offline': 'Go Offline',
       'youre_online': "You're Online",
@@ -113,6 +114,7 @@ class AppLocalizations {
       'email': 'Email',
       'phone': 'Phone',
       'address': 'Address',
+      'location': 'Location',
       'city': 'City',
       'country': 'Country',
 
@@ -240,6 +242,48 @@ class AppLocalizations {
       'account_created_success':
           'Account created! Please check your email to verify.',
       'signup_failed': 'Sign up failed:',
+
+      // Car Renter
+      'failed_to_load_car_renter_profile': 'Failed to load car renter profile',
+      'requests': 'Requests',
+      'my_cars': 'My Cars',
+      'dashboard': 'Dashboard',
+      'total_requests': 'Total Requests',
+      'active_rentals': 'Active Rentals',
+      'available_cars': 'Available Cars',
+      'revenue_this_month': 'Revenue This Month',
+      'no_requests_found': 'No requests found',
+      'reject': 'Reject',
+      'approve': 'Approve',
+      'no_cars_added_yet': 'No cars added yet',
+      'tap_to_add_first_car': 'Tap + to add your first car',
+      'no_cars_match_filter': 'No cars match this filter',
+      'delete_car': 'Delete Car',
+      'confirm_delete_car': 'Are you sure you want to delete this car?',
+      'car_marked_unavailable': 'Car marked unavailable from {from} to {to}',
+      'edit_car': 'Edit Car',
+      'rented': 'Rented',
+      'manage_profile_business_details': 'Manage your profile and business details',
+      'theme_language_preferences': 'Theme, language, and other preferences',
+      'profile_picture_updated': 'Profile picture updated',
+      'error_updating_profile_picture': 'Error updating profile picture',
+      'edit_business_name': 'Edit Business Name',
+      'business_name_updated': 'Business name updated',
+      'error_updating_business_name': 'Error updating business name',
+      'edit_phone_number': 'Edit Phone Number',
+      'phone_number_updated': 'Phone number updated',
+      'error_updating_phone': 'Error updating phone',
+      'renter_profile': 'Renter Profile',
+      'verified': 'Verified',
+      'rating': 'Rating',
+      'total_cars': 'Total Cars',
+      'vehicles': 'vehicles',
+      'contact_functionality_coming_soon': 'Contact functionality coming soon!',
+      'contact_renter': 'Contact Renter',
+      'no_cars_available': 'No cars available',
+      'price_per_day': 'Price/Day',
+      'actions': 'Actions',
+      'please_select_car_brand': 'Please select a car brand',
     },
     'fr': {
       // Common
@@ -471,6 +515,48 @@ class AppLocalizations {
           'Ce numéro de téléphone est déjà enregistré. Veuillez utiliser un numéro différent ou vous connecter.',
       'account_created_success': 'Compte créé ! Veuillez vérifier votre email.',
       'signup_failed': 'L\'inscription a échoué :',
+
+      // Car Renter
+      'failed_to_load_car_renter_profile': 'Échec du chargement du profil de location de voiture',
+      'requests': 'Demandes',
+      'my_cars': 'Mes Voitures',
+      'dashboard': 'Tableau de bord',
+      'total_requests': 'Total des Demandes',
+      'active_rentals': 'Locations Actives',
+      'available_cars': 'Voitures Disponibles',
+      'revenue_this_month': 'Revenus Ce Mois',
+      'no_requests_found': 'Aucune demande trouvée',
+      'reject': 'Rejeter',
+      'approve': 'Approuver',
+      'no_cars_added_yet': 'Aucune voiture ajoutée',
+      'tap_to_add_first_car': 'Appuyez sur + pour ajouter votre première voiture',
+      'no_cars_match_filter': 'Aucune voiture ne correspond à ce filtre',
+      'delete_car': 'Supprimer la Voiture',
+      'confirm_delete_car': 'Êtes-vous sûr de vouloir supprimer cette voiture?',
+      'car_marked_unavailable': 'Voiture marquée indisponible du {from} au {to}',
+      'edit_car': 'Modifier la Voiture',
+      'rented': 'Loué',
+      'manage_profile_business_details': 'Gérer votre profil et les détails de l\'entreprise',
+      'theme_language_preferences': 'Thème, langue et autres préférences',
+      'profile_picture_updated': 'Photo de profil mise à jour',
+      'error_updating_profile_picture': 'Erreur lors de la mise à jour de la photo de profil',
+      'edit_business_name': 'Modifier le Nom de l\'Entreprise',
+      'business_name_updated': 'Nom de l\'entreprise mis à jour',
+      'error_updating_business_name': 'Erreur lors de la mise à jour du nom de l\'entreprise',
+      'edit_phone_number': 'Modifier le Numéro de Téléphone',
+      'phone_number_updated': 'Numéro de téléphone mis à jour',
+      'error_updating_phone': 'Erreur lors de la mise à jour du téléphone',
+      'renter_profile': 'Profil du Loueur',
+      'verified': 'Vérifié',
+      'rating': 'Note',
+      'total_cars': 'Total des Voitures',
+      'vehicles': 'véhicules',
+      'contact_functionality_coming_soon': 'Fonctionnalité de contact à venir!',
+      'contact_renter': 'Contacter le Loueur',
+      'no_cars_available': 'Aucune voiture disponible',
+      'price_per_day': 'Prix/Jour',
+      'actions': 'Actions',
+      'please_select_car_brand': 'Veuillez sélectionner une marque de voiture',
     },
     'ar': {
       // Common
@@ -700,6 +786,48 @@ class AppLocalizations {
       'account_created_success':
           'تم إنشاء الحساب! يرجى التحقق من بريدك الإلكتروني للتفعيل.',
       'signup_failed': 'فشل التسجيل:',
+
+      // Car Renter
+      'failed_to_load_car_renter_profile': 'فشل تحميل ملف مالك السيارة',
+      'requests': 'الطلبات',
+      'my_cars': 'سياراتي',
+      'dashboard': 'لوحة التحكم',
+      'total_requests': 'إجمالي الطلبات',
+      'active_rentals': 'الإيجارات النشطة',
+      'available_cars': 'السيارات المتاحة',
+      'revenue_this_month': 'الإيرادات هذا الشهر',
+      'no_requests_found': 'لم يتم العثور على طلبات',
+      'reject': 'رفض',
+      'approve': 'موافقة',
+      'no_cars_added_yet': 'لم تتم إضافة سيارات بعد',
+      'tap_to_add_first_car': 'اضغط على + لإضافة سيارتك الأولى',
+      'no_cars_match_filter': 'لا توجد سيارات تطابق هذا الفلتر',
+      'delete_car': 'حذف السيارة',
+      'confirm_delete_car': 'هل أنت متأكد أنك تريد حذف هذه السيارة؟',
+      'car_marked_unavailable': 'تم تعليم السيارة غير متاحة من {from} إلى {to}',
+      'edit_car': 'تعديل السيارة',
+      'rented': 'مؤجرة',
+      'manage_profile_business_details': 'إدارة ملفك الشخصي وتفاصيل العمل',
+      'theme_language_preferences': 'المظهر واللغة والتفضيلات الأخرى',
+      'profile_picture_updated': 'تم تحديث صورة الملف الشخصي',
+      'error_updating_profile_picture': 'خطأ في تحديث صورة الملف الشخصي',
+      'edit_business_name': 'تعديل اسم العمل',
+      'business_name_updated': 'تم تحديث اسم العمل',
+      'error_updating_business_name': 'خطأ في تحديث اسم العمل',
+      'edit_phone_number': 'تعديل رقم الهاتف',
+      'phone_number_updated': 'تم تحديث رقم الهاتف',
+      'error_updating_phone': 'خطأ في تحديث الهاتف',
+      'renter_profile': 'ملف المالك',
+      'verified': 'متحقق',
+      'rating': 'التقييم',
+      'total_cars': 'إجمالي السيارات',
+      'vehicles': 'مركبات',
+      'contact_functionality_coming_soon': 'وظيفة الاتصال قريباً!',
+      'contact_renter': 'اتصل بالمالك',
+      'no_cars_available': 'لا توجد سيارات متاحة',
+      'price_per_day': 'السعر/اليوم',
+      'actions': 'الإجراءات',
+      'please_select_car_brand': 'يرجى اختيار ماركة السيارة',
     },
     'es': {
       // Common
@@ -931,6 +1059,48 @@ class AppLocalizations {
       'account_created_success':
           '¡Cuenta creada! Por favor verifica tu correo electrónico.',
       'signup_failed': 'El registro falló:',
+
+      // Car Renter
+      'failed_to_load_car_renter_profile': 'Error al cargar el perfil del arrendador',
+      'requests': 'Solicitudes',
+      'my_cars': 'Mis Coches',
+      'dashboard': 'Panel',
+      'total_requests': 'Total de Solicitudes',
+      'active_rentals': 'Alquileres Activos',
+      'available_cars': 'Coches Disponibles',
+      'revenue_this_month': 'Ingresos Este Mes',
+      'no_requests_found': 'No se encontraron solicitudes',
+      'reject': 'Rechazar',
+      'approve': 'Aprobar',
+      'no_cars_added_yet': 'Aún no se han agregado coches',
+      'tap_to_add_first_car': 'Toca + para agregar tu primer coche',
+      'no_cars_match_filter': 'Ningún coche coincide con este filtro',
+      'delete_car': 'Eliminar Coche',
+      'confirm_delete_car': '¿Estás seguro de que quieres eliminar este coche?',
+      'car_marked_unavailable': 'Coche marcado como no disponible del {from} al {to}',
+      'edit_car': 'Editar Coche',
+      'rented': 'Alquilado',
+      'manage_profile_business_details': 'Gestiona tu perfil y los detalles del negocio',
+      'theme_language_preferences': 'Tema, idioma y otras preferencias',
+      'profile_picture_updated': 'Foto de perfil actualizada',
+      'error_updating_profile_picture': 'Error al actualizar la foto de perfil',
+      'edit_business_name': 'Editar Nombre del Negocio',
+      'business_name_updated': 'Nombre del negocio actualizado',
+      'error_updating_business_name': 'Error al actualizar el nombre del negocio',
+      'edit_phone_number': 'Editar Número de Teléfono',
+      'phone_number_updated': 'Número de teléfono actualizado',
+      'error_updating_phone': 'Error al actualizar el teléfono',
+      'renter_profile': 'Perfil del Arrendador',
+      'verified': 'Verificado',
+      'rating': 'Calificación',
+      'total_cars': 'Total de Coches',
+      'vehicles': 'vehículos',
+      'contact_functionality_coming_soon': '¡Funcionalidad de contacto próximamente!',
+      'contact_renter': 'Contactar Arrendador',
+      'no_cars_available': 'No hay coches disponibles',
+      'price_per_day': 'Precio/Día',
+      'actions': 'Acciones',
+      'please_select_car_brand': 'Por favor selecciona una marca de coche',
     },
     'de': {
       // Common
@@ -1163,6 +1333,48 @@ class AppLocalizations {
       'account_created_success':
           'Konto erstellt! Bitte überprüfe deine E-Mail zur Bestätigung.',
       'signup_failed': 'Anmeldung fehlgeschlagen:',
+
+      // Car Renter
+      'failed_to_load_car_renter_profile': 'Fehler beim Laden des Autovermieter-Profils',
+      'requests': 'Anfragen',
+      'my_cars': 'Meine Autos',
+      'dashboard': 'Dashboard',
+      'total_requests': 'Gesamte Anfragen',
+      'active_rentals': 'Aktive Vermietungen',
+      'available_cars': 'Verfügbare Autos',
+      'revenue_this_month': 'Umsatz Diesen Monat',
+      'no_requests_found': 'Keine Anfragen gefunden',
+      'reject': 'Ablehnen',
+      'approve': 'Genehmigen',
+      'no_cars_added_yet': 'Noch keine Autos hinzugefügt',
+      'tap_to_add_first_car': 'Tippe auf +, um dein erstes Auto hinzuzufügen',
+      'no_cars_match_filter': 'Keine Autos entsprechen diesem Filter',
+      'delete_car': 'Auto Löschen',
+      'confirm_delete_car': 'Bist du sicher, dass du dieses Auto löschen möchtest?',
+      'car_marked_unavailable': 'Auto als nicht verfügbar markiert vom {from} bis {to}',
+      'edit_car': 'Auto Bearbeiten',
+      'rented': 'Vermietet',
+      'manage_profile_business_details': 'Verwalte dein Profil und Geschäftsdetails',
+      'theme_language_preferences': 'Design, Sprache und andere Einstellungen',
+      'profile_picture_updated': 'Profilbild aktualisiert',
+      'error_updating_profile_picture': 'Fehler beim Aktualisieren des Profilbilds',
+      'edit_business_name': 'Geschäftsname Bearbeiten',
+      'business_name_updated': 'Geschäftsname aktualisiert',
+      'error_updating_business_name': 'Fehler beim Aktualisieren des Geschäftsnamens',
+      'edit_phone_number': 'Telefonnummer Bearbeiten',
+      'phone_number_updated': 'Telefonnummer aktualisiert',
+      'error_updating_phone': 'Fehler beim Aktualisieren der Telefonnummer',
+      'renter_profile': 'Vermieter-Profil',
+      'verified': 'Verifiziert',
+      'rating': 'Bewertung',
+      'total_cars': 'Gesamte Autos',
+      'vehicles': 'Fahrzeuge',
+      'contact_functionality_coming_soon': 'Kontaktfunktion kommt bald!',
+      'contact_renter': 'Vermieter Kontaktieren',
+      'no_cars_available': 'Keine Autos verfügbar',
+      'price_per_day': 'Preis/Tag',
+      'actions': 'Aktionen',
+      'please_select_car_brand': 'Bitte wähle eine Automarke',
     },
   };
 
@@ -1184,6 +1396,12 @@ class AppLocalizations {
   String get success => translate('success');
   String get close => translate('close');
   String get confirm => translate('confirm');
+  String get location => translate('location');
+  String get delete => translate('delete');
+  String get edit => translate('edit');
+  String get add => translate('add');
+  String get color => translate('color');
+  String get status => translate('status');
 
   // Navigation
   String get home => translate('home');
@@ -1202,6 +1420,7 @@ class AppLocalizations {
   // Driver Status
   String get online => translate('online');
   String get offline => translate('offline');
+  String get available => translate('available');
   String get goOnline => translate('go_online');
   String get goOffline => translate('go_offline');
   String get youreOnline => translate('youre_online');
@@ -1289,6 +1508,49 @@ class AppLocalizations {
   String get phoneAlreadyRegistered => translate('phone_already_registered');
   String get accountCreatedSuccess => translate('account_created_success');
   String get signupFailed => translate('signup_failed');
+
+  // Car Renter
+  String get failedToLoadCarRenterProfile => translate('failed_to_load_car_renter_profile');
+  String get requests => translate('requests');
+  String get myCars => translate('my_cars');
+  String get dashboard => translate('dashboard');
+  String get totalRequests => translate('total_requests');
+  String get activeRentals => translate('active_rentals');
+  String get availableCars => translate('available_cars');
+  String get revenueThisMonth => translate('revenue_this_month');
+  String get noRequestsFound => translate('no_requests_found');
+  String get reject => translate('reject');
+  String get approve => translate('approve');
+  String get noCarsAddedYet => translate('no_cars_added_yet');
+  String get tapToAddFirstCar => translate('tap_to_add_first_car');
+  String get noCarsMatchFilter => translate('no_cars_match_filter');
+  String get deleteCar => translate('delete_car');
+  String get confirmDeleteCar => translate('confirm_delete_car');
+  String carMarkedUnavailable(String from, String to) => translate('car_marked_unavailable').replaceAll('{from}', from).replaceAll('{to}', to);
+  String get editCar => translate('edit_car');
+  String get rented => translate('rented');
+  String get manageProfileBusinessDetails => translate('manage_profile_business_details');
+  String get themeLanguagePreferences => translate('theme_language_preferences');
+  String get profilePictureUpdated => translate('profile_picture_updated');
+  String get errorUpdatingProfilePicture => translate('error_updating_profile_picture');
+  String get editBusinessName => translate('edit_business_name');
+  String get businessNameUpdated => translate('business_name_updated');
+  String get errorUpdatingBusinessName => translate('error_updating_business_name');
+  String get editPhoneNumber => translate('edit_phone_number');
+  String get phoneNumberUpdated => translate('phone_number_updated');
+  String get errorUpdatingPhone => translate('error_updating_phone');
+  String get renterProfile => translate('renter_profile');
+  String get verified => translate('verified');
+  String get rating => translate('rating');
+  String get totalCars => translate('total_cars');
+  String get vehicles => translate('vehicles');
+  String get contactFunctionalityComingSoon => translate('contact_functionality_coming_soon');
+  String get contactRenter => translate('contact_renter');
+  String get confirmLogout => translate('confirm_logout');
+  String get noCarsAvailable => translate('no_cars_available');
+  String get pricePerDay => translate('price_per_day');
+  String get actions => translate('actions');
+  String get pleaseSelectCarBrand => translate('please_select_car_brand');
 }
 
 /// Localization Delegate

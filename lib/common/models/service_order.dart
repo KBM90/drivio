@@ -10,8 +10,8 @@ class ServiceOrder {
   @JsonKey(name: 'service_id')
   final int? serviceId; // Nullable for custom orders
 
-  @JsonKey(name: 'driver_id')
-  final int driverId;
+  @JsonKey(name: 'requester_user_id')
+  final int requesterUserId;
 
   @JsonKey(name: 'provider_id')
   final int? providerId; // Nullable for custom orders
@@ -29,19 +29,19 @@ class ServiceOrder {
   @JsonKey(name: 'preferred_contact_method')
   final String preferredContactMethod; // 'phone', 'whatsapp', 'sms'
 
-  // Driver info
-  @JsonKey(name: 'driver_name')
-  final String driverName;
+  // Requester info (denormalized for quick access)
+  @JsonKey(name: 'requester_name')
+  final String requesterName;
 
-  @JsonKey(name: 'driver_phone')
-  final String driverPhone;
+  @JsonKey(name: 'requester_phone')
+  final String requesterPhone;
 
   @JsonKey(
-    name: 'driver_location',
+    name: 'requester_location',
     fromJson: _locationFromPostGIS,
     toJson: _locationToPostGIS,
   )
-  final Location? driverLocation;
+  final Location? requesterLocation;
 
   // Order status
   final String status; // 'pending', 'confirmed', 'completed', 'cancelled'
@@ -64,16 +64,16 @@ class ServiceOrder {
   ServiceOrder({
     required this.id,
     this.serviceId,
-    required this.driverId,
+    required this.requesterUserId,
     this.providerId,
     this.customServiceName,
     this.category,
     required this.quantity,
     this.notes,
     required this.preferredContactMethod,
-    required this.driverName,
-    required this.driverPhone,
-    this.driverLocation,
+    required this.requesterName,
+    required this.requesterPhone,
+    this.requesterLocation,
     required this.status,
     required this.createdAt,
     required this.updatedAt,
@@ -132,6 +132,6 @@ class ServiceOrder {
   @override
   String toString() {
     return 'ServiceOrder(id: $id, serviceId: $serviceId, customServiceName: $customServiceName, '
-        'category: $category, driverId: $driverId, status: $status, quantity: $quantity, createdAt: $createdAt)';
+        'category: $category, requesterUserId: $requesterUserId, status: $status, quantity: $quantity, createdAt: $createdAt)';
   }
 }

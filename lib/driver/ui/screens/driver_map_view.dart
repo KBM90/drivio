@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drivio_app/common/helpers/osrm_services.dart';
 import 'package:drivio_app/common/helpers/shared_preferences_helper.dart';
+import 'package:drivio_app/common/helpers/animated_map_controller.dart';
 import 'package:drivio_app/common/models/location.dart';
 import 'package:drivio_app/common/providers/map_reports_provider.dart';
 import 'package:drivio_app/common/widgets/cached_tile_layer.dart';
@@ -14,25 +15,24 @@ import 'package:drivio_app/driver/models/driver.dart';
 import 'package:drivio_app/driver/providers/driver_location_provider.dart';
 import 'package:drivio_app/driver/services/change_status.dart';
 import 'package:drivio_app/driver/ui/modals/ride_request_modal.dart';
-import 'package:drivio_app/driver/ui/widgets/trip_info_panel.dart';
 import 'package:drivio_app/driver/utils/map_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:drivio_app/driver/ui/widgets/go_offline_widget.dart';
-import 'package:drivio_app/driver/ui/widgets/go_online_widget.dart';
-import 'package:drivio_app/common/widgets/map_location_button.dart';
 
 class MapView extends StatefulWidget {
-  const MapView({super.key});
+  final MapController mapController;
+  const MapView({super.key, required this.mapController});
 
   @override
   _MapViewState createState() => _MapViewState();
 }
 
-class _MapViewState extends State<MapView> with WidgetsBindingObserver {
-  final MapController _mapController = MapController();
+class _MapViewState extends State<MapView>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
+  late MapController _mapController;
+
   List<LatLng> _routePolyline = [];
   List<LatLng> _routePolylineDriverToPickup = [];
   final OSRMService _osrmService = OSRMService();
@@ -80,6 +80,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _onDriverChanged();
     });
+    _mapController = widget.mapController;
   }
 
   Future<void> _onDriverChanged() async {
@@ -238,13 +239,16 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     final driverLocation = locationProvider.currentLocation;
     if (driverLocation == null) return;
 
-    _debounce = Timer(const Duration(seconds: 1), () async {
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
       if (mounted && _isMapReady) {
         try {
-          _mapController.move(driverLocation, 15.0);
+          // Rotate map to match heading (Head Up)
+          final heading = locationProvider.currentPosition?.heading ?? 0.0;
+          _animateMapMove(driverLocation, 15.0, -heading);
         } catch (e) {
           debugPrint("⚠️ Error moving map: $e");
         }
+        // ... (rest of the socket/route logic) ...
 
         if (rideRequestsProvider.currentRideRequest != null) {
           await _fetchRoute(
@@ -274,7 +278,7 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    _mapController.dispose();
+    // _mapController.dispose(); // Moved to parent
     _debounce?.cancel();
     locationProvider.removeListener(_onLocationUpdate);
     driverProvider.removeListener(_onDriverChanged);
@@ -421,6 +425,26 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
     }
   }
 
+  void _animateMapMove(
+    LatLng destLocation,
+    double destZoom,
+    double destRotation,
+  ) {
+    if (!mounted) return;
+
+    // Create animated controller instance
+    final animatedMap = AnimatedMapController(
+      mapController: _mapController,
+      vsync: this,
+    );
+
+    animatedMap.animateMapMove(
+      destLocation: destLocation,
+      destZoom: destZoom,
+      destRotation: destRotation,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rideRequestsProvider = Provider.of<RideRequestsProvider>(context);
@@ -463,7 +487,8 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                           locationProvider.currentLocation!.longitude,
                         )
                         : LatLng(31.7917, -7.0926), // Your default location
-                initialZoom: locationProvider.currentLocation != null ? 15 : 6,
+                initialZoom:
+                    locationProvider.currentLocation != null ? 15.0 : 6,
                 onMapReady: () async {
                   setState(() {
                     _isMapReady = true;
@@ -545,8 +570,6 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
                             heading:
                                 locationProvider.currentPosition?.heading ??
                                 0.0,
-                            size: 30,
-                            color: const Color.fromARGB(255, 8, 8, 8),
                           ),
                         ),
                       ],
@@ -830,53 +853,10 @@ class _MapViewState extends State<MapView> with WidgetsBindingObserver {
               ],
             ),
 
-        /// GPS Button (Bottom Right)
-        Positioned(
-          top:
-              MediaQuery.of(context).padding.top +
-              MediaQuery.of(context).size.height *
-                  0.3, // SafeArea + 2% of screen height
-          left: MediaQuery.of(context).size.width * 0.05,
-          child: MapLocationButton(
-            mapController: _mapController,
-            currentLocation: locationProvider.currentLocation,
-          ),
-        ),
+        // GPS Button moved to DriverHomeScreen
+
         // ✅ Remove DriverLocationProvider from Consumer2
-        Consumer<DriverProvider>(
-          builder: (context, driverProvider, child) {
-            final status = driverProvider.currentDriver?.status;
-
-            if (status == DriverStatus.active) {
-              return const GoOfflineButton();
-            } else if (status == DriverStatus.inactive) {
-              // ✅ Use DriverLocationProvider for GoOnlineButton
-              return Consumer<DriverLocationProvider>(
-                builder: (context, locationProvider, child) {
-                  final location = locationProvider.currentLocation;
-
-                  if (location == null) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  return GoOnlineButton(
-                    mapController: _mapController,
-                    driverLocation: location,
-                  );
-                },
-              );
-            } else if (status == DriverStatus.onTrip) {
-              if (rideRequestsProvider.currentRideRequest != null) {
-                return TripInfoPanel(
-                  rideRequest: rideRequestsProvider.currentRideRequest!,
-                );
-              }
-              return const SizedBox.shrink();
-            } else {
-              return const SizedBox.shrink();
-            }
-          },
-        ),
+        const SizedBox.shrink(),
       ],
     );
   }

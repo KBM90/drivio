@@ -1,5 +1,5 @@
 import 'package:drivio_app/common/widgets/cached_tile_layer.dart';
-import 'package:drivio_app/common/widgets/map_location_button.dart';
+import 'package:drivio_app/common/widgets/gps_button.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:drivio_app/common/models/delivery_request.dart';
@@ -7,9 +7,10 @@ import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:drivio_app/common/widgets/navigation_marker.dart';
 import 'package:drivio_app/delivery_person/providers/delivery_person_location_provider.dart';
 import 'package:drivio_app/delivery_person/services/delivery_person_service.dart';
-import 'package:drivio_app/passenger/services/delivery_service.dart';
+import 'package:drivio_app/delivery_person/services/delivery_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Example screen showing how to manage delivery status and location tracking
 /// This demonstrates the complete delivery workflow with status transitions
@@ -27,6 +28,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
   bool _isLoading = true;
   String? _error;
   final MapController _mapController = MapController();
+  Map<String, dynamic>? _passengerProfile;
 
   @override
   void initState() {
@@ -39,8 +41,15 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
       final delivery = await DeliveryService.getDeliveryRequestById(
         widget.deliveryId,
       );
+
+      // Fetch passenger profile
+      final profile = await AuthService.getPassengerProfile(
+        delivery.passengerId,
+      );
+
       setState(() {
         _deliveryRequest = delivery;
+        _passengerProfile = profile;
         _isLoading = false;
       });
     } catch (e) {
@@ -48,6 +57,40 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _launchCall() async {
+    if (_passengerProfile == null || _passengerProfile!['phone'] == null) {
+      return;
+    }
+
+    final Uri launchUri = Uri(scheme: 'tel', path: _passengerProfile!['phone']);
+    if (!await launchUrl(launchUri)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch dialer')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchWhatsApp() async {
+    if (_passengerProfile == null || _passengerProfile!['phone'] == null) {
+      return;
+    }
+
+    var phone = _passengerProfile!['phone'] as String;
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+
+    final Uri launchUri = Uri.parse('https://wa.me/$cleanPhone');
+
+    if (!await launchUrl(launchUri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch WhatsApp')),
+        );
+      }
     }
   }
 
@@ -129,7 +172,24 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
     final currentStatus = delivery.status;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Delivery #${widget.deliveryId}')),
+      appBar: AppBar(
+        title: Text('Delivery #${widget.deliveryId}'),
+        actions: [
+          if (_passengerProfile != null &&
+              _passengerProfile!['phone'] != null) ...[
+            IconButton(
+              onPressed: _launchCall,
+              icon: const Icon(Icons.phone),
+              tooltip: 'Call Passenger',
+            ),
+            IconButton(
+              onPressed: _launchWhatsApp,
+              icon: const Icon(Icons.chat),
+              tooltip: 'WhatsApp Passenger',
+            ),
+          ],
+        ],
+      ),
       body: Consumer<DeliveryPersonLocationProvider>(
         builder: (context, locationProvider, _) {
           final isActive =
@@ -719,7 +779,7 @@ class _DeliveryDetailsScreenState extends State<DeliveryDetailsScreen> {
         Positioned(
           bottom: 16,
           right: 16,
-          child: MapLocationButton(
+          child: GPSButton(
             mapController: _mapController,
             currentLocation: currentLocation,
             zoomLevel: 15.0,

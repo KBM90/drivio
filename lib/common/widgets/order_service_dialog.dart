@@ -1,9 +1,10 @@
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
 import 'package:drivio_app/common/models/provided_service.dart';
 import 'package:drivio_app/driver/services/service_order_service.dart';
-import 'package:drivio_app/common/services/user_services.dart';
+import 'package:drivio_app/common/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OrderServiceDialog extends StatefulWidget {
   final ProvidedService service;
@@ -22,14 +23,14 @@ class _OrderServiceDialogState extends State<OrderServiceDialog> {
   int _quantity = 1;
   String _preferredContactMethod = 'phone';
   bool _isLoading = false;
-  String? _driverName;
-  String? _driverPhone;
-  LatLng? _driverLocation;
+  String? _userName;
+  String? _userPhone;
+  LatLng? _userLocation;
 
   @override
   void initState() {
     super.initState();
-    _loadDriverInfo();
+    _loadUserInfo();
   }
 
   @override
@@ -38,28 +39,47 @@ class _OrderServiceDialogState extends State<OrderServiceDialog> {
     super.dispose();
   }
 
-  Future<void> _loadDriverInfo() async {
+  Future<void> _loadUserInfo() async {
     try {
-      final user = await UserService.getPersistanceCurrentUser();
+      // Load current user basic info from the DB (works for all roles)
+      final internalUserId = await AuthService.getInternalUserId();
       final location = await GeolocatorHelper.getCurrentLocation();
+
+      String? name;
+      String? phone;
+
+      if (internalUserId != null) {
+        final supabase = Supabase.instance.client;
+        final userRow =
+            await supabase
+                .from('users')
+                .select('name, phone')
+                .eq('id', internalUserId)
+                .maybeSingle();
+
+        if (userRow != null) {
+          name = userRow['name'] as String?;
+          phone = userRow['phone'] as String?;
+        }
+      }
 
       if (mounted) {
         setState(() {
-          _driverName = user?.name ?? 'Unknown';
-          _driverPhone = user?.phone ?? '';
-          _driverLocation = location;
+          _userName = name ?? 'Unknown';
+          _userPhone = phone ?? '';
+          _userLocation = location;
         });
       }
     } catch (e) {
-      debugPrint('Error loading driver info: $e');
+      debugPrint('Error loading user info: $e');
     }
   }
 
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_driverName == null || _driverPhone == null) {
-      _showError('Unable to load driver information');
+    if (_userName == null || _userPhone == null) {
+      _showError('Unable to load user information');
       return;
     }
 
@@ -67,17 +87,17 @@ class _OrderServiceDialogState extends State<OrderServiceDialog> {
 
     try {
       String? locationString;
-      if (_driverLocation != null) {
+      if (_userLocation != null) {
         locationString =
-            'POINT(${_driverLocation!.longitude} ${_driverLocation!.latitude})';
+            'POINT(${_userLocation!.longitude} ${_userLocation!.latitude})';
       }
 
       final order = await _serviceOrderService.createOrder(
         serviceId: widget.service.id,
         providerId: widget.service.providerId,
-        driverName: _driverName!,
-        driverPhone: _driverPhone!,
-        driverLocation: locationString,
+        requesterName: _userName!,
+        requesterPhone: _userPhone!,
+        requesterLocation: locationString,
         quantity: _quantity,
         notes:
             _notesController.text.trim().isEmpty
@@ -208,9 +228,9 @@ class _OrderServiceDialogState extends State<OrderServiceDialog> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildInfoField('Name', _driverName ?? 'Loading...'),
+                _buildInfoField('Your Name', _userName ?? 'Loading...'),
                 const SizedBox(height: 8),
-                _buildInfoField('Phone', _driverPhone ?? 'Loading...'),
+                _buildInfoField('Your Phone', _userPhone ?? 'Loading...'),
                 const SizedBox(height: 20),
 
                 // Quantity Selector
@@ -221,39 +241,44 @@ class _OrderServiceDialogState extends State<OrderServiceDialog> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      onPressed:
-                          _quantity > 1
-                              ? () => setState(() => _quantity--)
-                              : null,
-                      icon: const Icon(Icons.remove_circle_outline),
-                      color: Colors.blue,
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$_quantity',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed:
+                              _quantity > 1
+                                  ? () => setState(() => _quantity--)
+                                  : null,
+                          icon: const Icon(Icons.remove_circle_outline),
+                          color: Colors.blue,
                         ),
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '$_quantity',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => setState(() => _quantity++),
+                          icon: const Icon(Icons.add_circle_outline),
+                          color: Colors.blue,
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      onPressed: () => setState(() => _quantity++),
-                      icon: const Icon(Icons.add_circle_outline),
-                      color: Colors.blue,
-                    ),
-                    const Spacer(),
+                    const SizedBox(height: 8),
                     Text(
                       'Total: ${(widget.service.price * _quantity).toStringAsFixed(2)} ${widget.service.currency}',
                       style: TextStyle(

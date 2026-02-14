@@ -1,8 +1,17 @@
+import 'dart:io';
+
 import 'package:drivio_app/car_renter/models/car_renter.dart';
 import 'package:drivio_app/car_renter/services/car_rental_service.dart';
+import 'package:drivio_app/common/constants/app_theme.dart';
+import 'package:drivio_app/common/models/car_brand.dart';
 import 'package:drivio_app/common/models/provided_car_rental.dart';
 import 'package:drivio_app/common/services/auth_service.dart';
+import 'package:drivio_app/common/l10n/app_localizations.dart';
+import 'package:drivio_app/driver/services/driver_services.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:drivio_app/car_renter/widgets/car_form_dialog.dart';
 
 class CarRenterProfileScreen extends StatefulWidget {
   final CarRenter carRenter;
@@ -17,10 +26,21 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
   final CarRentalService _carRentalService = CarRentalService();
   List<ProvidedCarRental> _cars = [];
   bool _isLoadingCars = true;
+  bool _isUpdatingProfile = false;
+
+  // Editable fields
+  String? _businessName;
+  String? _phone;
+  String? _profileImageUrl;
+  XFile? _localProfileImage;
 
   @override
   void initState() {
     super.initState();
+    _businessName =
+        widget.carRenter.businessName ?? widget.carRenter.user?.name;
+    _phone = widget.carRenter.user?.phone;
+    _profileImageUrl = widget.carRenter.user?.profileImagePath;
     _loadCars();
   }
 
@@ -34,10 +54,256 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
     }
   }
 
+  Future<void> _pickProfileImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _localProfileImage = image;
+      });
+      await _saveProfileImage();
+    }
+  }
+
+  Future<void> _saveProfileImage() async {
+    try {
+      setState(() => _isUpdatingProfile = true);
+
+      String? profileImageUrl;
+      if (_localProfileImage != null) {
+        profileImageUrl = await DriverService.uploadProfileImage(
+          _localProfileImage!.path,
+        );
+      }
+
+      if (profileImageUrl != null) {
+        await DriverService.updateUserInfo(profileImagePath: profileImageUrl);
+        if (mounted) {
+          setState(() {
+            _profileImageUrl = profileImageUrl;
+            _localProfileImage = null;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)?.profilePictureUpdated ??
+                    'Profile picture updated',
+              ),
+              backgroundColor: AppTheme.primaryColor,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${AppLocalizations.of(context)?.errorUpdatingProfilePicture ?? 'Error updating profile picture'}: $e',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingProfile = false);
+      }
+    }
+  }
+
+  Future<void> _editBusinessName() async {
+    final controller = TextEditingController(text: _businessName ?? '');
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            AppLocalizations.of(context)?.editBusinessName ??
+                'Edit Business Name',
+          ),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText:
+                  AppLocalizations.of(context)?.businessName ?? 'Business Name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(AppLocalizations.of(context)?.cancel ?? 'Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: Text(AppLocalizations.of(context)?.save ?? 'Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null || result.isEmpty) return;
+
+    try {
+      setState(() => _isUpdatingProfile = true);
+
+      await AuthService.ensureValidSession();
+      await Supabase.instance.client
+          .from('car_renters')
+          .update({
+            'business_name': result,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', widget.carRenter.id);
+
+      if (mounted) {
+        setState(() => _businessName = result);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)?.businessNameUpdated ??
+                  'Business name updated',
+            ),
+            backgroundColor: AppTheme.primaryColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${AppLocalizations.of(context)?.errorUpdatingBusinessName ?? 'Error updating business name'}: $e',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdatingProfile = false);
+      }
+    }
+  }
+
+  Future<void> _editPhone() async {
+    final controller = TextEditingController(text: _phone ?? '');
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            AppLocalizations.of(context)?.editPhoneNumber ??
+                'Edit Phone Number',
+          ),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)?.phone ?? 'Phone',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(AppLocalizations.of(context)?.cancel ?? 'Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: Text(AppLocalizations.of(context)?.save ?? 'Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null || result.isEmpty) return;
+
+    try {
+      setState(() => _isUpdatingProfile = true);
+      await DriverService.updateUserInfo(phone: result);
+
+      if (mounted) {
+        setState(() => _phone = result);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)?.phoneNumberUpdated ??
+                  'Phone number updated',
+            ),
+            backgroundColor: AppTheme.primaryColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${AppLocalizations.of(context)?.errorUpdatingPhone ?? 'Error updating phone'}: $e',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+      setState(() => _isUpdatingProfile = false);
+      }
+    }
+  }
+
+  void _showAddCarDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => CarFormDialog(
+            renterId: widget.carRenter.id,
+            service: _carRentalService,
+            onSaved: _loadCars,
+          ),
+    );
+  }
+
+  void _showEditCarDialog(ProvidedCarRental car) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => CarFormDialog(
+            renterId: widget.carRenter.id,
+            service: _carRentalService,
+            car: car,
+            onSaved: _loadCars,
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Renter Profile')),
+      appBar: AppBar(
+        title: Text(
+          AppLocalizations.of(context)?.renterProfile ?? 'Renter Profile',
+        ),
+        actions: [
+          if (_isUpdatingProfile)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -47,29 +313,65 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
             Center(
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.blue[100],
-                    backgroundImage:
-                        widget.carRenter.user?.profileImagePath != null
-                            ? NetworkImage(
-                              widget.carRenter.user!.profileImagePath!,
-                            )
-                            : null,
-                    child:
-                        widget.carRenter.user?.profileImagePath == null
-                            ? const Icon(Icons.person, size: 50)
-                            : null,
+                  Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.blue[100],
+                        backgroundImage:
+                            _localProfileImage != null
+                                ? FileImage(File(_localProfileImage!.path))
+                                : _profileImageUrl != null
+                                ? NetworkImage(_profileImageUrl!)
+                                : null,
+                        child:
+                            _localProfileImage == null &&
+                                    _profileImageUrl == null
+                                ? const Icon(Icons.person, size: 50)
+                                : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: CircleAvatar(
+                          backgroundColor: AppTheme.primaryColor,
+                          radius: 18,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            onPressed: _pickProfileImage,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    widget.carRenter.businessName ??
-                        widget.carRenter.user?.name ??
-                        'Car Renter',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          _businessName ??
+                              widget.carRenter.user?.name ??
+                              'Car Renter',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        onPressed: _editBusinessName,
+                        tooltip: 'Edit business name',
+                      ),
+                    ],
                   ),
                   if (widget.carRenter.isVerified)
                     Padding(
@@ -84,7 +386,8 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Verified',
+                            AppLocalizations.of(context)?.verified ??
+                                'Verified',
                             style: TextStyle(
                               color: Colors.blue[700],
                               fontWeight: FontWeight.w500,
@@ -102,7 +405,7 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
             if (widget.carRenter.rating != null)
               _InfoCard(
                 icon: Icons.star,
-                title: 'Rating',
+                title: AppLocalizations.of(context)?.rating ?? 'Rating',
                 value: '${widget.carRenter.rating!.toStringAsFixed(1)} / 5.0',
                 iconColor: Colors.amber,
               ),
@@ -111,8 +414,9 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
             if (widget.carRenter.totalCars != null)
               _InfoCard(
                 icon: Icons.directions_car,
-                title: 'Total Cars',
-                value: '${widget.carRenter.totalCars} vehicles',
+                title: AppLocalizations.of(context)?.totalCars ?? 'Total Cars',
+                value:
+                    '${widget.carRenter.totalCars} ${AppLocalizations.of(context)?.vehicles ?? 'vehicles'}',
                 iconColor: Colors.blue,
               ),
 
@@ -120,27 +424,19 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
             if (widget.carRenter.city != null)
               _InfoCard(
                 icon: Icons.location_on,
-                title: 'Location',
+                title: AppLocalizations.of(context)?.location ?? 'Location',
                 value: widget.carRenter.city!,
                 iconColor: Colors.red,
               ),
 
             // Phone
-            if (widget.carRenter.user?.phone != null)
+            if (_phone != null && _phone!.isNotEmpty)
               _InfoCard(
                 icon: Icons.phone,
-                title: 'Phone',
-                value: widget.carRenter.user!.phone!,
+                title: AppLocalizations.of(context)?.phone ?? 'Phone',
+                value: _phone!,
                 iconColor: Colors.green,
-                onTap: () {
-                  // TODO: Implement phone call functionality
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Call functionality coming soon!'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
+                onTap: _editPhone,
               ),
 
             const SizedBox(height: 24),
@@ -153,14 +449,22 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
                   onPressed: () {
                     // TODO: Implement contact functionality
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Contact functionality coming soon!'),
+                      SnackBar(
+                        content: Text(
+                          AppLocalizations.of(
+                                context,
+                              )?.contactFunctionalityComingSoon ??
+                              'Contact functionality coming soon!',
+                        ),
                         duration: Duration(seconds: 2),
                       ),
                     );
                   },
                   icon: const Icon(Icons.message),
-                  label: const Text('Contact Renter'),
+                  label: Text(
+                    AppLocalizations.of(context)?.contactRenter ??
+                        'Contact Renter',
+                  ),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -178,9 +482,12 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
                     context: context,
                     builder:
                         (context) => AlertDialog(
-                          title: const Text('Logout'),
-                          content: const Text(
-                            'Are you sure you want to logout?',
+                          title: Text(
+                            AppLocalizations.of(context)?.logOut ?? 'Logout',
+                          ),
+                          content: Text(
+                            AppLocalizations.of(context)?.confirmLogout ??
+                                'Are you sure you want to logout?',
                           ),
                           actions: [
                             TextButton(
@@ -189,8 +496,9 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: const Text(
-                                'Logout',
+                              child: Text(
+                                AppLocalizations.of(context)?.logOut ??
+                                    'Logout',
                                 style: TextStyle(color: Colors.red),
                               ),
                             ),
@@ -218,9 +526,16 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
               children: [
                 Icon(Icons.directions_car, color: Colors.grey[700]),
                 const SizedBox(width: 8),
-                const Text(
-                  'Available Cars',
+                Text(
+                  AppLocalizations.of(context)?.availableCars ??
+                      'Available Cars',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: _showAddCarDialog,
+                  icon: const Icon(Icons.add),
+                  label: Text(AppLocalizations.of(context)?.add ?? 'Add Car'),
                 ),
               ],
             ),
@@ -247,7 +562,8 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'No cars available',
+                            AppLocalizations.of(context)?.noCarsAvailable ??
+                                'No cars available',
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                         ],
@@ -255,7 +571,44 @@ class _CarRenterProfileScreenState extends State<CarRenterProfileScreen> {
                     ),
                   ),
                 )
-                : _CarsTable(cars: _cars),
+                : _CarsTable(
+                  cars: _cars,
+                  onEditCar: _showEditCarDialog,
+                  onDeleteCar: (car) async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder:
+                          (context) => AlertDialog(
+                            title: Text(
+                              AppLocalizations.of(context)?.deleteCar ??
+                                  'Delete Car',
+                            ),
+                            content: Text(
+                              AppLocalizations.of(context)?.confirmDeleteCar ??
+                                  'Are you sure you want to delete this car?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                    );
+
+                    if (confirm == true) {
+                      await _carRentalService.deleteCarRental(car.id);
+                      await _loadCars();
+                    }
+                  },
+                ),
           ],
         ),
       ),
@@ -330,7 +683,14 @@ class _InfoCard extends StatelessWidget {
 class _CarsTable extends StatelessWidget {
   final List<ProvidedCarRental> cars;
 
-  const _CarsTable({required this.cars});
+  final void Function(ProvidedCarRental car) onEditCar;
+  final void Function(ProvidedCarRental car) onDeleteCar;
+
+  const _CarsTable({
+    required this.cars,
+    required this.onEditCar,
+    required this.onDeleteCar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -339,25 +699,34 @@ class _CarsTable extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
-          columns: const [
-            DataColumn(
-              label: Text('Car', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
+          columns: [
             DataColumn(
               label: Text(
-                'Color',
+                AppLocalizations.of(context)?.translate('car') ?? 'Car',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
-                'Price/Day',
+                AppLocalizations.of(context)?.color ?? 'Color',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
-                'Status',
+                AppLocalizations.of(context)?.pricePerDay ?? 'Price/Day',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                AppLocalizations.of(context)?.status ?? 'Status',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                AppLocalizations.of(context)?.actions ?? 'Actions',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -397,7 +766,7 @@ class _CarsTable extends StatelessWidget {
                         '${car.dailyPrice.toStringAsFixed(0)} MAD',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue,
+                          color: AppTheme.primaryColor,
                         ),
                       ),
                     ),
@@ -415,7 +784,11 @@ class _CarsTable extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          car.isAvailable ? 'Available' : 'Rented',
+                          car.isAvailable
+                              ? (AppLocalizations.of(context)?.available ??
+                                  'Available')
+                              : (AppLocalizations.of(context)?.rented ??
+                                  'Rented'),
                           style: TextStyle(
                             color:
                                 car.isAvailable
@@ -425,6 +798,22 @@ class _CarsTable extends StatelessWidget {
                             fontSize: 12,
                           ),
                         ),
+                      ),
+                    ),
+                    DataCell(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 20),
+                            onPressed: () => onEditCar(car),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 20),
+                            color: Colors.red,
+                            onPressed: () => onDeleteCar(car),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -453,3 +842,5 @@ class _CarsTable extends StatelessWidget {
     return colorMap[colorName.toLowerCase()] ?? Colors.grey;
   }
 }
+
+

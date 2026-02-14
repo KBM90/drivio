@@ -1,6 +1,6 @@
 import 'package:drivio_app/common/helpers/geolocator_helper.dart';
 import 'package:drivio_app/common/services/user_services.dart';
-import 'package:drivio_app/driver/services/custom_service_request_service.dart';
+import 'package:drivio_app/driver/services/service_order_service.dart';
 import 'package:flutter/material.dart';
 
 class CustomOrderDialog extends StatefulWidget {
@@ -58,34 +58,37 @@ class _CustomOrderDialogState extends State<CustomOrderDialog> {
         throw Exception('User not found');
       }
 
-      final driverName = user.name ?? 'Unknown Driver';
-      final driverPhone = user.phone ?? '';
+      final requesterName = user.name;
+      final requesterPhone = user.phone ?? '';
 
-      // Get driver location
-      String? driverLocation;
+      // Get requester location
+      String? requesterLocation;
       final location = await GeolocatorHelper.getCurrentLocation();
       if (location != null) {
-        driverLocation = 'POINT(${location.longitude} ${location.latitude})';
+        requesterLocation = 'POINT(${location.longitude} ${location.latitude})';
       }
 
-      // Create custom service request
-      final requestService = CustomServiceRequestService();
-      final request = await requestService.createRequest(
-        serviceName: _serviceNameController.text.trim(),
+      // Combine description and notes into notes field (service_orders doesn't have separate description)
+      final notes = [
+        _descriptionController.text.trim(),
+        if (_notesController.text.trim().isNotEmpty)
+          _notesController.text.trim(),
+      ].where((text) => text.isNotEmpty).join('\n\n');
+
+      // Create custom service order using ServiceOrderService
+      final orderService = ServiceOrderService();
+      final order = await orderService.createOrder(
+        customServiceName: _serviceNameController.text.trim(),
         category: _selectedCategory!,
-        description: _descriptionController.text.trim(),
-        driverName: driverName,
-        driverPhone: driverPhone,
-        driverLocation: driverLocation,
+        requesterName: requesterName,
+        requesterPhone: requesterPhone,
+        requesterLocation: requesterLocation,
         quantity: int.parse(_quantityController.text),
-        notes:
-            _notesController.text.trim().isEmpty
-                ? null
-                : _notesController.text.trim(),
+        notes: notes.isEmpty ? null : notes,
         preferredContactMethod: _contactMethod,
       );
 
-      if (request != null && mounted) {
+      if (order != null && mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

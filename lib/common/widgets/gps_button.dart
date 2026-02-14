@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-class MapLocationButton extends StatelessWidget {
+class GPSButton extends StatelessWidget {
   final MapController mapController;
   final LatLng? currentLocation;
   final double zoomLevel;
 
-  const MapLocationButton({
+  const GPSButton({
     super.key,
     required this.mapController,
     required this.currentLocation,

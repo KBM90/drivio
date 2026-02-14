@@ -61,6 +61,42 @@ class DeliveryRequest {
     this.updatedAt,
   });
 
+  DeliveryRequest copyWith({
+    int? id,
+    int? passengerId,
+    int? deliveryPersonId,
+    String? category,
+    String? description,
+    String? pickupNotes,
+    String? dropoffNotes,
+    Location? deliveryLocation,
+    Location? pickupLocation,
+    String? status,
+    double? price,
+    double? proposedPrice,
+    double? distanceKm,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return DeliveryRequest(
+      id: id ?? this.id,
+      passengerId: passengerId ?? this.passengerId,
+      deliveryPersonId: deliveryPersonId ?? this.deliveryPersonId,
+      category: category ?? this.category,
+      description: description ?? this.description,
+      pickupNotes: pickupNotes ?? this.pickupNotes,
+      dropoffNotes: dropoffNotes ?? this.dropoffNotes,
+      deliveryLocation: deliveryLocation ?? this.deliveryLocation,
+      pickupLocation: pickupLocation ?? this.pickupLocation,
+      status: status ?? this.status,
+      price: price ?? this.price,
+      proposedPrice: proposedPrice ?? this.proposedPrice,
+      distanceKm: distanceKm ?? this.distanceKm,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory DeliveryRequest.fromJson(Map<String, dynamic> json) =>
       _$DeliveryRequestFromJson(json);
 

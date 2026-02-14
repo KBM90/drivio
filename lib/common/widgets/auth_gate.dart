@@ -14,8 +14,6 @@ import 'package:drivio_app/driver/providers/ride_requests_provider.dart';
 import 'package:drivio_app/passenger/providers/passenger_provider.dart';
 import 'package:drivio_app/passenger/providers/passenger_ride_request_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:drivio_app/common/screens/no_internet_screen.dart';
-import 'package:drivio_app/common/services/connectivity_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 

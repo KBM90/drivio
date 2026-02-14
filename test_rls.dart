@@ -1,4 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   // Initialize Supabase (User needs to provide URL and Key potentially, but we'll assume the app environment or ask user to run it in context)

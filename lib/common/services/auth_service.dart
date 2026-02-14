@@ -243,7 +243,10 @@ class AuthService {
       await ensureValidSession(); // Ensure valid token before DB call
 
       final authUserId = _supabase.auth.currentUser?.id;
-      if (authUserId == null) return null;
+      if (authUserId == null) {
+        debugPrint('⚠️ AuthService.getInternalUserId: No auth user ID found');
+        return null;
+      }
 
       try {
         final response =
@@ -251,9 +254,15 @@ class AuthService {
                 .from('users')
                 .select('id')
                 .eq('user_id', authUserId)
-                .single();
+                .maybeSingle();
+
+        if (response == null) {
+          debugPrint('❌ AuthService.getInternalUserId: User not found in users table. Auth User ID: $authUserId');
+          return null;
+        }
 
         _cachedInternalUserId = response['id'] as int?;
+        debugPrint('✅ AuthService.getInternalUserId: Found user ID $_cachedInternalUserId');
         return _cachedInternalUserId;
       } on PostgrestException catch (e) {
         // 🚨 Handle JWT Expiration specifically
@@ -271,15 +280,23 @@ class AuthService {
                   .from('users')
                   .select('id')
                   .eq('user_id', authUserId)
-                  .single();
+                  .maybeSingle();
+
+          if (response == null) {
+            debugPrint('❌ AuthService.getInternalUserId: User not found after retry. Auth User ID: $authUserId');
+            return null;
+          }
 
           _cachedInternalUserId = response['id'] as int?;
           return _cachedInternalUserId;
         }
+        
+        debugPrint('❌ AuthService.getInternalUserId: PostgrestException - Code: ${e.code}, Message: ${e.message}');
         rethrow; // Rethrow other PostgrestExceptions
       }
     } catch (e) {
       debugPrint('❌ Error getting internal user ID: $e');
+      debugPrint('   Error type: ${e.runtimeType}');
 
       // If we still fail after retry, it might be time to logout
       if (e.toString().contains('JWT expired') ||
@@ -407,6 +424,36 @@ class AuthService {
     } catch (e) {
       debugPrint('❌ Sign out error: $e');
       rethrow;
+    }
+  }
+
+  /// Get passenger profile (name, phone) by passenger ID
+  static Future<Map<String, dynamic>?> getPassengerProfile(
+    int passengerId,
+  ) async {
+    try {
+      final passengerData =
+          await _supabase
+              .from('passengers')
+              .select('user_id')
+              .eq('id', passengerId)
+              .maybeSingle();
+
+      if (passengerData == null) return null;
+
+      final userId = passengerData['user_id'];
+
+      final userData =
+          await _supabase
+              .from('users')
+              .select('name, phone, country_code')
+              .eq('user_id', userId)
+              .maybeSingle();
+      debugPrint('Passenger profile: $userData');
+      return userData;
+    } catch (e) {
+      debugPrint('❌ Error fetching passenger profile: $e');
+      return null;
     }
   }
 

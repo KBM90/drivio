@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:drivio_app/common/constants/app_theme.dart';
 import '../models/provided_service.dart';
 import '../../provider/services/provided_services_service.dart';
+import '../../provider/screens/service_provider_details_screen.dart';
 import '../helpers/osrm_services.dart';
 import '../helpers/geolocator_helper.dart';
 import 'package:latlong2/latlong.dart';
-import '../../driver/ui/modals/order_service_dialog.dart';
+import '../widgets/order_service_dialog.dart';
 import '../widgets/custom_order_dialog.dart';
 
 class ServicesPage extends StatefulWidget {
@@ -192,9 +194,8 @@ class _ServicesPageState extends State<ServicesPage> {
                     hintText: 'Search city...',
                     prefixIcon: const Icon(
                       Icons.location_city,
-                      color: Colors.green,
+                      color: AppTheme.primaryColor,
                     ),
-
                     suffixIcon:
                         _selectedCity != null
                             ? IconButton(
@@ -204,17 +205,19 @@ class _ServicesPageState extends State<ServicesPage> {
                             : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.green[300]!),
+                      borderSide: BorderSide(
+                        color: AppTheme.primaryColor.withOpacity(0.3),
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Colors.green[600]!,
+                      borderSide: const BorderSide(
+                        color: AppTheme.primaryColor,
                         width: 2,
                       ),
                     ),
                     filled: true,
-                    fillColor: Colors.green[50],
+                    fillColor: AppTheme.primaryColor.withOpacity(0.05),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
@@ -266,19 +269,6 @@ class _ServicesPageState extends State<ServicesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading:
-            widget.showBackButton
-                ? IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-                : null,
-        title: const Text('Services'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
       body: Column(
         children: [
           _buildCityFilter(),
@@ -302,7 +292,7 @@ class _ServicesPageState extends State<ServicesPage> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCustomOrderDialog,
-        backgroundColor: Colors.blue,
+        backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
         label: const Text(
           'Custom Order',
@@ -341,12 +331,12 @@ class _ServicesPageState extends State<ServicesPage> {
                 if (selected) _onCategorySelected(category);
               },
               backgroundColor: Colors.grey[200],
-              selectedColor: Colors.blue[100],
+              selectedColor: AppTheme.primaryColor.withOpacity(0.15),
               labelStyle: TextStyle(
-                color: isSelected ? Colors.blue[900] : Colors.black,
+                color: isSelected ? AppTheme.primaryColor : Colors.black,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
-              checkmarkColor: Colors.blue[900],
+              checkmarkColor: AppTheme.primaryColor,
             ),
           );
         },
@@ -406,7 +396,7 @@ class _ServicesPageState extends State<ServicesPage> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                        color: AppTheme.primaryColor,
                       ),
                     ),
                   ],
@@ -419,6 +409,62 @@ class _ServicesPageState extends State<ServicesPage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ServiceProviderDetailsScreen(
+                          providerId: service.providerId,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        child: Text(
+                          (service.providerName != null &&
+                                  service.providerName!.isNotEmpty)
+                              ? service.providerName![0].toUpperCase()
+                              : 'P',
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              service.providerName ?? 'Unknown provider',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (service.providerCity != null)
+                              Text(
+                                service.providerCity!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -449,7 +495,7 @@ class _ServicesPageState extends State<ServicesPage> {
                               style: TextStyle(fontSize: 12),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
+                              backgroundColor: AppTheme.primaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,

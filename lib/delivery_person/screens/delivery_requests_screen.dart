@@ -1,7 +1,7 @@
 import 'package:drivio_app/common/models/delivery_request.dart';
 import 'package:drivio_app/delivery_person/providers/delivery_person_location_provider.dart';
 import 'package:drivio_app/delivery_person/screens/delivery_details_screen.dart';
-import 'package:drivio_app/passenger/services/delivery_service.dart';
+import 'package:drivio_app/delivery_person/services/delivery_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -290,10 +290,12 @@ class _DeliveryRequestsScreenState extends State<DeliveryRequestsScreen> {
         return Icons.shopping_cart;
       case 'electronics':
         return Icons.devices;
-      case 'clothing':
+      case 'clothes':
         return Icons.checkroom;
       case 'furniture':
         return Icons.weekend;
+      case 'medicament':
+        return Icons.medical_services;
       default:
         return Icons.local_shipping;
     }

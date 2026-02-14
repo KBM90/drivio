@@ -58,7 +58,6 @@ class DriverProvider extends ChangeNotifier {
             if (ride == null) {
               shouldReset = true;
             } else if (ride['driver_id'] != _currentDriver?.id) {
-              ;
               shouldReset = true;
             } else if (ride['status'] != 'accepted' &&
                 ride['status'] != 'arrived' &&
